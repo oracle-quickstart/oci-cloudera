@@ -10,11 +10,10 @@ ssh_check () {
         while [ "$ssh_chk" != "0" ]; do
                 ssh_chk=`ssh -o StrictHostKeyChecking=no -q -i /home/opc/.ssh/id_rsa ${user}@${hostfqdn} 'cat /home/opc/.done'`
                 if [ -z $ssh_chk ]; then
+			ssh_chk="1"
                         continue
                 elif [ $ssh_chk = "0" ]; then
                         continue
-                else
-                        echo "DEBUG OUTPUT - $ssh_chk"
                 fi
                 sleep 5
                 echo -n "*"
