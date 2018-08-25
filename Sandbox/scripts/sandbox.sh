@@ -53,7 +53,7 @@ if [ $firewall_on = "1" ]; then
 echo -e "Downloading CDH5 Docker Container..."
 echo -e "Installing Docker..."
 yum install docker.x86_64 -y
-sed -i 's/DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS= --storage-opt dm.basesize=20G/g' /etc/sysconfig/docker-storage
+#sed -i 's/DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS= --storage-opt dm.basesize=20G/g' /etc/sysconfig/docker-storage
 systemctl start docker
 
 statuschk=`echo -e $?`
