@@ -9,14 +9,18 @@ ssh_check () {
         echo -ne "Checking SSH as $user on ${hostfqdn} [*"
         while [ "$ssh_chk" != "0" ]; do
                 ssh_chk=`ssh -o StrictHostKeyChecking=no -q -i /home/opc/.ssh/id_rsa ${user}@${hostfqdn} 'cat /home/opc/.done'`
-                if [ $ssh_chk = "0" ]; then
+    	        if [ -z $ssh_chk ]; then
+                        sleep 5
+                        echo -n "*"
                         continue
-		else
-			ssh_chk="1"
+                elif [ $ssh_chk = "0" ]; then
+                        continue
+                else
+                        sleep 5
+                        echo -n "*"
+                        continue
                 fi
-                sleep 5
-                echo -n "*"
-        done;
+	done;
         echo -ne "*] - DONE\n"
         unset ssh_chk 
         unset user
