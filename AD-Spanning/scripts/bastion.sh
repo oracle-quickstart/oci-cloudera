@@ -14,7 +14,15 @@ ssh_check () {
                         echo -n "*"
                         continue
                 elif [ $ssh_chk = "0" ]; then
-                        continue
+                        if [ $failsafe = "1" ]; then
+                                failsafe="0"
+                                ssh_check="1"
+                                sleep 10
+                                echo -n "*"
+                                continue
+                        else
+                                continue
+                        fi
                 else
                         sleep 5
                         echo -n "*"
