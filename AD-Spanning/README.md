@@ -10,6 +10,14 @@ Installation has a dependency on Terraform being installed and configured for th
 
 Modify the env-vars file prior to deployment and modify the number of workers to scale your cluster dynamically.  You can also scale the number of Utility or Master hosts if you want additional redundancy.  Automated redundancy for Cloudera Manager is NOT currently included in this template.
 
+## Data Tiering
+
+Data Tiering support is now automated.   Go to the top level scripts directory and modify disk_setup.sh prior to deployment.   You will find the option:
+
+	enable_data_tiering="0"
+
+Simply change the 0 to a 1 and run your deployment.   Also ensure you have Heterogenous storage configured, by using Bare Metal shapes and enabling Block Volumes using block.tf.  This will allow for a much greater control of HDFS storage density without having to scale the number of Worker nodes in the cluster.
+
 ## Password & User Details
 
 Modify the script startup.sh and look for the MAIN CLUSTER CONFIGURATION section - this is which you can input your contact information, and set up the Cloudera Manager credentials prior to deployment.

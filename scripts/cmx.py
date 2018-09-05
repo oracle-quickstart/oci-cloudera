@@ -28,19 +28,19 @@ def getParameterValue(vmsize, parameter):
     switcher = {
         "BM.DenseIO2.52:yarn_nodemanager_resource_cpu_vcores": "208",
         "BM.DenseIO2.52:yarn_nodemanager_resource_memory_mb": "786432",
-        "BM.DenseIO2.52:impalad_memory_limit": "122857142857",
+        "BM.DenseIO2.52:impalad_memory_limit": "274877906944",
         "BM.DenseIO2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.DenseIO2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
 	"BM.DenseIO2.52:dfs_replication": "3",
         "BM.DenseIO1.36:yarn_nodemanager_resource_cpu_vcores": "128",
         "BM.DenseIO1.36:yarn_nodemanager_resource_memory_mb": "524288",
-        "BM.DenseIO1.36:impalad_memory_limit": "122857142857",
+        "BM.DenseIO1.36:impalad_memory_limit": "274877906944",
         "BM.DenseIO1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.DenseIO1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
 	"BM.DenseIO1.36:dfs_replication": "3",
 	"BM.Standard2.52:yarn_nodemanager_resource_cpu_vcores": "208",
         "BM.Standard2.52:yarn_nodemanager_resource_memory_mb": "786432",
-        "BM.Standard2.52:impalad_memory_limit": "122857142857",
+        "BM.Standard2.52:impalad_memory_limit": "274877906944",
         "BM.Standard2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.Standard2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
 	"BM.Standard2.52:dfs_replication": "1",
@@ -403,6 +403,7 @@ def setup_hdfs(HA):
                                    "dfs_datanode_du_reserved": "3508717158",
                                    "dfs_datanode_failed_volumes_tolerated": "0",
                                    "dfs_datanode_max_locked_memory": "1257242624",
+				   "dfs_datanode_max_xcievers": "16384",
                                    "datanode_log_dir": LOG_DIR+"/hadoop-hdfs"})
             if rcg.roleType == "FAILOVERCONTROLLER":
                 rcg.update_config({"failover_controller_log_dir": LOG_DIR+"/hadoop-hdfs"})
@@ -913,8 +914,9 @@ def setup_impala(HA):
         impalad=service.get_role_config_group("{0}-IMPALAD-BASE".format(service_name))
         impalad.update_config({"log_dir": LOG_DIR+"/impalad",
                                "impalad_memory_limit": getParameterValue(cmx.vmsize, "impalad_memory_limit")})
-        #llama=service.get_role_config_group("{0}-LLAMMA-BASE".format(service_name))
-        #llama.update_config({"log_dir": LOG_DIR+"impala-llama"})
+        llama=service.get_role_config_group("{0}-LLAMA-BASE".format(service_name))
+	llama.update_config({"log_dir": LOG_DIR+"/impala-llama",
+			     "llama_java_heapsize": "1073741824"})
         ss = service.get_role_config_group("{0}-STATESTORE-BASE".format(service_name))
         ss.update_config({"log_dir": LOG_DIR+"/statestore"})
         cs = service.get_role_config_group("{0}-CATALOGSERVER-BASE".format(service_name))
@@ -1874,8 +1876,9 @@ def parse_options():
     (options, args) = parser.parse_args()
 
     # Install CDH5 latest version
+    # Modify this for custom cloudera install
     cmx_config_options['parcel'].append(manifest_to_dict(
-        'http://archive.cloudera.com/cdh5/parcels/5/manifest.json'))
+        'http://archive.cloudera.com/cdh5/parcels/5.15.1/manifest.json'))
 
     msg_req_args = "Please specify the required arguments: "
     if cmx_config_options['cm_server'] is None:

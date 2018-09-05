@@ -8,8 +8,8 @@ echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
 
 ## Set vm.swappiness to 1
-echo vm.swappiness=1 | tee -a /etc/sysctl.conf
-echo 1 | tee /proc/sys/vm/swappiness
+echo vm.swappiness=0 | tee -a /etc/sysctl.conf
+echo 0 | tee /proc/sys/vm/swappiness
 
 ## Tune system network performance
 echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
@@ -30,3 +30,9 @@ sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
 sudo cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
 sudo cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
 
+## Set Limits
+echo "hdfs  -       nofile  32768
+hdfs  -       nproc   2048
+hbase -       nofile  32768
+hbase -       nproc   2048" >> /etc/security/limits.conf
+ulimit -n 262144
