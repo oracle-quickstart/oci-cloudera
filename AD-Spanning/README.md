@@ -16,7 +16,7 @@ Data Tiering support is now automated.   Go to the top level scripts directory a
 
 	enable_data_tiering="0"
 
-Simply change the 0 to a 1 and run your deployment.   Also ensure you have Heterogenous storage configured, by using Bare Metal shapes and enabling Block Volumes using block.tf.  This will allow for a much greater control of HDFS storage density without having to scale the number of Worker nodes in the cluster.
+Simply change the 0 to a 1 and run your deployment.   Also ensure you have Heterogenous storage configured, by using DenseIO shapes with local NVME and enabling Block Volumes using block.tf.  This will allow for a much greater control of HDFS storage density without having to scale the number of Worker nodes in the cluster.  Block Volume size can be adjusted by a variable in variables.tf, and this will also scale with the number of Workers in the cluster.
 
 ## Password & User Details
 
