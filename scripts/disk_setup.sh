@@ -47,6 +47,11 @@ data_tiering () {
 	fi
 }
 
+## Break out of this script if node is not a worker - this allows for Master tier Block Volumes not dedicated to HDFS use
+if [ ${is_worker} = "false" ]; then 
+	exit
+fi
+
 ## Check for x>0 devices
 echo -n "Checking for disks..."
 ## Execute - will format all devices except sda for use as data disks in HDFS 

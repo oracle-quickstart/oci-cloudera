@@ -2,15 +2,15 @@
 #### Bastion Master Setup Script
 
 ssh_check () {
-        ssh_chk="1"
+	ssh_chk="1"
 	failsafe="1"
-        if [ -z $user ]; then
-                user="opc"
-        fi
-        echo -ne "Checking SSH as $user on ${hostfqdn} [*"
+	if [ -z $user ]; then
+		user="opc"
+	fi
+	echo -ne "Checking SSH as $user on ${hostfqdn} [*"
         while [ "$ssh_chk" != "0" ]; do
-                ssh_chk=`ssh -o StrictHostKeyChecking=no -q -i /home/opc/.ssh/id_rsa ${user}@${hostfqdn} 'cat /home/opc/.done'`
-    	        if [ -z $ssh_chk ]; then
+		ssh_chk=`ssh -o StrictHostKeyChecking=no -q -i /home/opc/.ssh/id_rsa ${user}@${hostfqdn} 'cat /home/opc/.done'`
+                if [ -z $ssh_chk ]; then
                         sleep 5
                         echo -n "*"
                         continue
@@ -29,10 +29,76 @@ ssh_check () {
                         echo -n "*"
                         continue
                 fi
-	done;
-        echo -ne "*] - DONE\n"
-        unset ssh_chk 
-        unset user
+        done;
+	echo -ne "*] - DONE\n"
+        unset sshchk 
+	unset user
+}
+
+host_discovery () {
+## If Domain is modified in VCN config, this needs to be changed
+domain=".cdhvcn.oraclevcn.com"
+endcheck=1
+i=1
+while [ $endcheck != 0 ]; do
+        check=0
+        for d in `seq 1 3`; do
+                hname=`nslookup cdh-utility-${i}.public${d}${domain} | grep Name`
+                seqchk=`echo -e $?`
+                if [ $seqchk = "0" ]; then
+                        echo $hname | gawk '{print $2}'
+                        check="1"
+                fi
+        done;
+        if [ $check = "0" ]; then
+                endcheck=0
+        else
+                endcheck=1
+                i=$((i+1))
+        fi
+done
+
+## MASTER NODE DISCOVERY
+endcheck=1
+i=1
+while [ $endcheck != 0 ]; do
+        check=0
+        for d in `seq 1 3`; do
+                hname=`nslookup cdh-master-${i}.private${d}${domain} | grep Name`
+                seqchk=`echo -e $?`
+                if [ $seqchk = "0" ]; then
+                        echo $hname | gawk '{print $2}'
+                        check="1"
+                fi
+        done;
+        if [ $check = "0" ]; then
+                endcheck=0
+        else
+                endcheck=1
+                i=$((i+1))
+        fi
+done
+
+## WORKER NODE DISCOVERY
+endcheck=1
+i=1
+while [ $endcheck != 0 ]; do
+        check=0
+        for d in `seq 1 3`; do
+                hname=`nslookup cdh-worker-${i}.private${d}${domain} | grep Name`
+                seqchk=`echo -e $?`
+                if [ $seqchk = "0" ]; then
+                        echo $hname | gawk '{print $2}'
+                        check="1"
+                fi
+        done;
+        if [ $check = "0" ]; then
+                endcheck=0
+        else
+                endcheck=1
+                i=$((i+1))
+        fi
+done
 }
 
 ### Firewall Configuration
@@ -55,45 +121,10 @@ fi
 
 ## Continue with Main Setup 
 # First do some network & host discovery
-domain="cdhvcn.oraclevcn.com"
-utilname=`nslookup cdh-utility1 | grep Name | gawk '{print $2}'`
-echo "$utilname" >> host_list;
-ct=1;
-mcount=0;
-while [ $ct -lt 10 ]; do
-        nslk=`nslookup cdh-master-${ct}`
-        ns_ck=`echo -e $?`
-        if [ $ns_ck = 0 ]; then
-		hname=`nslookup cdh-master-${ct} | grep Name | gawk '{print $2}'`
-                echo "$hname" >> host_list;
-		mcount=$((mcount+1))
-        else
-                break
-        fi
-        ct=$((ct+1));
-done;
-ct=1;
-while [ $ct -le $mcount ]; do 
-	if [ -z $MASTER_LIST ]; then
-		MASTER_LIST="cdh-master-$ct"
-	else
-		MASTER_LIST="${MASTER_LIST}|cdh-master-$ct"
-	fi
-	ct=$((ct+1))
-done;
-ct=1; 
-while [ $ct -lt 1000 ]; do
-        nslk=`nslookup cdh-worker-${ct}`
-        ns_ck=`echo -e $?`
-        if [ $ns_ck = 0 ]; then
-		hname=`nslookup cdh-worker-${ct} | grep Name | gawk '{print $2}'`
-		echo "$hname" >> host_list;
-		echo "$hname" >> datanodes;
-        else
-                break
-        fi
-        ct=$((ct+1));
-done;
+host_discovery >> host_list
+cat host_list | grep worker >> datanodes
+utilfqdn=`cat host_list | grep cdh-utility-1`
+w1fqdn=`cat host_list | grep cdh-worker-1`
 for host in `cat host_list`; do 
 	h_ip=`dig +short $host`
 	echo -e "$h_ip\t$host" >> hosts
@@ -105,107 +136,98 @@ if [ -f hosts ]; then
 	local_network="10.0.0.0/16"
 	#local_network=`cat hosts | grep -w "cdh-worker-1" | gawk '{print $1}' | cut -d '.' -f 1-3`
 fi
-master_ip=`dig +short $utilname`
+master_ip=`dig +short ${utilfqdn}`
 sed -i "s/MASTERIP/$master_ip/g" startup.sh
 
-## Wait 4 minutes for Cloud Init to finish
-#sc=0
-#echo -ne "Waiting 4 Minutes for Cloud Init to finish... [*"
-#while [ $sc -lt 240 ]; do
-#	sc=$((sc+10))
-#	sleep 5
-#	echo -ne "*"
-#done;
-#echo -ne "*] - DONE\n"
-#
 ## Primary host setup section
 for host in `cat host_list | gawk -F '.' '{print $1}'`; do
+	hostfqdn=`cat host_list | grep $host`
         echo -e "\tConfiguring $host for deployment."
         host_ip=`cat hosts | grep $host | gawk '{print $1}'`
         ssh_check
 	echo -e "Copying Setup Scripts...\n"
         ## Copy Setup scripts
-        scp -o BatchMode=yes -o StrictHostkeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/hosts opc@$host:~/
-        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/iscsi.sh opc@$host:~/
-        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/node_prep.sh opc@$host:~/
-        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/tune.sh opc@$host:~/
-        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/disk_setup.sh opc@$host:~/
+        scp -o BatchMode=yes -o StrictHostkeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/hosts opc@$hostfqdn:~/
+        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/iscsi.sh opc@$hostfqdn:~/
+        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/node_prep.sh opc@$hostfqdn:~/
+        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/tune.sh opc@$hostfqdn:~/
+        scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/disk_setup.sh opc@$hostfqdn:~/
         ## Set Execute Flag on scripts
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host 'chmod +x *.sh'
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn 'chmod +x *.sh'
         ## Execute Node Prep
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host 'sudo ./node_prep.sh &'
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn 'sudo ./node_prep.sh &'
         ## Firewall Setup
         if [ $firewall_on = "1" ]; then
                 if [ -z "$local_network" ]; then
                         echo -ne "\tSetting up Firewall Ports [ "
                         for dport in `cat /home/opc/firewall.list`; do
                                 echo -n "$dport "
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=$dport/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=$dport/tcp"
                         done
                         echo -n "] - DONE"
                         echo -e "\n"
-                        if [ $host = "cdh-utility1" ]; then
+                        if [ $host = "cdh-utility-1" ]; then
                                 echo -e "\tSetting up Firewall Range 3181-4181 for ZK on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=3181-4181/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=3181-4181/tcp"
                                 ## Ports for Cloudera Manager UI
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=7180/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=7180/tcp"
                         fi
                         if [ $host = "cdh-master-2" ]; then
                                 echo -e "\tSetting up Firewall Range 3181-4181 for ZK on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=3181-4181/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=3181-4181/tcp"
                         fi
                         if [ $host = "cdh-master-3" ]; then
                                 echo -e "\tSetting up Firewall Range 3181-4181 for ZK on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=3181-4181/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=3181-4181/tcp"
                         fi
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --runtime-to-permanent"
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --runtime-to-permanent"
                 else
-                        if [ $host = "cdh-utility1" ]; then
+                        if [ $host = "cdh-utility-1" ]; then
                                 echo -e "\tSetting up Firewall port 7180 for CDH Manager UI access on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=7180/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=7180/tcp"
                                 echo -e "\tSetting up Firewall port 19888 for Job History Server access on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=19888/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=19888/tcp"
                         fi
                         if [[ $host =~ [${MASTER_LIST}] ]]; then
                                 echo -e "\tSetting up Firewall port 19888 for Job History Server access on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=19888/tcp"
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=19888/tcp"
                                 echo -e "\tSetting up Firewall port 8088 for Resource Manager access on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-port=8088/tcp" 
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=8088/tcp" 
 			fi
                         echo -e "\tAdding whitelist for network ${local_network} to local firewall on $host."
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --zone=public --add-source=${local_network}"
-                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo firewall-cmd --runtime-to-permanent"
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-source=${local_network}"
+                        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --runtime-to-permanent"
                 fi
         else
-                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo systemctl stop firewalld"
-                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "sudo systemctl disable firewalld"
+                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo systemctl stop firewalld"
+                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo systemctl disable firewalld"
 	fi
         ## Master Setup Files get copied here
-        if [ $host = "cdh-utility1" ]; then
+        if [ $host = "cdh-utility-1" ]; then
                 echo -e "\tCopying Master Setup Files..."
-                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/install-postgresql.sh opc@$host:~/
-                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/startup.sh opc@$host:~/
-                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/cms_install.sh opc@$host:~/
-                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/cmx.py opc@$host:~/
-                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/.ssh/id_rsa opc@$host:~/.ssh/
-		scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/datanodes opc@$host:/tmp/datanodes
-                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$host "chmod 0600 .ssh/id_rsa"
+                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/install-postgresql.sh opc@$hostfqdn:~/
+                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/startup.sh opc@$hostfqdn:~/
+                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/cms_install.sh opc@$hostfqdn:~/
+                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/cmx.py opc@$hostfqdn:~/
+                scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/.ssh/id_rsa opc@$hostfqdn:~/.ssh/
+		scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa /home/opc/datanodes opc@$hostfqdn:/tmp/datanodes
+                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "chmod 0600 .ssh/id_rsa"
 	fi
         echo -e "\tDone initializing $host.\n\n"
 done;
 ## End Worker Node Setup
 ## Discovery for later configuration - look at resources on first worker
 echo -e "Checking Resources on Worker Node..."
-wprocs=`ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@cdh-worker-1 'cat /proc/cpuinfo | grep processor | wc -l'`
+wprocs=`ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${w1fqdn} 'cat /proc/cpuinfo | grep processor | wc -l'`
 echo -e "$wprocs processors detected.."
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@cdh-worker-1 "free -hg | grep Mem" > /tmp/meminfo
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${w1fqdn} "free -hg | grep Mem" > /tmp/meminfo
 memtotal=`cat /tmp/meminfo | gawk '{print $2}' | cut -d 'G' -f 1`
 echo -e "${memtotal}GB of RAM detected..."
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@cdh-utility1 "echo $wprocs > /tmp/wprocs"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@cdh-utility1 "echo $memtotal > /tmp/memtotal"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${utilfqdn} "echo $wprocs > /tmp/wprocs"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${utilfqdn} "echo $memtotal > /tmp/memtotal"
 ## Finish Cluster Setup Below
-echo -e "Install Complete..."
-host="cdh-utility1"
+echo -e "Pre-Install Bootstrapping Complete..."
+hostfqdn="$utilfqdn"
 user="root"
 ssh_check
 echo -e "\n"
@@ -213,12 +235,53 @@ echo -e "Running CDH Manager Setup..."
 ## Invoke CMS installer
 install_success="1"
 while [ $install_success = "1" ]; do
-	ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@cdh-utility1 "sudo /home/opc/cms_install.sh"
+	ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${utilfqdn} "sudo /home/opc/cms_install.sh"
 	install_success=`echo -e $?`
 	sleep 10
 done
-echo -e "CDH Manager Setup Complete... Starting CDH provisioning via SCM..."
+echo -e "CDH Manager Setup Complete."
+echo -e "Copying (if exists) HDFS Data Tiering file from first Worker."
+scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@cdh-worker-1:/home/opc/hdfs_data_tiering.txt .
+if [ -f "hdfs_data_tiering.txt" ]; then 
+	echo -e "HDFS Data Tiering file found!  Copying to Utility node."
+	scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa hdfs_data_tiering.txt root@cdh-utility-1:/home/opc/hdfs_data_tiering.txt
+fi
+echo -e "Starting CDH provisioning via SCM..."
 ## Invoke SCM bootstrapping and initialization 
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@cdh-utility1 "sudo /home/opc/startup.sh"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${utilfqdn} "sudo /home/opc/startup.sh"
+echo -e "--------------------------------------------------------------------"
 echo -e "---------------------CLUSTER SETUP COMPLETE-------------------------"
+echo -e "--------------------------------------------------------------------"
+#echo -e "Provisioning HDFS OCI Object Connector."
+#./HDFS-connector.sh
+
+## Find any post Cluster setup scripts and run them
+cd /home/opc/post-setup-scripts/
+for shell_script in `ls`; do 
+	./${shell_script}
+done;
+
+
+## TPC-DS Benchmarking
+tpc_ds () {
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "cp /home/opc/impala-tpcds-kit.tar.gz /var/lib/hadoop-hdfs/"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "chown hdfs:hdfs /var/lib/hadoop-hdfs/impala-tpcds-kit.tar.gz"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "mkdir -p /var/lib/hadoop-hdfs/.ssh/"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "chown hdfs:hdfs /var/lib/hadoop-hdfs/.ssh/"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "cp /home/opc/.ssh/* /var/lib/hadoop-hdfs/.ssh/"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "chown hdfs:hdfs /var/lib/hadoop-hdfs/.ssh/*"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa hdfs@${utilfqdn} "tar -zxvf impala-tpcds-kit.tar.gz"
+ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa hdfs@${utilfqdn} "impala-tpcds-kit/tpc-ds.sh"
+}
+
+#echo -e "------------------------------"
+#echo -e "----------TPC-DS--------------"
+#echo -e "------------------------------"
+#tpc_ds
+
+
+
+
+
+
 
