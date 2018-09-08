@@ -252,36 +252,3 @@ ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${
 echo -e "--------------------------------------------------------------------"
 echo -e "---------------------CLUSTER SETUP COMPLETE-------------------------"
 echo -e "--------------------------------------------------------------------"
-#echo -e "Provisioning HDFS OCI Object Connector."
-#./HDFS-connector.sh
-
-## Find any post Cluster setup scripts and run them
-cd /home/opc/post-setup-scripts/
-for shell_script in `ls`; do 
-	./${shell_script}
-done;
-
-
-## TPC-DS Benchmarking
-tpc_ds () {
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "cp /home/opc/impala-tpcds-kit.tar.gz /var/lib/hadoop-hdfs/"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "chown hdfs:hdfs /var/lib/hadoop-hdfs/impala-tpcds-kit.tar.gz"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "mkdir -p /var/lib/hadoop-hdfs/.ssh/"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "chown hdfs:hdfs /var/lib/hadoop-hdfs/.ssh/"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "cp /home/opc/.ssh/* /var/lib/hadoop-hdfs/.ssh/"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@${utilfqdn} "chown hdfs:hdfs /var/lib/hadoop-hdfs/.ssh/*"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa hdfs@${utilfqdn} "tar -zxvf impala-tpcds-kit.tar.gz"
-ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa hdfs@${utilfqdn} "impala-tpcds-kit/tpc-ds.sh"
-}
-
-#echo -e "------------------------------"
-#echo -e "----------TPC-DS--------------"
-#echo -e "------------------------------"
-#tpc_ds
-
-
-
-
-
-
-
