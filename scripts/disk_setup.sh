@@ -16,6 +16,8 @@ while [ $iscsi = "1" ]; do
 		iscsi="1"
 		sleep 1 
 	else
+		## Wait 10 seconds to allow for any latent iscsi operations to finish, then proceed
+		sleep 10
 		iscsi="0"
 	fi
 done
@@ -54,8 +56,9 @@ fi
 
 ## Check for x>0 devices
 echo -n "Checking for disks..."
+nvcount="0"
+bvcount="0"
 ## Execute - will format all devices except sda for use as data disks in HDFS 
-n=0
 dcount=0
 for disk in `sudo cat /proc/partitions | grep -iv sda | sed 1,2d | gawk '{print $4}'`; do
 	echo -e "\nProcessing /dev/$disk"
@@ -67,5 +70,19 @@ for disk in `sudo cat /proc/partitions | grep -iv sda | sed 1,2d | gawk '{print 
 			data_tiering
 		fi
 	fi
-	dcount=$((dcount+1))	
+	dcount=$((dcount+1))
+	nv_chk=`echo $disk | grep nv`; 
+	nv_chk=$?
+	if [ $nv_chk = "0" ]; then
+		nvcount=$((nvcount+1))
+	else
+		bvcount=$((bvcount+1))
+	fi
 done;
+ibvcount=`cat /tmp/bvcount`
+if [ $ibvcount -gt $bvcount ]; then 
+	echo -e "ERROR - $ibvcount Block Volumes detected but $bvcount processed."
+else
+	echo -e "DONE - $nvcount NVME disks processed, $bvcount Block Volumes processed."
+fi
+
