@@ -914,9 +914,9 @@ def setup_impala(HA):
         impalad=service.get_role_config_group("{0}-IMPALAD-BASE".format(service_name))
         impalad.update_config({"log_dir": LOG_DIR+"/impalad",
                                "impalad_memory_limit": getParameterValue(cmx.vmsize, "impalad_memory_limit")})
-        llama=service.get_role_config_group("{0}-LLAMA-BASE".format(service_name))
-	llama.update_config({"log_dir": LOG_DIR+"/impala-llama",
-			     "llama_java_heapsize": "1073741824"})
+        #llama=service.get_role_config_group("{0}-LLAMA-BASE".format(service_name))
+	#llama.update_config({"log_dir": LOG_DIR+"/impala-llama",
+	#		     "llama_java_heapsize": "1073741824"})
         ss = service.get_role_config_group("{0}-STATESTORE-BASE".format(service_name))
         ss.update_config({"log_dir": LOG_DIR+"/statestore"})
         cs = service.get_role_config_group("{0}-CATALOGSERVER-BASE".format(service_name))
