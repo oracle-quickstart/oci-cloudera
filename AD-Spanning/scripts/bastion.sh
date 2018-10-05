@@ -34,69 +34,50 @@ ssh_check () {
 }
 
 host_discovery () {
-## If Domain is modified in VCN config, this needs to be changed
-domain=".cdhvcn.oraclevcn.com"
+## UTILITY NODE DISCOVERY
 endcheck=1
-i=1
-while [ $endcheck != 0 ]; do
-        check=0
-        for d in `seq 1 3`; do
-                hname=`nslookup cdh-utility-${i}.public${d}${domain} | grep Name`
-                seqchk=`echo -e $?`
-                if [ $seqchk = "0" ]; then
-                        echo $hname | gawk '{print $2}'
-                        check="1"
+while [ "$endcheck" = "1" ]; do
+        for i in `seq 1 3`; do
+                hname=`host cdh-utility-${i}`
+                hchk=$?
+                if [ "$hchk" = "1" ]; then
+                        endcheck="0"
+                else
+                        echo "$hname" | head -n 1 | gawk '{print $1}'
+                        endcheck="1"
                 fi
         done;
-        if [ $check = "0" ]; then
-                endcheck=0
-        else
-                endcheck=1
-                i=$((i+1))
-        fi
-done
+done;
 
 ## MASTER NODE DISCOVERY
 endcheck=1
-i=1
-while [ $endcheck != 0 ]; do
-        check=0
-        for d in `seq 1 3`; do
-                hname=`nslookup cdh-master-${i}.private${d}${domain} | grep Name`
-                seqchk=`echo -e $?`
-                if [ $seqchk = "0" ]; then
-                        echo $hname | gawk '{print $2}'
-                        check="1"
+while [ "$endcheck" = "1" ]; do
+        for i in `seq 1 3`; do
+                hname=`host cdh-master-${i}`
+                hchk=$?
+                if [ "$hchk" = "1" ]; then
+                        endcheck="0"
+                else
+                        echo "$hname" | head -n 1 | gawk '{print $1}'
+                        endcheck="1"
                 fi
         done;
-        if [ $check = "0" ]; then
-                endcheck=0
-        else
-                endcheck=1
-                i=$((i+1))
-        fi
-done
+done;
 
 ## WORKER NODE DISCOVERY
 endcheck=1
 i=1
-while [ $endcheck != 0 ]; do
-        check=0
-        for d in `seq 1 3`; do
-                hname=`nslookup cdh-worker-${i}.private${d}${domain} | grep Name`
-                seqchk=`echo -e $?`
-                if [ $seqchk = "0" ]; then
-                        echo $hname | gawk '{print $2}'
-                        check="1"
-                fi
-        done;
-        if [ $check = "0" ]; then
-                endcheck=0
+while [ "$endcheck" != 0 ]; do
+        hname=`host cdh-worker-${i}`
+        hchk=$?
+        if [ "$hchk" = "1" ]; then
+                endcheck="0"
         else
-                endcheck=1
-                i=$((i+1))
+                echo "$hname" | head -n 1 | gawk '{print $1}'
+                endcheck="1"
         fi
-done
+        i=$((i+1))
+done;
 }
 
 ### Firewall Configuration
