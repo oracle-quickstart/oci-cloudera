@@ -60,6 +60,7 @@ nvcount="0"
 bvcount="0"
 ## Execute - will format all devices except sda for use as data disks in HDFS 
 dcount=0
+for disk in `cat /proc/partitions | grep -ivw 'sda' | grep -ivw 'sda[1-3]' | sed 1,2d | gawk '{print $4}'`; do
 for disk in `sudo cat /proc/partitions | grep -iv sda | sed 1,2d | gawk '{print $4}'`; do
 	echo -e "\nProcessing /dev/$disk"
 	sudo mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/$disk
