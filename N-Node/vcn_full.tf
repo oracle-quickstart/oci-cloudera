@@ -43,14 +43,6 @@ resource "oci_core_security_list" "PublicSubnet" {
     }]
     ingress_security_rules = [{
         tcp_options {
-            "max" = 8088
-            "min" = 8088
-        }
-        protocol = "6"
-        source = "0.0.0.0/0"
-    }]
-    ingress_security_rules = [{
-        tcp_options {
             "max" = 19888
             "min" = 19888
         }
