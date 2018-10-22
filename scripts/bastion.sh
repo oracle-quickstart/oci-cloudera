@@ -233,3 +233,11 @@ ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${
 echo -e "--------------------------------------------------------------------"
 echo -e "---------------------CLUSTER SETUP COMPLETE-------------------------"
 echo -e "--------------------------------------------------------------------"
+
+if [ -d post-setup-scripts ]; then 
+	echo -e "---Running Post Installation Scripts---"
+	for script in `ls post-setup-scripts/`; do
+		sh post-setup-scripts/${script}
+	done;
+fi
+
