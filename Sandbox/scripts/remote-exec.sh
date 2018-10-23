@@ -1,4 +1,5 @@
 #!/bin/bash
+
 ### Firewall Configuration
 ## Set this flag to 1 to enable host firewall, 0 to disable
 firewall_on="1"
@@ -6,7 +7,9 @@ firewall_on="1"
 #### MAIN EXECUTION BEGIN ####
 cd /home/opc/
 setenforce 0
+
 ### Tune Host
+
 ## Install Java
 yum install java-1.8.0-openjdk.x86_64 -y
 
@@ -36,31 +39,32 @@ sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
 
 ## Firewall Setup
 if [ $firewall_on = "1" ]; then
-        echo -e "\tSetting up Firewall Ports"
-               	echo -e "Port 7180"
-               	 firewall-cmd --zone=public --add-port=7180/tcp
-		echo -e "Port 8888"
-		 firewall-cmd --zone=public --add-port=8888/tcp
-		echo -e "Port 80"
-		 firewall-cmd --zone=public --add-port=80/tcp
-                 firewall-cmd --runtime-to-permanent
-		echo -e "DONE"
-        else
-                systemctl stop firewalld
-                systemctl disable firewalld
-	fi
+  echo -e "\tSetting up Firewall Ports"
+  echo -e "Port 7180"
+  firewall-cmd --zone=public --add-port=7180/tcp
+  echo -e "Port 8888"
+  firewall-cmd --zone=public --add-port=8888/tcp
+  echo -e "Port 80"
+  firewall-cmd --zone=public --add-port=80/tcp
+  firewall-cmd --runtime-to-permanent
+  echo -e "DONE"
+else
+  systemctl stop firewalld
+  systemctl disable firewalld
+fi
 
 echo -e "Downloading CDH5 Docker Container..."
 echo -e "Installing Docker..."
+
 yum install docker.x86_64 -y
 #sed -i 's/DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS= --storage-opt dm.basesize=20G/g' /etc/sysconfig/docker-storage
 systemctl start docker
 
 statuschk=`echo -e $?`
-if [ $statuschk = "0" ]; then 
+if [ $statuschk = "0" ]; then
 	continue
 else
-	while [ $statuschk != "0" ]; do 
+	while [ $statuschk != "0" ]; do
 		systemctl restart docker
 		statuschk=`echo -e $?`
 		sleep 1
@@ -68,6 +72,9 @@ else
 fi
 
 echo -e "Downloading CDH5 Docker Container..."
+# This module specifically uses wget to fetch a specific version of the Cloudera Docker container.
+# This is because the version currently available in public Docker registry is an older version.
+# The wget command should be updated to fetch the latest Cloudera Docker container when new versions are released.
 wget https://downloads.cloudera.com/demo_vm/docker/cloudera-quickstart-vm-5.13.0-0-beta-docker.tar.gz
 tar -zxvf cloudera-quickstart-vm-5.13.0-0-beta-docker.tar.gz
 docker import - cloudera/quickstart:latest < cloudera-quickstart-vm-*-docker/*.tar
@@ -78,7 +85,7 @@ docker run -d --hostname=quickstart.cloudera --privileged=true -it -p 7180:7180 
 quickstart_ps=`docker ps | sed 1d | gawk '{print $1}'`
 t=0
 echo -e "Waiting 120 seconds on startup..."
-while [ $t -le 120 ]; do 
+while [ $t -le 120 ]; do
 	echo -e "$t"
 	sleep 5
 	t=$((t+5))
@@ -92,7 +99,3 @@ mkdir -p /home/cloudera/.ssh
 cp /home/opc/.ssh/authorized_keys /home/cloudera/.ssh/
 chown cloudera:cloudera -R /home/cloudera
 echo "cloudera    ALL=(ALL)       ALL" >> /etc/sudoers
-
-
-
-
