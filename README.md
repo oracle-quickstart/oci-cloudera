@@ -19,7 +19,7 @@ This environment provides a much higher HDFS storage capacity, along with a comp
 | Minimum     | BM.Standard1.16 with 3x700GB Block Storage Devices | VM.Standard1.4   | VM.Standard1.8   |                   
 | Recommended | BM.Standard2.24 with 3x1TB Block Storage Devices   | VM.Standard2.4   | VM.Standard2.8   |
 
-## Production Starter
+## Production
 [Production](Production) is the most powerful preconfigured option.  It provides high density, high performance and high availability.  It is an appropriate entry point for scaling up a production big data practice.
 
 |             | Worker Nodes   | Bastion Instance         | Utility and Master Instances |
