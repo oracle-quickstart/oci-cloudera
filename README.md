@@ -7,10 +7,24 @@ These are Terraform modules for deploying Cloudera Enterprise Data Hub (EDH) on 
 * [N-Node](N-Node) deploys a cluster of arbitrary size.
 * [AD-Spanning](AD-Spanning) is a variation of the N-Node deployment that spans all ADs in a region.  This provides the most highly available solution for running Cloudera EDH on OCI.
 
-## How to use these Modules
-In addition to an active tenancy on OCI, you will need a functional installation of Terraform, and an API key for a privileged user in the tenancy.  See these documentation links for more information:
+## Prerequisites
+First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/cloud-partners/oci-prerequisites).
 
-* [Getting Started with Terraform on OCI](https://docs.cloud.oracle.com/iaas/Content/API/SDKDocs/terraformgetstarted.htm)
-* [How to Generate an API Signing Key](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/apisigningkey.htm#How)
+## Clone the Module
+Now, you'll want a local copy of this repo.  You can make that with the commands:
 
-Once the prerequisites are in place, you will need to copy the templates from this repository to where you have Terraform installed.
+    git clone https://github.com/cloud-partners/oci-cloudera-edh.git
+    cd oci-couchbase/terraform
+    ls
+
+## Deploy
+You can deploy with the following Terraform commands:
+
+    terraform init
+    terraform plan
+    terraform apply
+
+## Destroy the Deployment
+When you no longer need the deployment, you can run this command to destroy it:
+
+    terraform destroy
