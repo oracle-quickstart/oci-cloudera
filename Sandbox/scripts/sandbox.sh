@@ -1,4 +1,5 @@
 #!/bin/bash
+
 ### Firewall Configuration
 ## Set this flag to 1 to enable host firewall, 0 to disable
 firewall_on="1"
@@ -57,10 +58,10 @@ yum install docker.x86_64 -y
 systemctl start docker
 
 statuschk=`echo -e $?`
-if [ $statuschk = "0" ]; then 
+if [ $statuschk = "0" ]; then
 	continue
 else
-	while [ $statuschk != "0" ]; do 
+	while [ $statuschk != "0" ]; do
 		systemctl restart docker
 		statuschk=`echo -e $?`
 		sleep 1
@@ -78,7 +79,7 @@ docker run -d --hostname=quickstart.cloudera --privileged=true -it -p 7180:7180 
 quickstart_ps=`docker ps | sed 1d | gawk '{print $1}'`
 t=0
 echo -e "Waiting 120 seconds on startup..."
-while [ $t -le 120 ]; do 
+while [ $t -le 120 ]; do
 	echo -e "$t"
 	sleep 5
 	t=$((t+5))
@@ -92,7 +93,3 @@ mkdir -p /home/cloudera/.ssh
 cp /home/opc/.ssh/authorized_keys /home/cloudera/.ssh/
 chown cloudera:cloudera -R /home/cloudera
 echo "cloudera    ALL=(ALL)       ALL" >> /etc/sudoers
-
-
-
-
