@@ -18,11 +18,13 @@ Now, you'll want a local copy of this repo.  You can make that with the commands
     ls
 
 ## Deploy
-You can deploy with the following Terraform commands:
+Pick a module and `cd` into the directory containing it.  You can deploy with the following Terraform commands:
 
     terraform init
     terraform plan
     terraform apply
+
+When complete, Terraform will print information on how you can access the deployment.
 
 ## Destroy the Deployment
 When you no longer need the deployment, you can run this command to destroy it:
