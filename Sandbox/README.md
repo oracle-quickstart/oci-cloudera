@@ -1,7 +1,7 @@
 # Sandbox
 
 ## Usage Guide
-Note that this installation is a stand-alone instance running the Cloudera VM Docker image.  This is a self contained environment.   Access to the Sandbox is done via post deployment URLs.  SSH access is also possible, but because this is running inside docker, shell commands to the container require attaching to the Docker container first:
+This sets up an instance running the Cloudera VM Docker image.  This is a self contained environment.   Access to the Sandbox is done via post deployment URLs.  SSH access is also possible, but because this is running inside docker, shell commands to the container require attaching to the Docker container first:
 
     ssh -i ~/.ssh/id_rsa opc@<sandbox_public_ip>
     sudo docker ps

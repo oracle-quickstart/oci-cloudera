@@ -1,5 +1,4 @@
 #!/bin/bash
-## cloud-init bootstrap script
 
 ## set speedup="1" to bypass host reboot - should set selinux to permissive mode allowing for faster deployment
 speedup="1"
