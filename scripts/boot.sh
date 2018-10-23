@@ -14,14 +14,14 @@ if [ $speedup = "0" ]; then
 		fi
 	fi
 elif [ $speedup = "1" ]; then
-        if [ -f /etc/selinux/config ]; then
-                selinuxchk=`sudo cat /etc/selinux/config | grep enforcing`
-                selinux_chk=`echo -e $?`
-                if [ $selinux_chk = "0" ]; then
-                        sudo sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+	if [ -f /etc/selinux/config ]; then
+		selinuxchk=`sudo cat /etc/selinux/config | grep enforcing`
+		selinux_chk=`echo -e $?`
+		if [ $selinux_chk = "0" ]; then
+			sudo sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 			sudo setenforce 0
-                fi
-        fi
+		fi
+	fi
 fi
 
 ## Custom Boot Volume Extension

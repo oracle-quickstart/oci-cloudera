@@ -21,41 +21,42 @@ from cm_api.api_client import ApiResource, ApiException
 from cm_api.endpoints.hosts import *
 from cm_api.endpoints.services import ApiServiceSetupInfo, ApiService
 
-LOG_DIR='/log/cloudera'
+LOG_DIR = '/log/cloudera'
+
 
 def getParameterValue(vmsize, parameter):
-    log("vmsize: "+vmsize+", parameter:"+parameter)
+    log("vmsize: " + vmsize + ", parameter:" + parameter)
     switcher = {
         "BM.DenseIO2.52:yarn_nodemanager_resource_cpu_vcores": "208",
         "BM.DenseIO2.52:yarn_nodemanager_resource_memory_mb": "786432",
         "BM.DenseIO2.52:impalad_memory_limit": "274877906944",
         "BM.DenseIO2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.DenseIO2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-	"BM.DenseIO2.52:dfs_replication": "3",
+        "BM.DenseIO2.52:dfs_replication": "3",
         "BM.DenseIO1.36:yarn_nodemanager_resource_cpu_vcores": "128",
         "BM.DenseIO1.36:yarn_nodemanager_resource_memory_mb": "524288",
         "BM.DenseIO1.36:impalad_memory_limit": "274877906944",
         "BM.DenseIO1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.DenseIO1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-	"BM.DenseIO1.36:dfs_replication": "3",
-	"BM.Standard2.52:yarn_nodemanager_resource_cpu_vcores": "208",
+        "BM.DenseIO1.36:dfs_replication": "3",
+        "BM.Standard2.52:yarn_nodemanager_resource_cpu_vcores": "208",
         "BM.Standard2.52:yarn_nodemanager_resource_memory_mb": "786432",
         "BM.Standard2.52:impalad_memory_limit": "274877906944",
         "BM.Standard2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.Standard2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-	"BM.Standard2.52:dfs_replication": "1",
+        "BM.Standard2.52:dfs_replication": "1",
         "BM.Standard1.36:yarn_nodemanager_resource_cpu_vcores": "128",
         "BM.Standard1.36:yarn_nodemanager_resource_memory_mb": "242688",
         "BM.Standard1.36:impalad_memory_limit": "122857142857",
-	"BM.Standard1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-	"BM.Standard1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-	"BM.Standard1.36:dfs_replication": "1",
-	"VM.Standard2.24:yarn_nodemanager_resource_cpu_vcores": "80",
+        "BM.Standard1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
+        "BM.Standard1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
+        "BM.Standard1.36:dfs_replication": "1",
+        "VM.Standard2.24:yarn_nodemanager_resource_cpu_vcores": "80",
         "VM.Standard2.24:yarn_nodemanager_resource_memory_mb": "308224",
         "VM.Standard2.24:impalad_memory_limit": "122857142857",
         "VM.Standard2.24:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
         "VM.Standard2.24:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
-	"VM.Standard2.24:dfs_replication": "1",
+        "VM.Standard2.24:dfs_replication": "1",
         "VM.Standard2.16:yarn_nodemanager_resource_cpu_vcores": "48",
         "VM.Standard2.16:yarn_nodemanager_resource_memory_mb": "237568",
         "VM.Standard2.16:impalad_memory_limit": "42949672960",
@@ -67,7 +68,7 @@ def getParameterValue(vmsize, parameter):
         "VM.Standard1.16:impalad_memory_limit": "42949672960",
         "VM.Standard1.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard1.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-	"VM.Standard1.16:dfs_replication": "1",
+        "VM.Standard1.16:dfs_replication": "1",
         "VM.Standard2.8:yarn_nodemanager_resource_cpu_vcores": "16",
         "VM.Standard2.8:yarn_nodemanager_resource_memory_mb": "114688",
         "VM.Standard2.8:impalad_memory_limit": "21500000000",
@@ -86,41 +87,46 @@ def getParameterValue(vmsize, parameter):
         "VM.DenseIO1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO1.8:dfs_replication": "3",
-	"VM.Standard1.8:yarn_nodemanager_resource_cpu_vcores": "16",
+        "VM.Standard1.8:yarn_nodemanager_resource_cpu_vcores": "16",
         "VM.Standard1.8:yarn_nodemanager_resource_memory_mb": "37888",
         "VM.Standard1.8:impalad_memory_limit": "21500000000",
         "VM.Standard1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-	"VM.Standard1.8:dfs_replication": "1",
+        "VM.Standard1.8:dfs_replication": "1",
     }
-    return switcher.get(vmsize+":"+parameter)
+    return switcher.get(vmsize + ":" + parameter)
+
 
 def getDataDiskCount():
-    bashCommand="sudo lsblk | grep /data | grep -v /data/ | wc -l"
-    client=SSHClient()
+    bashCommand = "sudo lsblk | grep /data | grep -v /data/ | wc -l"
+    client = SSHClient()
     client.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
     log(socket.getfqdn("CDH-Worker-1"))
-    toconnect=socket.getfqdn("CDH-Worker-1").replace("-mn0", "-dn0")
+    toconnect = socket.getfqdn("CDH-Worker-1").replace("-mn0", "-dn0")
     log(toconnect)
-    client.connect(toconnect, username=cmx.ssh_root_user, key_filename='/home/opc/.ssh/id_rsa')
+    client.connect(toconnect, username=cmx.ssh_root_user,
+                   key_filename='/home/opc/.ssh/id_rsa')
     stdin, stdout, stderr = client.exec_command(bashCommand)
-    count=stdout.readline().rstrip('\n')
+    count = stdout.readline().rstrip('\n')
     return count
 
+
 def setZookeeperOwnerDir(HA):
-    os.system("sudo chown zookeeper:zookeeper "+LOG_DIR+"/zookeeper")
+    os.system("sudo chown zookeeper:zookeeper " + LOG_DIR + "/zookeeper")
     # setup other masters in HA environment
     if HA:
-        client=SSHClient()
+        client = SSHClient()
         client.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
-        toconnect=socket.getfqdn(cmx.cm_server).replace("-mn0", "-mn1")
-        client.connect(toconnect, username=cmx.ssh_root_user, key_filename='/home/opc/.ssh/id_rsa')
-        client.exec_command("sudo chown zookeeper:zookeeper "+LOG_DIR+"/zookeeper")
-        toconnect=socket.getfqdn(cmx.cm_server).replace("-mn0", "-mn2")
-        client.connect(toconnect, username=cmx.ssh_root_user, key_filename='/home/opc/.ssh/id_rsa')
-        client.exec_command("sudo chown zookeeper:zookeeper "+LOG_DIR+"/zookeeper")
-
-
+        toconnect = socket.getfqdn(cmx.cm_server).replace("-mn0", "-mn1")
+        client.connect(toconnect, username=cmx.ssh_root_user,
+                       key_filename='/home/opc/.ssh/id_rsa')
+        client.exec_command(
+            "sudo chown zookeeper:zookeeper " + LOG_DIR + "/zookeeper")
+        toconnect = socket.getfqdn(cmx.cm_server).replace("-mn0", "-mn2")
+        client.connect(toconnect, username=cmx.ssh_root_user,
+                       key_filename='/home/opc/.ssh/id_rsa')
+        client.exec_command(
+            "sudo chown zookeeper:zookeeper " + LOG_DIR + "/zookeeper")
 
 
 def init_cluster():
@@ -128,10 +134,12 @@ def init_cluster():
     Initialise Cluster
     :return:
     """
-    #using default username/password to login first, create new admin user base on provided value, then delete admin
-    api = ApiResource(server_host=cmx.cm_server, username="admin", password="admin")
+    # using default username/password to login first, create new admin user base on provided value, then delete admin
+    api = ApiResource(server_host=cmx.cm_server,
+                      username="admin", password="admin")
     api.create_user(cmx.username, cmx.password, ['ROLE_ADMIN'])
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     api.delete_user("admin")
 
     # Update Cloudera Manager configuration
@@ -153,7 +161,8 @@ def add_hosts_to_cluster():
     :return:
     """
     print "> Add hosts to Cluster: %s" % cmx.cluster_name
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     cm = api.get_cloudera_manager()
 
@@ -163,10 +172,10 @@ def add_hosts_to_cluster():
     if host_list:
         cmd = cm.host_install(user_name=cmx.ssh_root_user, host_names=host_list,
                               password=cmx.ssh_root_password, private_key=cmx.ssh_private_key)
-	print "Installing host(s) to cluster '%s' - [ http://%s:7180/cmf/command/%s/details ]" % \
+        print "Installing host(s) to cluster '%s' - [ http://%s:7180/cmf/command/%s/details ]" % \
               (socket.getfqdn(cmx.cm_server), cmx.cm_server, cmd.id)
-        ## STATUS CHECK HERE
-	#check.status_for_command("Hosts: %s " % host_list, cmd)
+        # STATUS CHECK HERE
+        #check.status_for_command("Hosts: %s " % host_list, cmd)
         print "Installing hosts. This might take a while."
         while cmd.success == None:
             sleep(20)
@@ -181,7 +190,8 @@ def add_hosts_to_cluster():
     hosts = []
     for host in api.get_all_hosts():
         if host.hostId not in [x.hostId for x in cluster.list_hosts()]:
-            print "Adding {'ip': '%s', 'hostname': '%s', 'hostId': '%s'}" % (host.ipAddress, host.hostname, host.hostId)
+            print "Adding {'ip': '%s', 'hostname': '%s', 'hostId': '%s'}" % (
+                host.ipAddress, host.hostname, host.hostId)
             hosts.append(host.hostId)
 
     print "adding new hosts to cluster"
@@ -198,7 +208,8 @@ def host_rack():
     """
     # TODO: Add host to rack
     print "> Add host to rack"
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     hosts = []
     for h in api.get_all_hosts():
@@ -206,31 +217,34 @@ def host_rack():
         # socket.gethostbyname(h.hostname),
         # "/default_rack")
         if "private1" in h.hostname:
-		h.set_rack_id("/rack1")
-		print "Adding '%s' to /rack1" % (h.hostname)
-	elif "private2" in h.hostname:
-		h.set_rack_id("/rack2")
-		print "Adding '%s' to /rack2" % (h.hostname)
-	elif "private3" in h.hostname:
-		h.set_rack_id("/rack3")
-		print "Adding '%s' to /rack3" % (h.hostname)
-	else:
-		h.set_rack_id("/default")
-		print "Adding '%s' to /default" % (h.hostname)
+            h.set_rack_id("/rack1")
+            print "Adding '%s' to /rack1" % (h.hostname)
+        elif "private2" in h.hostname:
+            h.set_rack_id("/rack2")
+            print "Adding '%s' to /rack2" % (h.hostname)
+        elif "private3" in h.hostname:
+            h.set_rack_id("/rack3")
+            print "Adding '%s' to /rack3" % (h.hostname)
+        else:
+            h.set_rack_id("/default")
+            print "Adding '%s' to /default" % (h.hostname)
         hosts.append(h)
 
     hosts.append(hosts)
+
 
 def deploy_parcel(parcel_product, parcel_version):
     """
     Deploy parcels
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     parcel = cluster.get_parcel(parcel_product, parcel_version)
     if parcel.stage != 'ACTIVATED':
-        print "> Deploying parcel: [ %s-%s ]" % (parcel_product, parcel_version)
+        print "> Deploying parcel: [ %s-%s ]" % (
+            parcel_product, parcel_version)
         parcel.start_download()
         # unlike other commands, check progress by looking at parcel stage and status
         while True:
@@ -239,7 +253,8 @@ def deploy_parcel(parcel_product, parcel_version):
                 break
            # if parcel.state.errors:
             #    raise Exception(str(parcel.state.errors))
-            msg = " [%s: %s / %s]" % (parcel.stage, parcel.state.progress, parcel.state.totalProgress)
+            msg = " [%s: %s / %s]" % (parcel.stage,
+                                      parcel.state.progress, parcel.state.totalProgress)
             sys.stdout.write(msg + " " * (78 - len(msg)) + "\r")
             sys.stdout.flush()
 
@@ -253,7 +268,8 @@ def deploy_parcel(parcel_product, parcel_version):
                 break
            # if parcel.state.errors:
                # raise Exception(str(parcel.state.errors))
-            msg = " [%s: %s / %s]" % (parcel.stage, parcel.state.progress, parcel.state.totalProgress)
+            msg = " [%s: %s / %s]" % (parcel.stage,
+                                      parcel.state.progress, parcel.state.totalProgress)
             sys.stdout.write(msg + " " * (78 - len(msg)) + "\r")
             sys.stdout.flush()
 
@@ -264,7 +280,8 @@ def deploy_parcel(parcel_product, parcel_version):
         while True:
             parcel = cluster.get_parcel(parcel_product, parcel_version)
             if parcel.stage != 'ACTIVATED':
-                msg = " [%s: %s / %s]" % (parcel.stage, parcel.state.progress, parcel.state.totalProgress)
+                msg = " [%s: %s / %s]" % (parcel.stage,
+                                          parcel.state.progress, parcel.state.totalProgress)
                 sys.stdout.write(msg + " " * (78 - len(msg)) + "\r")
                 sys.stdout.flush()
            # elif parcel.state.errors:
@@ -281,7 +298,8 @@ def setup_zookeeper(HA):
     Starting ZooKeeper Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "ZOOKEEPER"
     if cdh.get_service_type(service_type) is None:
@@ -292,7 +310,7 @@ def setup_zookeeper(HA):
         service = cluster.get_service(service_name)
 
         hosts = management.get_hosts()
-        cmhost= management.get_cmhost()
+        cmhost = management.get_cmhost()
 
         service.update_config({"zookeeper_datadir_autocreate": True})
 
@@ -303,23 +321,23 @@ def setup_zookeeper(HA):
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "SERVER":
                 rcg.update_config({"maxClientCnxns": "1024",
-                                   "dataLogDir": LOG_DIR+"/zookeeper",
-                                   "dataDir": LOG_DIR+"/zookeeper",
-                                   "zk_server_log_dir": LOG_DIR+"/zookeeper"})
+                                   "dataLogDir": LOG_DIR + "/zookeeper",
+                                   "dataDir": LOG_DIR + "/zookeeper",
+                                   "zk_server_log_dir": LOG_DIR + "/zookeeper"})
                 # Pick 3 hosts and deploy Zookeeper Server role for Zookeeper HA
                 # mingrui change install on primary, secondary, and CM
                 if HA:
                     print cmhost
-                    print [x for x in hosts if x.id == 0 ][0]
-                    print [x for x in hosts if x.id == 1 ][0]
+                    print [x for x in hosts if x.id == 0][0]
+                    print [x for x in hosts if x.id == 1][0]
                     cdh.create_service_role(service, rcg.roleType, cmhost)
-                    cdh.create_service_role(service, rcg.roleType, [x for x in hosts if x.id == 0 ][0])
-                    cdh.create_service_role(service, rcg.roleType, [x for x in hosts if x.id == 1 ][0])
-                #No HA, using POC setup, all service in one master node aka the cm host
+                    cdh.create_service_role(service, rcg.roleType, [
+                                            x for x in hosts if x.id == 0][0])
+                    cdh.create_service_role(service, rcg.roleType, [
+                                            x for x in hosts if x.id == 1][0])
+                # No HA, using POC setup, all service in one master node aka the cm host
                 else:
                     cdh.create_service_role(service, rcg.roleType, cmhost)
-
-
 
         # init_zookeeper not required as the API performs this when adding Zookeeper
         # check.status_for_command("Waiting for ZooKeeper Service to initialize", service.init_zookeeper())
@@ -334,7 +352,8 @@ def setup_hdfs(HA):
     > Creating HDFS /tmp directory
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "HDFS"
     if cdh.get_service_type(service_type) is None:
@@ -347,7 +366,7 @@ def setup_hdfs(HA):
 
         # Service-Wide
         service_config = cdh.dependencies_for(service)
-        service_config.update({"dfs_replication": getParameterValue(cmx.vmsize,"dfs_replication"),
+        service_config.update({"dfs_replication": getParameterValue(cmx.vmsize, "dfs_replication"),
                                "dfs_block_local_path_access_user": "impala,hbase,mapred,spark"})
         service.update_config(service_config)
 
@@ -357,35 +376,32 @@ def setup_hdfs(HA):
         default_snn_dir_list = ""
         default_data_dir_list = ""
 
-
         dfs_name_dir_list = default_name_dir_list
         dfs_snn_dir_list = default_snn_dir_list
         dfs_data_dir_list = default_data_dir_list
 
-	data_tiering_file = os.path.isfile("/home/opc/hdfs_data_tiering.txt")
-	if data_tiering_file is True:
-		with open("/home/opc/hdfs_data_tiering.txt") as d:
-			dfs_data_dir_list = d.readline().strip()
-	else:
-		## Normal dfs.data.dir setup
-        	for x in range(int(diskcount)):
-			if x is 0:
-				dfs_data_dir_list+="/data%d/dfs/dn" % (x)
-			else:
-				dfs_data_dir_list+=",/data%d/dfs/dn" % (x)
+        data_tiering_file = os.path.isfile("/home/opc/hdfs_data_tiering.txt")
+        if data_tiering_file is True:
+            with open("/home/opc/hdfs_data_tiering.txt") as d:
+                dfs_data_dir_list = d.readline().strip()
+        else:
+            # Normal dfs.data.dir setup
+            for x in range(int(diskcount)):
+                if x is 0:
+                    dfs_data_dir_list += "/data%d/dfs/dn" % (x)
+                else:
+                    dfs_data_dir_list += ",/data%d/dfs/dn" % (x)
 
-        dfs_name_dir_list+=",/data/dfs/nn"
-        dfs_snn_dir_list+=",/data/dfs/snn"
+        dfs_name_dir_list += ",/data/dfs/nn"
+        dfs_snn_dir_list += ",/data/dfs/snn"
 
-        #No HA, using POC setup, all service in one master node aka the cm host
+        # No HA, using POC setup, all service in one master node aka the cm host
         if not HA:
-            nn_host_id=management.get_cmhost()
-            snn_host_id=management.get_cmhost()
+            nn_host_id = management.get_cmhost()
+            snn_host_id = management.get_cmhost()
         else:
             nn_host_id = [host for host in hosts if host.id == 0][0]
             snn_host_id = [host for host in hosts if host.id == 1][0]
-
-
 
         # Role Config Group equivalent to Service Default Group
         for rcg in [x for x in service.get_all_role_config_groups()]:
@@ -396,13 +412,13 @@ def setup_hdfs(HA):
                                    "dfs_namenode_handler_count": "70",
                                    "dfs_namenode_service_handler_count": "70",
                                    "dfs_namenode_servicerpc_address": "8022",
-                                   "namenode_log_dir": LOG_DIR+"/hadoop-hdfs"})
+                                   "namenode_log_dir": LOG_DIR + "/hadoop-hdfs"})
                 cdh.create_service_role(service, rcg.roleType, nn_host_id)
             if rcg.roleType == "SECONDARYNAMENODE":
                 # hdfs-SECONDARYNAMENODE - Default Group
                 rcg.update_config({"fs_checkpoint_dir_list": dfs_snn_dir_list,
                                    "secondary_namenode_java_heapsize": "4196000000",
-                                   "secondarynamenode_log_dir": LOG_DIR+"/hadoop-hdfs"})
+                                   "secondarynamenode_log_dir": LOG_DIR + "/hadoop-hdfs"})
                 # chose a server that it's not NN, easier to enable HDFS-HA later
 
                 cdh.create_service_role(service, rcg.roleType, snn_host_id)
@@ -415,26 +431,26 @@ def setup_hdfs(HA):
                                    "dfs_datanode_du_reserved": "3508717158",
                                    "dfs_datanode_failed_volumes_tolerated": "0",
                                    "dfs_datanode_max_locked_memory": "1257242624",
-				   "dfs_datanode_max_xcievers": "16384",
-                                   "datanode_log_dir": LOG_DIR+"/hadoop-hdfs"})
+                                   "dfs_datanode_max_xcievers": "16384",
+                                   "datanode_log_dir": LOG_DIR + "/hadoop-hdfs"})
             if rcg.roleType == "FAILOVERCONTROLLER":
-                rcg.update_config({"failover_controller_log_dir": LOG_DIR+"/hadoop-hdfs"})
+                rcg.update_config(
+                    {"failover_controller_log_dir": LOG_DIR + "/hadoop-hdfs"})
             if rcg.roleType == "HTTPFS":
-                rcg.update_config({"httpfs_log_dir": LOG_DIR+"/hadoop-httpfs"})
+                rcg.update_config(
+                    {"httpfs_log_dir": LOG_DIR + "/hadoop-httpfs"})
 
             if rcg.roleType == "GATEWAY":
                 # hdfs-GATEWAY - Default Group
                 rcg.update_config({"dfs_client_use_trash": True})
 
-
-
     # print nn_host_id.hostId
     # print snn_host_id.hostId
     for role_type in ['DATANODE']:
-        for host in management.get_hosts(include_cm_host = False):
+        for host in management.get_hosts(include_cm_host=False):
             if host.hostId != nn_host_id.hostId:
                 if host.hostId != snn_host_id.hostId:
-                            cdh.create_service_role(service, role_type, host)
+                    cdh.create_service_role(service, role_type, host)
 
         for role_type in ['GATEWAY']:
             for host in management.get_hosts(include_cm_host=(role_type == 'GATEWAY')):
@@ -446,12 +462,12 @@ def setup_hdfs(HA):
             check.status_for_command("Format NameNode", cmd)
 
         check.status_for_command("Starting HDFS.", service.start())
-        check.status_for_command("Creating HDFS /tmp directory", service.create_hdfs_tmp())
+        check.status_for_command(
+            "Creating HDFS /tmp directory", service.create_hdfs_tmp())
 
     # Additional HA setting for yarn
     if HA:
         setup_hdfs_ha()
-
 
 
 def setup_hbase():
@@ -461,7 +477,8 @@ def setup_hbase():
     Starting HBase Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "HBASE"
     if cdh.get_service_type(service_type) is None:
@@ -482,23 +499,26 @@ def setup_hbase():
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "MASTER":
                 cdh.create_service_role(service, rcg.roleType, master_host_id)
-                cdh.create_service_role(service, rcg.roleType, backup_master_host_id)
+                cdh.create_service_role(
+                    service, rcg.roleType, backup_master_host_id)
                 cdh.create_service_role(service, rcg.roleType, cmhost)
 
             if rcg.roleType == "REGIONSERVER":
-                for host in management.get_hosts(include_cm_host = False):
+                for host in management.get_hosts(include_cm_host=False):
                     if host.hostId != master_host_id.hostId:
                         if host.hostId != backup_master_host_id.hostId:
-                            cdh.create_service_role(service, rcg.roleType, host)
+                            cdh.create_service_role(
+                                service, rcg.roleType, host)
 
-        #for role_type in ['HBASETHRIFTSERVER', 'HBASERESTSERVER']:
+        # for role_type in ['HBASETHRIFTSERVER', 'HBASERESTSERVER']:
         #    cdh.create_service_role(service, role_type, random.choice(hosts))
 
         for role_type in ['GATEWAY']:
             for host in management.get_hosts(include_cm_host=(role_type == 'GATEWAY')):
                 cdh.create_service_role(service, role_type, host)
 
-        check.status_for_command("Creating HBase root directory", service.create_hbase_root())
+        check.status_for_command(
+            "Creating HBase root directory", service.create_hbase_root())
         check.status_for_command("Starting HBase Service", service.start())
 
 
@@ -510,7 +530,8 @@ def setup_solr():
     Starting Solr Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "SOLR"
     if cdh.get_service_type(service_type) is None:
@@ -527,7 +548,8 @@ def setup_solr():
         # Role Config Group equivalent to Service Default Group
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "SOLR_SERVER":
-                cdh.create_service_role(service, rcg.roleType, [x for x in hosts if x.id == 0][0])
+                cdh.create_service_role(service, rcg.roleType, [
+                                        x for x in hosts if x.id == 0][0])
             if rcg.roleType == "GATEWAY":
                 for host in management.get_hosts(include_cm_host=True):
                     cdh.create_service_role(service, rcg.roleType, host)
@@ -537,7 +559,8 @@ def setup_solr():
 
         # check.status_for_command("Initializing Solr in ZooKeeper", service._cmd('initSolr'))
         # check.status_for_command("Creating HDFS home directory for Solr", service._cmd('createSolrHdfsHomeDir'))
-        check.status_for_command("Initializing Solr in ZooKeeper", service.init_solr())
+        check.status_for_command(
+            "Initializing Solr in ZooKeeper", service.init_solr())
         check.status_for_command("Creating HDFS home directory for Solr",
                                  service.create_solr_hdfs_home_dir())
         # This service is started later on
@@ -549,7 +572,8 @@ def setup_ks_indexer():
     KS_INDEXER
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "KS_INDEXER"
     if cdh.get_service_type(service_type) is None:
@@ -569,12 +593,12 @@ def setup_ks_indexer():
         # HBase Service-Wide configuration
         hbase = cdh.get_service_type('HBASE')
         hbase.stop()
-        hbase.update_config({"hbase_enable_indexing": True, "hbase_enable_replication": True})
+        hbase.update_config({"hbase_enable_indexing": True,
+                             "hbase_enable_replication": True})
         hbase.start()
 
         # This service is started later on
         # check.status_for_command("Starting Lily HBase Indexer Service", service.start())
-
 
 
 def setup_spark_on_yarn():
@@ -582,7 +606,8 @@ def setup_spark_on_yarn():
     Sqoop Client
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "SPARK_ON_YARN"
     if cdh.get_service_type(service_type) is None:
@@ -596,11 +621,12 @@ def setup_spark_on_yarn():
         # Service-Wide
         service.update_config(cdh.dependencies_for(service))
 
-        cmhost= management.get_cmhost()
+        cmhost = management.get_cmhost()
 
-        soy=service.get_role_config_group("{0}-SPARK_YARN_HISTORY_SERVER-BASE".format(service_name))
-        soy.update_config({"log_dir": LOG_DIR+"/spark"})
-        cdh.create_service_role(service, "SPARK_YARN_HISTORY_SERVER",cmhost)
+        soy = service.get_role_config_group(
+            "{0}-SPARK_YARN_HISTORY_SERVER-BASE".format(service_name))
+        soy.update_config({"log_dir": LOG_DIR + "/spark"})
+        cdh.create_service_role(service, "SPARK_YARN_HISTORY_SERVER", cmhost)
 
         for host in management.get_hosts(include_cm_host=True):
             cdh.create_service_role(service, "GATEWAY", host)
@@ -627,7 +653,8 @@ def setup_yarn(HA):
     Starting YARN (MR2 Included) Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "YARN"
     if cdh.get_service_type(service_type) is None:
@@ -646,29 +673,29 @@ def setup_yarn(HA):
         yarn_dir_list = default_yarn_dir_list
 
         for x in range(int(diskcount)):
-          yarn_dir_list+=",/data%d/yarn/nm" % (x)
+            yarn_dir_list += ",/data%d/yarn/nm" % (x)
 
-        cmhost= management.get_cmhost()
+        cmhost = management.get_cmhost()
         rm_host_id = [host for host in hosts if host.id == 0][0]
         srm_host_id = [host for host in hosts if host.id == 1][0]
 
         if not HA:
-            rm_host_id=cmhost
-            srm_host_id=cmhost
+            rm_host_id = cmhost
+            srm_host_id = cmhost
 
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "RESOURCEMANAGER":
                 # yarn-RESOURCEMANAGER - Default Group
                 rcg.update_config({"resource_manager_java_heapsize": "2000000000",
-				   "yarn_scheduler_minimum_allocation_mb": "1024",
+                                   "yarn_scheduler_minimum_allocation_mb": "1024",
                                    "yarn_scheduler_maximum_allocation_mb": "8192",
                                    "yarn_scheduler_maximum_allocation_vcores": "2",
-                                   "resource_manager_log_dir": LOG_DIR+"/hadoop-yarn"})
+                                   "resource_manager_log_dir": LOG_DIR + "/hadoop-yarn"})
                 cdh.create_service_role(service, rcg.roleType, rm_host_id)
             if rcg.roleType == "JOBHISTORY":
                 # yarn-JOBHISTORY - Default Group
                 rcg.update_config({"mr2_jobhistory_java_heapsize": "1000000000",
-                                   "mr2_jobhistory_log_dir": LOG_DIR+"/hadoop-mapreduce"})
+                                   "mr2_jobhistory_log_dir": LOG_DIR + "/hadoop-mapreduce"})
 
                 cdh.create_service_role(service, rcg.roleType, cmhost)
 
@@ -677,38 +704,38 @@ def setup_yarn(HA):
                 rcg.update_config({"yarn_nodemanager_heartbeat_interval_ms": "100",
                                    "node_manager_java_heapsize": "2000000000",
                                    "yarn_nodemanager_local_dirs": yarn_dir_list,
-                                   "yarn_nodemanager_resource_cpu_vcores": getParameterValue(cmx.vmsize,"yarn_nodemanager_resource_cpu_vcores"),
-                                   "yarn_nodemanager_resource_memory_mb": getParameterValue(cmx.vmsize,"yarn_nodemanager_resource_memory_mb"),
-                                   "node_manager_log_dir": LOG_DIR+"/hadoop-yarn",
-                                   "yarn_nodemanager_log_dirs": LOG_DIR+"/hadoop-yarn/container"})
+                                   "yarn_nodemanager_resource_cpu_vcores": getParameterValue(cmx.vmsize, "yarn_nodemanager_resource_cpu_vcores"),
+                                   "yarn_nodemanager_resource_memory_mb": getParameterValue(cmx.vmsize, "yarn_nodemanager_resource_memory_mb"),
+                                   "node_manager_log_dir": LOG_DIR + "/hadoop-yarn",
+                                   "yarn_nodemanager_log_dirs": LOG_DIR + "/hadoop-yarn/container"})
 #                for host in hosts:
 #                    cdh.create_service_role(service, rcg.roleType, host)
             if rcg.roleType == "GATEWAY":
                 # yarn-GATEWAY - Default Group
                 rcg.update_config({"mapred_submit_replication": "3",
-                                   "mapreduce_map_java_opts": getParameterValue(cmx.vmsize,"mapreduce_map_java_opts"),
-                                   "mapreduce_reduce_java_opts": getParameterValue(cmx.vmsize,"mapreduce_reduce_java_opts"),
-				   "io_file_buffer_size": "131072",
-				   "io_sort_mb": "1024",
-				   "yarn_app_mapreduce_am_resource_mb": "4096",
-				   "yarn_app_mapreduce_am_max_heap": "1073741824"})
+                                   "mapreduce_map_java_opts": getParameterValue(cmx.vmsize, "mapreduce_map_java_opts"),
+                                   "mapreduce_reduce_java_opts": getParameterValue(cmx.vmsize, "mapreduce_reduce_java_opts"),
+                                   "io_file_buffer_size": "131072",
+                                   "io_sort_mb": "1024",
+                                   "yarn_app_mapreduce_am_resource_mb": "4096",
+                                   "yarn_app_mapreduce_am_max_heap": "1073741824"})
                 for host in management.get_hosts(include_cm_host=True):
                     cdh.create_service_role(service, rcg.roleType, host)
-
 
         #print rm_host_id.hostId
         #print srm_host_id.hostId
         for role_type in ['NODEMANAGER']:
-                for host in management.get_hosts(include_cm_host = False):
+            for host in management.get_hosts(include_cm_host=False):
                         #print host.hostId
-                        if host.hostId != rm_host_id.hostId:
-                            if host.hostId != srm_host_id.hostId:
-                                cdh.create_service_role(service, role_type, host)
+                if host.hostId != rm_host_id.hostId:
+                    if host.hostId != srm_host_id.hostId:
+                        cdh.create_service_role(service, role_type, host)
 
         # Example of deploy_client_config. Recommended to Deploy Cluster wide client config.
         # cdh.deploy_client_config_for(service)
 
-        check.status_for_command("Creating MR2 job history directory", service.create_yarn_job_history_dir())
+        check.status_for_command(
+            "Creating MR2 job history directory", service.create_yarn_job_history_dir())
         check.status_for_command("Creating NodeManager remote application log directory",
                                  service.create_yarn_node_manager_remote_app_log_dir())
         # This service is started later on
@@ -724,7 +751,8 @@ def setup_mapreduce(HA):
     MapReduce
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "MAPREDUCE"
     if cdh.get_service_type(service_type) is None:
@@ -735,9 +763,9 @@ def setup_mapreduce(HA):
         service = cluster.get_service(service_name)
         hosts = management.get_hosts()
 
-        jk=management.get_cmhost()
+        jk = management.get_cmhost()
         if HA:
-            jk=[x for x in hosts if x.id == 0][0]
+            jk = [x for x in hosts if x.id == 0][0]
 
         # Service-Wide
         service.update_config(cdh.dependencies_for(service))
@@ -745,7 +773,8 @@ def setup_mapreduce(HA):
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "JOBTRACKER":
                 # mapreduce-JOBTRACKER - Default Group
-                rcg.update_config({"jobtracker_mapred_local_dir_list": "/mapred/jt"})
+                rcg.update_config(
+                    {"jobtracker_mapred_local_dir_list": "/mapred/jt"})
                 cdh.create_service_role(service, rcg.roleType, jk)
             if rcg.roleType == "TASKTRACKER":
                 # mapreduce-TASKTRACKER - Default Group
@@ -755,11 +784,11 @@ def setup_mapreduce(HA):
             if rcg.roleType == "GATEWAY":
                 # mapreduce-GATEWAY - Default Group
                 rcg.update_config({"mapred_reduce_tasks": "1", "mapred_submit_replication": "1",
-				   "mapred_map_memory_mb": "4096",
-				   "mapred_map_cpu_vcores": "1",
-				   "mapred_reduce_memory_mb": "8192",
-				   "mapred_reduce_cpu_vcores": "1",
-				   "mapred_map_java_opts_max_heap": "1024"})
+                                   "mapred_map_memory_mb": "4096",
+                                   "mapred_map_cpu_vcores": "1",
+                                   "mapred_reduce_memory_mb": "8192",
+                                   "mapred_reduce_cpu_vcores": "1",
+                                   "mapred_map_java_opts_max_heap": "1024"})
 
         for role_type in ['GATEWAY', 'TASKTRACKER']:
             for host in management.get_hosts(include_cm_host=(role_type == 'GATEWAY')):
@@ -782,7 +811,8 @@ def setup_hive():
     Starting Hive Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "HIVE"
     if cdh.get_service_type(service_type) is None:
@@ -804,16 +834,18 @@ def setup_hive():
         service_config.update(cdh.dependencies_for(service))
         service.update_config(service_config)
 
-        hcat = service.get_role_config_group("{0}-WEBHCAT-BASE".format(service_name))
-        hcat.update_config({"hcatalog_log_dir": LOG_DIR+"/hcatalog"})
-        hs2 = service.get_role_config_group("{0}-HIVESERVER2-BASE".format(service_name))
-        hs2.update_config({"hive_log_dir": LOG_DIR+"/hive"})
-        hms = service.get_role_config_group("{0}-HIVEMETASTORE-BASE".format(service_name))
-        hms.update_config({"hive_log_dir": LOG_DIR+"/hive"})
+        hcat = service.get_role_config_group(
+            "{0}-WEBHCAT-BASE".format(service_name))
+        hcat.update_config({"hcatalog_log_dir": LOG_DIR + "/hcatalog"})
+        hs2 = service.get_role_config_group(
+            "{0}-HIVESERVER2-BASE".format(service_name))
+        hs2.update_config({"hive_log_dir": LOG_DIR + "/hive"})
+        hms = service.get_role_config_group(
+            "{0}-HIVEMETASTORE-BASE".format(service_name))
+        hms.update_config({"hive_log_dir": LOG_DIR + "/hive"})
 
-
-        #install to CM node, mingrui
-        cmhost= management.get_cmhost()
+        # install to CM node, mingrui
+        cmhost = management.get_cmhost()
         for role_type in ['HIVEMETASTORE', 'HIVESERVER2']:
             cdh.create_service_role(service, role_type, cmhost)
 
@@ -823,9 +855,12 @@ def setup_hive():
         # Example of deploy_client_config. Recommended to Deploy Cluster wide client config.
         # cdh.deploy_client_config_for(service)
 
-        check.status_for_command("Creating Hive Metastore Database Tables", service.create_hive_metastore_tables())
-        check.status_for_command("Creating Hive user directory", service.create_hive_userdir())
-        check.status_for_command("Creating Hive warehouse directory", service.create_hive_warehouse())
+        check.status_for_command(
+            "Creating Hive Metastore Database Tables", service.create_hive_metastore_tables())
+        check.status_for_command(
+            "Creating Hive user directory", service.create_hive_userdir())
+        check.status_for_command(
+            "Creating Hive warehouse directory", service.create_hive_warehouse())
         # This service is started later on
         # check.status_for_command("Starting Hive Service", service.start())
 
@@ -837,7 +872,8 @@ def setup_sqoop():
     Starting Sqoop 2 Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "SQOOP"
     if cdh.get_service_type(service_type) is None:
@@ -851,12 +887,13 @@ def setup_sqoop():
         # Service-Wide
         service.update_config(cdh.dependencies_for(service))
 
-        #install to CM node, mingrui
-        cmhost= management.get_cmhost()
+        # install to CM node, mingrui
+        cmhost = management.get_cmhost()
         cdh.create_service_role(service, "SQOOP_SERVER", cmhost)
 
         # check.status_for_command("Creating Sqoop 2 user directory", service._cmd('createSqoopUserDir'))
-        check.status_for_command("Creating Sqoop 2 user directory", service.create_sqoop_user_dir())
+        check.status_for_command(
+            "Creating Sqoop 2 user directory", service.create_sqoop_user_dir())
         # This service is started later on
         # check.status_for_command("Starting Sqoop 2 Service", service.start())
 
@@ -866,7 +903,8 @@ def setup_sqoop_client():
     Sqoop Client
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "SQOOP_CLIENT"
     if cdh.get_service_type(service_type) is None:
@@ -900,13 +938,14 @@ def setup_impala(HA):
     impala_dir_list = default_impala_dir_list
 
     for x in range(int(diskcount)):
-        impala_dir_list+="/data%d/impala/scratch" % (x)
-        max_count=int(diskcount)-1
+        impala_dir_list += "/data%d/impala/scratch" % (x)
+        max_count = int(diskcount) - 1
         if x < max_count:
-          impala_dir_list+=","
-          print "x is %d. Adding comma" % (x)
+            impala_dir_list += ","
+            print "x is %d. Adding comma" % (x)
 
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "IMPALA"
     if cdh.get_service_type(service_type) is None:
@@ -915,7 +954,8 @@ def setup_impala(HA):
         print "Create %s service" % service_name
         cluster.create_service(service_name, service_type)
         service = cluster.get_service(service_name)
-        service_config = {"impala_cmd_args_safety_valve": "-scratch_dirs=%s" % (impala_dir_list) }
+        service_config = {
+            "impala_cmd_args_safety_valve": "-scratch_dirs=%s" % (impala_dir_list)}
         service.update_config(service_config)
         service = cluster.get_service(service_name)
         hosts = management.get_hosts()
@@ -923,18 +963,21 @@ def setup_impala(HA):
         # Service-Wide
         service.update_config(cdh.dependencies_for(service))
 
-        impalad=service.get_role_config_group("{0}-IMPALAD-BASE".format(service_name))
-        impalad.update_config({"log_dir": LOG_DIR+"/impalad",
+        impalad = service.get_role_config_group(
+            "{0}-IMPALAD-BASE".format(service_name))
+        impalad.update_config({"log_dir": LOG_DIR + "/impalad",
                                "impalad_memory_limit": getParameterValue(cmx.vmsize, "impalad_memory_limit")})
-        #llama=service.get_role_config_group("{0}-LLAMA-BASE".format(service_name))
-	#llama.update_config({"log_dir": LOG_DIR+"/impala-llama",
-	#		     "llama_java_heapsize": "1073741824"})
-        ss = service.get_role_config_group("{0}-STATESTORE-BASE".format(service_name))
-        ss.update_config({"log_dir": LOG_DIR+"/statestore"})
-        cs = service.get_role_config_group("{0}-CATALOGSERVER-BASE".format(service_name))
-        cs.update_config({"log_dir": LOG_DIR+"/catalogd"})
+        # llama=service.get_role_config_group("{0}-LLAMA-BASE".format(service_name))
+        # llama.update_config({"log_dir": LOG_DIR+"/impala-llama",
+        #		     "llama_java_heapsize": "1073741824"})
+        ss = service.get_role_config_group(
+            "{0}-STATESTORE-BASE".format(service_name))
+        ss.update_config({"log_dir": LOG_DIR + "/statestore"})
+        cs = service.get_role_config_group(
+            "{0}-CATALOGSERVER-BASE".format(service_name))
+        cs.update_config({"log_dir": LOG_DIR + "/catalogd"})
 
-        cmhost= management.get_cmhost()
+        cmhost = management.get_cmhost()
         for role_type in ['CATALOGSERVER', 'STATESTORE']:
             cdh.create_service_role(service, role_type, cmhost)
 
@@ -945,16 +988,16 @@ def setup_impala(HA):
 
             for host in hosts:
                 # impalad should not be on hn-1 and hn-2
-                if (host.id!=head_node_1_host_id.id and host.id!=head_node_2_host_id.id):
+                if (host.id != head_node_1_host_id.id and host.id != head_node_2_host_id.id):
                     cdh.create_service_role(service, "IMPALAD", host)
         else:
             # All master services on CM host, install impalad on datanode host
             for host in hosts:
-                if (host.id!=cmhost.id):
+                if (host.id != cmhost.id):
                     cdh.create_service_role(service, "IMPALAD", host)
 
-
-        check.status_for_command("Creating Impala user directory", service.create_impala_user_dir())
+        check.status_for_command(
+            "Creating Impala user directory", service.create_impala_user_dir())
         check.status_for_command("Starting Impala Service", service.start())
 
 
@@ -966,7 +1009,8 @@ def setup_oozie():
     Starting Oozie Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "OOZIE"
     if cdh.get_service_type(service_type) is None:
@@ -982,15 +1026,17 @@ def setup_oozie():
 
         # Role Config Group equivalent to Service Default Group
         # install to CM server, mingrui
-        cmhost= management.get_cmhost()
+        cmhost = management.get_cmhost()
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "OOZIE_SERVER":
-                rcg.update_config({"oozie_log_dir": LOG_DIR+"/oozie",
-                                   "oozie_data_dir": LOG_DIR+"/lib/oozie/data"})
+                rcg.update_config({"oozie_log_dir": LOG_DIR + "/oozie",
+                                   "oozie_data_dir": LOG_DIR + "/lib/oozie/data"})
                 cdh.create_service_role(service, rcg.roleType, cmhost)
 
-        check.status_for_command("Creating Oozie database", service.create_oozie_db())
-        check.status_for_command("Installing Oozie ShareLib in HDFS", service.install_oozie_sharelib())
+        check.status_for_command(
+            "Creating Oozie database", service.create_oozie_db())
+        check.status_for_command(
+            "Installing Oozie ShareLib in HDFS", service.install_oozie_sharelib())
         # This service is started later on
         # check.status_for_command("Starting Oozie Service", service.start())
 
@@ -1001,7 +1047,8 @@ def setup_hue():
     Starting Hue Service
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "HUE"
     if cdh.get_service_type(service_type) is None:
@@ -1017,19 +1064,20 @@ def setup_hue():
 
         # Role Config Group equivalent to Service Default Group
         # install to CM, mingrui
-        cmhost= management.get_cmhost()
+        cmhost = management.get_cmhost()
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "HUE_SERVER":
-                rcg.update_config({"hue_server_log_dir": LOG_DIR+"/hue"})
+                rcg.update_config({"hue_server_log_dir": LOG_DIR + "/hue"})
                 cdh.create_service_role(service, "HUE_SERVER", cmhost)
             if rcg.roleType == "KT_RENEWER":
-                rcg.update_config({"kt_renewer_log_dir": LOG_DIR+"/hue"})
+                rcg.update_config({"kt_renewer_log_dir": LOG_DIR + "/hue"})
         # This service is started later on
         # check.status_for_command("Starting Hue Service", service.start())
 
 
 def setup_flume():
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "FLUME"
     if cdh.get_service_type(service_type) is None:
@@ -1040,7 +1088,8 @@ def setup_flume():
         # Service-Wide
         service.update_config(cdh.dependencies_for(service))
         hosts = management.get_hosts()
-        cdh.create_service_role(service, "AGENT", [x for x in hosts if x.id == 0][0])
+        cdh.create_service_role(
+            service, "AGENT", [x for x in hosts if x.id == 0][0])
         # This service is started later on
         # check.status_for_command("Starting Flume Agent", service.start())
 
@@ -1062,37 +1111,45 @@ def setup_hdfs_ha():
         hue = cdh.get_service_type('HUE')
         hosts = management.get_hosts()
 
-        nn=[x for x in hosts if x.id == 0 ][0]
-        snn=[x for x in hosts if x.id == 1 ][0]
-        cm=management.get_cmhost()
+        nn = [x for x in hosts if x.id == 0][0]
+        snn = [x for x in hosts if x.id == 1][0]
+        cm = management.get_cmhost()
 
         if len(hdfs.get_roles_by_type("NAMENODE")) != 2:
             # QJM require 3 nodes
-            jn = random.sample([x.hostRef.hostId for x in hdfs.get_roles_by_type("DATANODE")], 3)
+            jn = random.sample(
+                [x.hostRef.hostId for x in hdfs.get_roles_by_type("DATANODE")], 3)
             # get NAMENODE and SECONDARYNAMENODE hostId
             nn_host_id = hdfs.get_roles_by_type("NAMENODE")[0].hostRef.hostId
-            sndnn_host_id = hdfs.get_roles_by_type("SECONDARYNAMENODE")[0].hostRef.hostId
+            sndnn_host_id = hdfs.get_roles_by_type(
+                "SECONDARYNAMENODE")[0].hostRef.hostId
 
             # Occasionally SECONDARYNAMENODE is also installed on the NAMENODE
             if nn_host_id == sndnn_host_id:
-                standby_host_id = random.choice([x.hostId for x in jn if x.hostId not in [nn_host_id, sndnn_host_id]])
+                standby_host_id = random.choice(
+                    [x.hostId for x in jn if x.hostId not in [nn_host_id, sndnn_host_id]])
             elif nn_host_id is not sndnn_host_id:
                 standby_host_id = sndnn_host_id
             else:
-                standby_host_id = random.choice([x.hostId for x in hosts if x.hostId is not nn_host_id])
+                standby_host_id = random.choice(
+                    [x.hostId for x in hosts if x.hostId is not nn_host_id])
 
             # hdfs-JOURNALNODE - Default Group
-            role_group = hdfs.get_role_config_group("%s-JOURNALNODE-BASE" % hdfs.name)
-            role_group.update_config({"dfs_journalnode_edits_dir": "/data/dfs/jn"})
+            role_group = hdfs.get_role_config_group(
+                "%s-JOURNALNODE-BASE" % hdfs.name)
+            role_group.update_config(
+                {"dfs_journalnode_edits_dir": "/data/dfs/jn"})
 
             cmd = hdfs.enable_nn_ha(hdfs.get_roles_by_type("NAMENODE")[0].name, standby_host_id,
-                                    "nameservice1", [dict(jnHostId=nn_host_id), dict(jnHostId=sndnn_host_id), dict(jnHostId=cm.hostId)],
+                                    "nameservice1", [dict(jnHostId=nn_host_id), dict(
+                                        jnHostId=sndnn_host_id), dict(jnHostId=cm.hostId)],
                                     zk_service_name=zookeeper.name)
             check.status_for_command("Enable HDFS-HA - [ http://%s:7180/cmf/command/%s/details ]" %
                                      (socket.getfqdn(cmx.cm_server), cmd.id), cmd)
 
             # hdfs-HTTPFS
-            cdh.create_service_role(hdfs, "HTTPFS", [x for x in hosts if x.id == 0][0])
+            cdh.create_service_role(
+                hdfs, "HTTPFS", [x for x in hosts if x.id == 0][0])
             # Configure HUE service dependencies
             cdh('HDFS').stop()
             cdh('ZOOKEEPER').stop()
@@ -1100,7 +1157,8 @@ def setup_hdfs_ha():
             if hue is not None:
                 hue.update_config(cdh.dependencies_for(hue))
             if hive is not None:
-                check.status_for_command("Update Hive Metastore NameNodes", hive.update_metastore_namenodes())
+                check.status_for_command(
+                    "Update Hive Metastore NameNodes", hive.update_metastore_namenodes())
 
             cdh('ZOOKEEPER').start()
             cdh('HDFS').start()
@@ -1123,7 +1181,7 @@ def setup_yarn_ha():
     # hosts = api.get_all_hosts()
     if len(yarn.get_roles_by_type("RESOURCEMANAGER")) != 2:
         # Choose secondary name node for standby RM
-        rm = [x for x in hosts if x.id == 1 ][0]
+        rm = [x for x in hosts if x.id == 1][0]
 
         cmd = yarn.enable_rm_ha(rm.hostId, zookeeper.name)
         check.status_for_command("Enable YARN-HA - [ http://%s:7180/cmf/command/%s/details ]" %
@@ -1144,7 +1202,8 @@ def setup_kerberos():
     hosts = management.get_hosts()
 
     # HDFS Service-Wide
-    hdfs.update_config({"hadoop_security_authentication": "kerberos", "hadoop_security_authorization": True})
+    hdfs.update_config({"hadoop_security_authentication": "kerberos",
+                        "hadoop_security_authorization": True})
 
     # hdfs-DATANODE-BASE - Default Group
     role_group = hdfs.get_role_config_group("%s-DATANODE-BASE" % hdfs.name)
@@ -1153,11 +1212,13 @@ def setup_kerberos():
 
     # Zookeeper Service-Wide
     zookeeper.update_config({"enableSecurity": True})
-    cdh.create_service_role(hue, "KT_RENEWER", [x for x in hosts if x.id == 0][0])
+    cdh.create_service_role(
+        hue, "KT_RENEWER", [x for x in hosts if x.id == 0][0])
 
 
 def setup_sentry():
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     service_type = "SENTRY"
     if cdh.get_service_type(service_type) is None:
@@ -1178,17 +1239,19 @@ def setup_sentry():
         service.update_config(service_config)
         hosts = management.get_hosts()
 
-        #Mingrui install sentry to cm host
-        cmhost= management.get_cmhost()
+        # Mingrui install sentry to cm host
+        cmhost = management.get_cmhost()
         cdh.create_service_role(service, "SENTRY_SERVER", cmhost)
-        check.status_for_command("Creating Sentry Database Tables", service.create_sentry_database_tables())
+        check.status_for_command(
+            "Creating Sentry Database Tables", service.create_sentry_database_tables())
 
         # Update configuration for Hive service
         hive = cdh.get_service_type('HIVE')
         hive.update_config(cdh.dependencies_for(hive))
 
         # Disable HiveServer2 Impersonation - hive-HIVESERVER2-BASE - Default Group
-        role_group = hive.get_role_config_group("%s-HIVESERVER2-BASE" % hive.name)
+        role_group = hive.get_role_config_group(
+            "%s-HIVESERVER2-BASE" % hive.name)
         role_group.update_config({"hiveserver2_enable_impersonation": False})
 
         # This service is started later on
@@ -1199,16 +1262,19 @@ def setup_easy():
     """
     An example using auto_assign_roles() and auto_configure()
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     cluster = api.get_cluster(cmx.cluster_name)
     print "> Easy setup for cluster: %s" % cmx.cluster_name
     # Do not install these services
     do_not_install = ['KEYTRUSTEE', 'KMS', 'KS_INDEXER', 'ISILON', 'FLUME', 'MAPREDUCE', 'ACCUMULO',
                       'ACCUMULO16', 'SPARK_ON_YARN', 'SPARK', 'SOLR', 'SENTRY']
-    service_types = list(set(cluster.get_service_types()) - set(do_not_install))
+    service_types = list(
+        set(cluster.get_service_types()) - set(do_not_install))
 
     for service in service_types:
-        cluster.create_service(name=service.lower(), service_type=service.upper())
+        cluster.create_service(name=service.lower(),
+                               service_type=service.upper())
 
     cluster.auto_assign_roles()
     cluster.auto_configure()
@@ -1223,8 +1289,8 @@ def setup_easy():
                       "hive_metastore_database_type": "postgresql"}
     service_config.update(cdh.dependencies_for(service))
     service.update_config(service_config)
-    check.status_for_command("Executing first run command. This might take a while.", cluster.first_run())
-
+    check.status_for_command(
+        "Executing first run command. This might take a while.", cluster.first_run())
 
 
 def teardown(keep_cluster=True):
@@ -1232,16 +1298,19 @@ def teardown(keep_cluster=True):
     Teardown the Cluster
     :return:
     """
-    api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+    api = ApiResource(server_host=cmx.cm_server,
+                      username=cmx.username, password=cmx.password)
     try:
         cluster = api.get_cluster(cmx.cluster_name)
         service_list = cluster.get_all_services()
-        print "> Teardown Cluster: %s Services and keep_cluster: %s" % (cmx.cluster_name, keep_cluster)
+        print "> Teardown Cluster: %s Services and keep_cluster: %s" % (
+            cmx.cluster_name, keep_cluster)
         check.status_for_command("Stop %s" % cmx.cluster_name, cluster.stop())
 
         for service in service_list[:None:-1]:
             try:
-                check.status_for_command("Stop Service %s" % service.name, service.stop())
+                check.status_for_command(
+                    "Stop Service %s" % service.name, service.stop())
             except ApiException as err:
                 print " ERROR: %s" % err.message
 
@@ -1258,7 +1327,8 @@ def teardown(keep_cluster=True):
     # Delete Management Services
     try:
         mgmt = api.get_cloudera_manager()
-        check.status_for_command("Stop Management services", mgmt.get_service().stop())
+        check.status_for_command(
+            "Stop Management services", mgmt.get_service().stop())
         mgmt.delete_mgmt_service()
     except ApiException as err:
         print " ERROR: %s" % err.message
@@ -1287,7 +1357,8 @@ def teardown(keep_cluster=True):
                     print "Executing parcel.remove_download()"
                     parcel.remove_download()
                 elif parcel.stage == 'UNDISTRIBUTING':
-                    msg = " [%s: %s / %s]" % (parcel.stage, parcel.state.progress, parcel.state.totalProgress)
+                    msg = " [%s: %s / %s]" % (parcel.stage,
+                                              parcel.state.progress, parcel.state.totalProgress)
                     sys.stdout.write(msg + " " * (78 - len(msg)) + "\r")
                     sys.stdout.flush()
                 else:
@@ -1297,7 +1368,6 @@ def teardown(keep_cluster=True):
         api.delete_cluster(cmx.cluster_name)
 
 
-
 class ManagementActions:
     """
     Example stopping 'ACTIVITYMONITOR', 'REPORTSMANAGER' Management Role
@@ -1305,9 +1375,11 @@ class ManagementActions:
     :param action:
     :return:
     """
+
     def __init__(self, *role_list):
         self._role_list = role_list
-        self._api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        self._api = ApiResource(server_host=cmx.cm_server,
+                                username=cmx.username, password=cmx.password)
         self._cm = self._api.get_cloudera_manager()
         try:
             self._service = self._cm.get_service()
@@ -1325,11 +1397,13 @@ class ManagementActions:
         self._action('restart_roles')
 
     def _action(self, action):
-        state = {'start_roles': ['STOPPED'], 'stop_roles': ['STARTED'], 'restart_roles': ['STARTED', 'STOPPED']}
+        state = {'start_roles': ['STOPPED'], 'stop_roles': [
+            'STARTED'], 'restart_roles': ['STARTED', 'STOPPED']}
         for mgmt_role in [x for x in self._role_list if x in self._role_types]:
             for role in [x for x in self._service.get_roles_by_type(mgmt_role) if x.roleState in state[action]]:
                 for cmd in getattr(self._service, action)(role.name):
-                    check.status_for_command("%s role %s" % (action.split("_")[0].upper(), mgmt_role), cmd)
+                    check.status_for_command("%s role %s" % (
+                        action.split("_")[0].upper(), mgmt_role), cmd)
 
     def setup(self):
         """
@@ -1345,7 +1419,8 @@ class ManagementActions:
         # pick hostId that match the ipAddress of cm_server
         # mgmt_host may be empty then use the 1st host from the -w
         try:
-            mgmt_host = [x for x in hosts if x.ipAddress == socket.gethostbyname(cmx.cm_server)][0]
+            mgmt_host = [x for x in hosts if x.ipAddress
+                         == socket.gethostbyname(cmx.cm_server)][0]
         except IndexError:
             mgmt_host = [x for x in hosts if x.id == 0][0]
 
@@ -1355,7 +1430,8 @@ class ManagementActions:
                     print "Creating Management Role %s " % role_type
                     role_name = "mgmt-%s-%s" % (role_type, mgmt_host.md5host)
                     for cmd in self._service.create_role(role_name, role_type, mgmt_host.hostId).get_commands():
-                        check.status_for_command("Creating %s" % role_name, cmd)
+                        check.status_for_command(
+                            "Creating %s" % role_name, cmd)
             except ApiException as err:
                 print "ERROR: %s " % err.message
 
@@ -1367,20 +1443,21 @@ class ManagementActions:
                                      "firehose_database_password": cmx.amon_password,
                                      "firehose_database_type": "postgresql",
                                      "firehose_database_name": "amon",
-                                     "mgmt_log_dir": LOG_DIR+"/cloudera-scm-firehose",
+                                     "mgmt_log_dir": LOG_DIR + "/cloudera-scm-firehose",
                                      "firehose_heapsize": "215964392"})
             elif group.roleType == "ALERTPUBLISHER":
-                group.update_config({"mgmt_log_dir": LOG_DIR+"/cloudera-scm-alertpublisher"})
+                group.update_config(
+                    {"mgmt_log_dir": LOG_DIR + "/cloudera-scm-alertpublisher"})
             elif group.roleType == "EVENTSERVER":
                 group.update_config({"event_server_heapsize": "215964392",
-                                     "mgmt_log_dir": LOG_DIR+"/cloudera-scm-eventserver",
-                                     "eventserver_index_dir": LOG_DIR+"/lib/cloudera-scm-eventserver"})
+                                     "mgmt_log_dir": LOG_DIR + "/cloudera-scm-eventserver",
+                                     "eventserver_index_dir": LOG_DIR + "/lib/cloudera-scm-eventserver"})
             elif group.roleType == "HOSTMONITOR":
-                group.update_config({"mgmt_log_dir": LOG_DIR+"/cloudera-scm-firehose",
-                                     "firehose_storage_dir": LOG_DIR+"/lib/cloudera-host-monitor"})
+                group.update_config({"mgmt_log_dir": LOG_DIR + "/cloudera-scm-firehose",
+                                     "firehose_storage_dir": LOG_DIR + "/lib/cloudera-host-monitor"})
             elif group.roleType == "SERVICEMONITOR":
-                group.update_config({"mgmt_log_dir": LOG_DIR+"/cloudera-scm-firehose",
-                                     "firehose_storage_dir": LOG_DIR+"/lib/cloudera-service-monitor"})
+                group.update_config({"mgmt_log_dir": LOG_DIR + "/cloudera-scm-firehose",
+                                     "firehose_storage_dir": LOG_DIR + "/lib/cloudera-service-monitor"})
             elif group.roleType == "NAVIGATOR" and management.licensed():
                 group.update_config({})
             elif group.roleType == "NAVIGATORMETADATASERVER" and management.licensed():
@@ -1391,15 +1468,15 @@ class ManagementActions:
                                      "headlamp_database_password": cmx.rman_password,
                                      "headlamp_database_type": "postgresql",
                                      "headlamp_database_user": "rman",
-                                     "headlamp_scratch_dir": LOG_DIR+"/lib/cloudera-scm-headlamp",
-                                     "mgmt_log_dir": LOG_DIR+"/cloudera-scm-headlamp"})
+                                     "headlamp_scratch_dir": LOG_DIR + "/lib/cloudera-scm-headlamp",
+                                     "mgmt_log_dir": LOG_DIR + "/cloudera-scm-headlamp"})
             elif group.roleType == "OOZIE":
                 group.update_config({"oozie_database_host": "%s:5432" % socket.getfqdn(cmx.cm_server),
                                      "oozie_database_name": "oozie",
                                      "oozie_database_password": cmx.oozie_password,
                                      "oozie_database_type": "postgresql",
                                      "oozie_database_user": "oozie",
-                                     "oozie_log_dir": LOG_DIR+"/oozie" })
+                                     "oozie_log_dir": LOG_DIR + "/oozie"})
 
     @classmethod
     def licensed(cls):
@@ -1407,7 +1484,8 @@ class ManagementActions:
         Check if Cluster is licensed
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         cm = api.get_cloudera_manager()
         try:
             return bool(cm.get_license().uuid)
@@ -1420,7 +1498,8 @@ class ManagementActions:
         Upload License file
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         cm = api.get_cloudera_manager()
         if cmx.license_file and not management.licensed():
             print "Upload license"
@@ -1438,7 +1517,8 @@ class ManagementActions:
         Begin Trial
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         print "def begin_trial"
         if not management.licensed():
             try:
@@ -1460,7 +1540,8 @@ class ManagementActions:
         mgmt_password = False
 
         if os.path.exists('/etc/cloudera-scm-server'):
-            file_path = os.path.join('/etc/cloudera-scm-server', 'db.mgmt.properties')
+            file_path = os.path.join(
+                '/etc/cloudera-scm-server', 'db.mgmt.properties')
             try:
                 with open(file_path) as f:
                     contents = f.readlines()
@@ -1469,7 +1550,7 @@ class ManagementActions:
 
         # role_type expected to be in
         # ACTIVITYMONITOR, REPORTSMANAGER, NAVIGATOR, OOZIE, HIVEMETASTORESERVER
-        if role_type in ['ACTIVITYMONITOR', 'REPORTSMANAGER', 'NAVIGATOR','OOZIE','HIVEMETASTORESERVER']:
+        if role_type in ['ACTIVITYMONITOR', 'REPORTSMANAGER', 'NAVIGATOR', 'OOZIE', 'HIVEMETASTORESERVER']:
             idx = "com.cloudera.cmf.%s.db.password=" % role_type
             match = [s.rstrip('\n') for s in contents if idx in s][0]
             mgmt_password = match[match.index(idx) + len(idx):]
@@ -1481,13 +1562,14 @@ class ManagementActions:
         """
         return cm host in the same format as other host
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
 
         idx = len(set(enumerate(cmx.host_names)))
 
-
-        _host = [x for x in api.get_all_hosts() if x.ipAddress == socket.gethostbyname(cmx.cm_server)][0]
-        cmhost={
+        _host = [x for x in api.get_all_hosts() if x.ipAddress
+                 == socket.gethostbyname(cmx.cm_server)][0]
+        cmhost = {
             'id': idx,
             'hostId': _host.hostId,
             'hostname': _host.hostname,
@@ -1508,7 +1590,8 @@ class ManagementActions:
         attributes = {'id': None, 'hostId': None, 'hostname': None, 'md5host': None, 'ipAddress': None, }
         return a list of hosts
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
 
         w_hosts = set(enumerate(cmx.host_names))
         if include_cm_host and socket.gethostbyname(cmx.cm_server) \
@@ -1517,7 +1600,8 @@ class ManagementActions:
 
         hosts = []
         for idx, host in w_hosts:
-            _host = [x for x in api.get_all_hosts() if x.ipAddress == socket.gethostbyname(host)][0]
+            _host = [x for x in api.get_all_hosts() if x.ipAddress
+                     == socket.gethostbyname(host)][0]
             hosts.append({
                 'id': idx,
                 'hostId': _host.hostId,
@@ -1534,7 +1618,8 @@ class ManagementActions:
         Restart Management Services
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         mgmt = api.get_cloudera_manager().get_service()
 
         check.status_for_command("Stop Management services", mgmt.stop())
@@ -1548,9 +1633,11 @@ class ServiceActions:
     :param action:
     :return:
     """
+
     def __init__(self, *service_list):
         self._service_list = service_list
-        self._api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        self._api = ApiResource(server_host=cmx.cm_server,
+                                username=cmx.username, password=cmx.password)
         self._cluster = self._api.get_cluster(cmx.cluster_name)
 
     def stop(self):
@@ -1563,7 +1650,8 @@ class ServiceActions:
         self._action('restart')
 
     def _action(self, action):
-        state = {'start': ['STOPPED'], 'stop': ['STARTED'], 'restart': ['STARTED', 'STOPPED']}
+        state = {'start': ['STOPPED'], 'stop': [
+            'STARTED'], 'restart': ['STARTED', 'STOPPED']}
         for services in [x for x in self._cluster.get_all_services()
                          if x.type in self._service_list and x.serviceState in state[action]]:
             check.status_for_command("%s service %s" % (action.upper(), services.type),
@@ -1576,10 +1664,12 @@ class ServiceActions:
         :param name:
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         cluster = api.get_cluster(cmx.cluster_name)
         try:
-            service = [x for x in cluster.get_all_services() if x.type == name][0]
+            service = [x for x in cluster.get_all_services()
+                       if x.type == name][0]
         except IndexError:
             service = None
 
@@ -1601,7 +1691,8 @@ class ServiceActions:
         :param host.hostId, or ApiService:
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         # cluster = api.get_cluster(cmx.cluster_name)
         if isinstance(obj, str) or isinstance(obj, unicode):
             for role_name in [x.roleName for x in api.get_host(obj).roleRefs if 'GATEWAY' in x.roleName]:
@@ -1627,7 +1718,8 @@ class ServiceActions:
         role_name = "-".join([service_name, role_type, host.md5host])[:64]
         print "Creating role: %s on host: [%s]" % (role_name, host.hostname)
         for cmd in service.create_role(role_name, role_type, host.hostId).get_commands():
-            check.status_for_command("Creating role: %s on host: [%s]" % (role_name, host.hostname), cmd)
+            check.status_for_command(
+                "Creating role: %s on host: [%s]" % (role_name, host.hostname), cmd)
 
     @classmethod
     def restart_cluster(cls):
@@ -1635,13 +1727,16 @@ class ServiceActions:
         Restart Cluster and Cluster wide deploy client config
         :return:
         """
-        api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        api = ApiResource(server_host=cmx.cm_server,
+                          username=cmx.username, password=cmx.password)
         cluster = api.get_cluster(cmx.cluster_name)
         print "Restart cluster: %s" % cmx.cluster_name
         check.status_for_command("Stop %s" % cmx.cluster_name, cluster.stop())
-        check.status_for_command("Start %s" % cmx.cluster_name, cluster.start())
+        check.status_for_command("Start %s" %
+                                 cmx.cluster_name, cluster.start())
         # Example deploying cluster wide Client Config
-        check.status_for_command("Deploy client config for %s" % cmx.cluster_name, cluster.deploy_client_config())
+        check.status_for_command("Deploy client config for %s" %
+                                 cmx.cluster_name, cluster.deploy_client_config())
 
     @classmethod
     def dependencies_for(cls, service):
@@ -1683,10 +1778,12 @@ class ServiceActions:
             if key == "hue_webhdfs":
                 hdfs = cdh.get_service_type('HDFS')
                 if hdfs is not None:
-                    service_config[key] = [x.name for x in hdfs.get_roles_by_type('NAMENODE')][0]
+                    service_config[key] = [
+                        x.name for x in hdfs.get_roles_by_type('NAMENODE')][0]
                     # prefer HTTPS over NAMENODE
                     if [x.name for x in hdfs.get_roles_by_type('HTTPFS')]:
-                        service_config[key] = [x.name for x in hdfs.get_roles_by_type('HTTPFS')][0]
+                        service_config[key] = [
+                            x.name for x in hdfs.get_roles_by_type('HTTPFS')][0]
             elif key == "mapreduce_yarn_service":
                 for _type in config_types[key]:
                     if cdh.get_service_type(_type) is not None:
@@ -1697,17 +1794,20 @@ class ServiceActions:
             elif key == "hue_hbase_thrift":
                 hbase = cdh.get_service_type('HBASE')
                 if hbase is not None:
-                    service_config[key] = [x.name for x in hbase.get_roles_by_type(config_types[key])][0]
+                    service_config[key] = [
+                        x.name for x in hbase.get_roles_by_type(config_types[key])][0]
             else:
                 if cdh.get_service_type(config_types[key]) is not None:
-                    service_config[key] = cdh.get_service_type(config_types[key]).name
+                    service_config[key] = cdh.get_service_type(
+                        config_types[key]).name
 
         return service_config
 
 
 class ActiveCommands:
     def __init__(self):
-        self._api = ApiResource(server_host=cmx.cm_server, username=cmx.username, password=cmx.password)
+        self._api = ApiResource(server_host=cmx.cm_server,
+                                username=cmx.username, password=cmx.password)
 
     def status_for_command(self, message, command):
         """
@@ -1720,15 +1820,18 @@ class ActiveCommands:
         _bar = ['[|]', '[/]', '[-]', '[\\]']
         while True:
             if self._api.get("/commands/%s" % command.id)['active']:
-                sys.stdout.write(_bar[_state] + ' ' + message + ' ' + ('\b' * (len(message) + 5)))
+                sys.stdout.write(
+                    _bar[_state] + ' ' + message + ' ' + ('\b' * (len(message) + 5)))
                 sys.stdout.flush()
                 _state += 1
                 if _state > 3:
                     _state = 0
                 time.sleep(2)
             else:
-                print "\n [%s] %s" % (command.id, self._api.get("/commands/%s" % command.id)['resultMessage'])
-                self._child_cmd(self._api.get("/commands/%s" % command.id)['children']['items'])
+                print "\n [%s] %s" % (command.id, self._api.get(
+                    "/commands/%s" % command.id)['resultMessage'])
+                self._child_cmd(self._api.get("/commands/%s" %
+                                              command.id)['children']['items'])
                 break
 
     def _child_cmd(self, cmd):
@@ -1743,22 +1846,24 @@ class ActiveCommands:
                 if resMsg.get('resultMessage'):
                     print "  [%s] %s" % (resMsg['id'], resMsg['resultMessage']) if not resMsg.get('roleRef') \
                         else "  [%s] %s - %s" % (resMsg['id'], resMsg['resultMessage'], resMsg['roleRef']['roleName'])
-                self._child_cmd(self._api.get("/commands/%s" % resMsg['id'])['children']['items'])
+                self._child_cmd(self._api.get("/commands/%s" %
+                                              resMsg['id'])['children']['items'])
+
 
 def display_eula():
 
-    fname=raw_input("Please enter your first name: ")
-    lname=raw_input("Please enter your last name: ")
-    company=raw_input("Please enter your company: ")
-    email=raw_input("Please enter your email: ")
-    phone=raw_input("Please enter your phone: ")
-    jobrole=raw_input("Please enter your jobrole: ")
-    jobfunction=raw_input("Please enter your jobfunction: ")
-    accepted=raw_input("Please enter yes to accept EULA: ")
-    if accepted =='yes' and fname and lname and company and email and phone and jobrole and jobfunction:
-       postEulaInfo(fname, lname, email, company,
-                    jobrole, jobfunction, phone)
-       return True
+    fname = raw_input("Please enter your first name: ")
+    lname = raw_input("Please enter your last name: ")
+    company = raw_input("Please enter your company: ")
+    email = raw_input("Please enter your email: ")
+    phone = raw_input("Please enter your phone: ")
+    jobrole = raw_input("Please enter your jobrole: ")
+    jobfunction = raw_input("Please enter your jobfunction: ")
+    accepted = raw_input("Please enter yes to accept EULA: ")
+    if accepted == 'yes' and fname and lname and company and email and phone and jobrole and jobfunction:
+        postEulaInfo(fname, lname, email, company,
+                     jobrole, jobfunction, phone)
+        return True
     else:
         return False
 
@@ -1772,7 +1877,7 @@ def parse_options():
                           'username': 'cmadmin', 'password': 'cmpassword', 'cm_server': None,
                           'host_names': None, 'license_file': None, 'parcel': [], 'company': None,
                           'email': None, 'phone': None, 'fname': None, 'lname': None, 'jobrole': None,
-                          'jobfunction': None, 'vmsize': None,'do_post':True}
+                          'jobfunction': None, 'vmsize': None, 'do_post': True}
 
     def cmx_args(option, opt_str, value, *args, **kwargs):
         if option.dest == 'host_names':
@@ -1781,7 +1886,8 @@ def parse_options():
                 if not hostname_resolves(host):
                     exit(1)
             else:
-                cmx_config_options[option.dest] = [socket.gethostbyname(x) for x in value.split(',')]
+                cmx_config_options[option.dest] = [
+                    socket.gethostbyname(x) for x in value.split(',')]
         elif option.dest == 'cm_server':
             print "switch %s value check: %s" % (opt_str, value)
 
@@ -1897,24 +2003,26 @@ def parse_options():
         parser.error(msg_req_args + "-m/--cm-server")
     else:
         if not (cmx_config_options['ssh_private_key'] or cmx_config_options['ssh_root_password']):
-            parser.error(msg_req_args + "-p/--ssh-root-password or -k/--ssh-private-key")
+            parser.error(msg_req_args +
+                         "-p/--ssh-root-password or -k/--ssh-private-key")
         elif cmx_config_options['host_names'] is None:
             parser.error(msg_req_args + "-w/--host-names")
         elif cmx_config_options['ssh_private_key'] and cmx_config_options['ssh_root_password']:
-            parser.error(msg_req_args + "-p/--ssh-root-password _OR_ -k/--ssh-private-key")
+            parser.error(msg_req_args +
+                         "-p/--ssh-root-password _OR_ -k/--ssh-private-key")
     if (cmx_config_options['email'] is None or cmx_config_options['phone'] is None or
         cmx_config_options['fname'] is None or cmx_config_options['lname'] is None or
         cmx_config_options['jobrole'] is None or cmx_config_options['jobfunction'] is None or
         cmx_config_options['company'] is None or
-        options.accepted is not True):
+            options.accepted is not True):
 
-        eula_result=display_eula()
+        eula_result = display_eula()
         if(eula_result):
-            cmx_config_options['do_post']=False
+            cmx_config_options['do_post'] = False
         else:
-            parser.error(msg_req_args + 'please provide email, phone, firstname, lastname, jobrole, jobfunction, company and accept eula'+
-                         '-r/--email-address, -b/--business-phone, -f/--first-name, -t/--last-name, -o/--job-role, -i/--job-function,'+
-                         '-y/--company, -e/--accept-eula')
+            parser.error(msg_req_args + 'please provide email, phone, firstname, lastname, jobrole, jobfunction, company and accept eula'
+                         + '-r/--email-address, -b/--business-phone, -f/--first-name, -t/--last-name, -o/--job-role, -i/--job-function,'
+                         + '-y/--company, -e/--accept-eula')
 
     # Management services password. They are required when adding Management services
     management = ManagementActions
@@ -1922,10 +2030,14 @@ def parse_options():
             and bool(management.get_mgmt_password("REPORTSMANAGER"))):
         exit(1)
     else:
-        cmx_config_options['amon_password'] = management.get_mgmt_password("ACTIVITYMONITOR")
-        cmx_config_options['rman_password'] = management.get_mgmt_password("REPORTSMANAGER")
-        cmx_config_options['oozie_password'] = management.get_mgmt_password("OOZIE")
-        cmx_config_options['hive_password'] = management.get_mgmt_password("HIVEMETASTORESERVER")
+        cmx_config_options['amon_password'] = management.get_mgmt_password(
+            "ACTIVITYMONITOR")
+        cmx_config_options['rman_password'] = management.get_mgmt_password(
+            "REPORTSMANAGER")
+        cmx_config_options['oozie_password'] = management.get_mgmt_password(
+            "OOZIE")
+        cmx_config_options['hive_password'] = management.get_mgmt_password(
+            "HIVEMETASTORESERVER")
 
     cmx = type('', (), cmx_config_options)
     check = ActiveCommands()
@@ -1943,13 +2055,15 @@ def parse_options():
     # print cmx_config_options
     return options
 
+
 def log(msg):
     print time.strftime("%X") + ": " + msg
 
-def postEulaInfo(firstName, lastName, emailAddress, company,jobRole, jobFunction, businessPhone):
-    elqFormName='Cloudera_Azure_EULA'
-    elqSiteID='1465054361'
-    cid='70134000001PsLS'
+
+def postEulaInfo(firstName, lastName, emailAddress, company, jobRole, jobFunction, businessPhone):
+    elqFormName = 'Cloudera_Azure_EULA'
+    elqSiteID = '1465054361'
+    cid = '70134000001PsLS'
     url = 'https://s1465054361.t.eloqua.com/e/f2'
     data = urllib.urlencode({'elqFormName': elqFormName,
                              'elqSiteID': elqSiteID,
@@ -1961,18 +2075,19 @@ def postEulaInfo(firstName, lastName, emailAddress, company,jobRole, jobFunction
                              'jobRole': jobRole,
                              'jobFunction': jobFunction,
                              'businessPhone': businessPhone
-                            })
+                             })
     results = urllib2.urlopen(url, data)
     with open('results.html', 'w') as f:
         log(results.read())
+
 
 def main():
     # Parse user options
     log("parse_options")
     options = parse_options()
     global diskcount
-    diskcount= getDataDiskCount()
-    log("data_disk_count"+`diskcount`)
+    diskcount = getDataDiskCount()
+    log("data_disk_count" + `diskcount`)
     if(cmx.do_post):
         postEulaInfo(cmx.fname, cmx.lname, cmx.email, cmx.company,
                      cmx.jobrole, cmx.jobfunction, cmx.phone)
@@ -1984,9 +2099,9 @@ def main():
     init_cluster()
     log("add_hosts_to_cluster")
     add_hosts_to_cluster()
-    ## Un-comment the following two entries to enable rack topology for AD spanning.
-    #log("host_rack")
-    #host_rack()
+    # Un-comment the following two entries to enable rack topology for AD spanning.
+    # log("host_rack")
+    # host_rack()
     # Deploy CDH Parcel
     log("deploy_parcel")
     deploy_parcel(parcel_product=cmx.parcel[0]['product'],
@@ -1994,7 +2109,8 @@ def main():
 
     log("setup_management")
     # Example CM API to setup Cloudera Manager Management services - not installing 'ACTIVITYMONITOR'
-    mgmt_roles = ['SERVICEMONITOR', 'ALERTPUBLISHER', 'EVENTSERVER', 'HOSTMONITOR']
+    mgmt_roles = ['SERVICEMONITOR', 'ALERTPUBLISHER',
+                  'EVENTSERVER', 'HOSTMONITOR']
     if management.licensed():
         mgmt_roles.append('REPORTSMANAGER')
     management(*mgmt_roles).setup()
@@ -2022,7 +2138,7 @@ def main():
     setup_oozie()
     setup_hue()
 
-    #setup_mapreduce(options.highAvailability)
+    # setup_mapreduce(options.highAvailability)
 
     # Note: setup_easy() is alternative to Step-Through above
     # This this provides an example of alternative method of
@@ -2034,7 +2150,7 @@ def main():
     # setup_hdfs_ha()
     # setup_yarn_ha()
 
-    #if options.highAvailability:
+    # if options.highAvailability:
     #    setup_hdfs_ha()
     #    setup_yarn_ha()
 
