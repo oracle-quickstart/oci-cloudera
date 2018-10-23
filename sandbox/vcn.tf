@@ -84,7 +84,7 @@ resource "oci_core_security_list" "PublicSubnet" {
 
 resource "oci_core_subnet" "public" {
   count               = "3"
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index],"name")}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index], "name")}"
   cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, count.index)}"
   display_name        = "public_ad${count.index + 1}"
   compartment_id      = "${var.compartment_ocid}"
