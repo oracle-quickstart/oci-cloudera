@@ -14,7 +14,7 @@ For small implementations, [Development](Development) is the next step up.  This
 
 This environment provides a much higher HDFS storage capacity, along with a compute and memory resources for use with a variety of big data workloads.   This environment is not a good fit for users who want high availability.
 
-|-------------| Worker Nodes                                       | Bastion Instance | Utility Instance |
+|             | Worker Nodes                                       | Bastion Instance | Utility Instance |
 |-------------|----------------------------------------------------|------------------|------------------|
 | Minimum     | BM.Standard1.16 with 3x700GB Block Storage Devices | VM.Standard1.4   | VM.Standard1.8   |                   
 | Recommended | BM.Standard2.24 with 3x1TB Block Storage Devices   | VM.Standard2.4   | VM.Standard2.8   |
@@ -22,7 +22,7 @@ This environment provides a much higher HDFS storage capacity, along with a comp
 ## Production Starter
 [Production](Production) is the most powerful preconfigured option.  It provides high density, high performance and high availability.  It is an appropriate entry point for scaling up a production big data practice.
 
-|-------------| Worker Nodes   | Bastion Instance         | Utility and Master Instances |
+|             | Worker Nodes   | Bastion Instance         | Utility and Master Instances |
 |-------------|----------------|--------------------------|------------------------------|
 | Minimum     | BM.DenseIO1.36 | VM.Standard1.4           | VM.Standard1.8               |                                
 | Recommended | BM.DenseIO2.52 | VM.Standard2.4           | VM.Standard2.8               |                                   
@@ -30,7 +30,7 @@ This environment provides a much higher HDFS storage capacity, along with a comp
 ## N-Node
 With the [N-Node](N-Node) module it's possible to deploy a cluster of arbitrary size.
 
-|-------------| Worker Nodes   | Bastion Instance | Utility and Master Instances |
+|             | Worker Nodes   | Bastion Instance | Utility and Master Instances |
 |-------------|----------------|------------------|------------------------------|
 | Minimum     | BM.DenseIO1.36 | VM.Standard1.4   | VM.Standard1.8               |
 | Recommended | BM.DenseIO2.52 | VM.Standard2.4   | VM.Standard2.16              |
