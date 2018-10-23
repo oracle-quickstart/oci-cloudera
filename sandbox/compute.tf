@@ -14,7 +14,7 @@ resource "oci_core_instance" "Sandbox" {
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data           = "${base64encode(file("scripts/boot.sh"))}"
+    user_data           = "${base64encode(file("scripts/cloud-init.sh"))}"
   }
 
   timeouts {
