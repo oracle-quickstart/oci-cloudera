@@ -16,4 +16,3 @@ export TF_VAR_ssh_private_key=$(cat /home/opc/.ssh/id_rsa)
 
 ## AD
 export TF_VAR_AD="2"
-
