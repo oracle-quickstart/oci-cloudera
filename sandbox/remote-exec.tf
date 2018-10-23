@@ -2,8 +2,8 @@ resource "null_resource" "cdh-setup" {
   depends_on = ["oci_core_instance.Sandbox"]
 
   provisioner "file" {
-    source      = "scripts/remote-exec.sh"
-    destination = "/home/opc/remote-exec.sh"
+    source      = "scripts/remote.sh"
+    destination = "/home/opc/remote.sh"
 
     connection {
       agent       = false
@@ -24,8 +24,8 @@ resource "null_resource" "cdh-setup" {
     }
 
     inline = [
-      "chmod +x /home/opc/remote-exec.sh",
-      "sudo /home/opc/remote-exec.sh",
+      "chmod +x /home/opc/remote.sh",
+      "sudo /home/opc/remote.sh",
     ]
   }
 }
