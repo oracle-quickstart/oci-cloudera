@@ -1,4 +1,4 @@
-# Development
+# development
 This is for small implementations.  This deployment consists of five instances:
 
 * 1 Bastion Instance

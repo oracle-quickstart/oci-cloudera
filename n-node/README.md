@@ -1,4 +1,4 @@
-# N-Node
+# n-node
 This module deploys a cluster of arbitrary size.
 
 |             | Worker Nodes   | Bastion Instance | Utility and Master Instances |

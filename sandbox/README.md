@@ -1,4 +1,4 @@
-# Sandbox
+# sandbox
 This sets up an instance running the Cloudera VM Docker image.  Once complete, Terraform will print URLs you can use to access the sandbox.
 
 If you want to SSH into the machine running Docker and check on status, you can do this:
