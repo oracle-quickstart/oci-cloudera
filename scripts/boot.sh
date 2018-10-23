@@ -27,5 +27,6 @@ fi
 ## Custom Boot Volume Extension
 sudo yum -y install cloud-utils-growpart
 sudo yum -y install gdisk
+growpart /dev/sda 3
 echo "0" > /home/opc/.done
 sudo reboot
