@@ -4,7 +4,7 @@ cd /home/opc/
 setenforce 0
 
 ## Install Java
-yum install java-1.8.0-openjdk.x86_64 -y
+yum -y install java-1.8.0-openjdk.x86_64
 
 ## Disable Transparent Huge Pages
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
@@ -47,44 +47,43 @@ else
 fi
 
 echo -e "Installing Docker..."
-yum install docker.x86_64 -y
-#sed -i 's/DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS= --storage-opt dm.basesize=20G/g' /etc/sysconfig/docker-storage
+yum -y install docker.x86_64
 systemctl start docker
 
 statuschk=`echo -e $?`
 if [ $statuschk = "0" ]; then
-	continue
+  continue
 else
-	while [ $statuschk != "0" ]; do
+  while [ $statuschk != "0" ]; do
 		systemctl restart docker
 		statuschk=`echo -e $?`
 		sleep 1
 	done;
 fi
 
-echo -e "Downloading CDH5 Docker Container..."
+echo -e "Downloading and Starting CDH5 Docker Container..."
 # This module specifically uses wget to fetch a specific version of the Cloudera Docker container.
 # This is because the version currently available in public Docker registry is an older version.
 # The wget command should be updated to fetch the latest Cloudera Docker container when new versions are released.
 wget https://downloads.cloudera.com/demo_vm/docker/cloudera-quickstart-vm-5.13.0-0-beta-docker.tar.gz
 tar -zxvf cloudera-quickstart-vm-5.13.0-0-beta-docker.tar.gz
 docker import - cloudera/quickstart:latest < cloudera-quickstart-vm-*-docker/*.tar
-
 quickstart_id=`docker images | sed 1d | gawk '{print $3}'`
 docker run -d --hostname=quickstart.cloudera --privileged=true -it -p 7180:7180 -p 80:80 -p 8888:8888 ${quickstart_id} /usr/bin/docker-quickstart
-
 quickstart_ps=`docker ps | sed 1d | gawk '{print $1}'`
-t=0
+
 echo -e "Waiting 120 seconds on startup..."
+t=0
 while [ $t -le 120 ]; do
 	echo -e "$t"
 	sleep 5
 	t=$((t+5))
 done;
+
 echo -e "Starting CDH Manager..."
 docker exec -it ${quickstart_ps} /home/cloudera/cloudera-manager --express
 
-## Add Clouder user and sudo privileges
+## Add Cloudera user and sudo privileges
 useradd -s /bin/bash cloudera
 mkdir -p /home/cloudera/.ssh
 cp /home/opc/.ssh/authorized_keys /home/cloudera/.ssh/
