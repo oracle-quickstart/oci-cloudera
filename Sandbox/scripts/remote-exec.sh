@@ -1,14 +1,7 @@
 #!/bin/bash
 
-### Firewall Configuration
-## Set this flag to 1 to enable host firewall, 0 to disable
-firewall_on="1"
-
-#### MAIN EXECUTION BEGIN ####
 cd /home/opc/
 setenforce 0
-
-### Tune Host
 
 ## Install Java
 yum install java-1.8.0-openjdk.x86_64 -y
@@ -36,8 +29,8 @@ echo net.ipv4.tcp_low_latency=1 >> /etc/sysctl.conf
 ## Tune File System options
 sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
 
-
 ## Firewall Setup
+firewall_on="1"
 if [ $firewall_on = "1" ]; then
   echo -e "\tSetting up Firewall Ports"
   echo -e "Port 7180"
@@ -53,9 +46,7 @@ else
   systemctl disable firewalld
 fi
 
-echo -e "Downloading CDH5 Docker Container..."
 echo -e "Installing Docker..."
-
 yum install docker.x86_64 -y
 #sed -i 's/DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS= --storage-opt dm.basesize=20G/g' /etc/sysconfig/docker-storage
 systemctl start docker
@@ -93,7 +84,7 @@ done;
 echo -e "Starting CDH Manager..."
 docker exec -it ${quickstart_ps} /home/cloudera/cloudera-manager --express
 
-## Add Clouder User & Sudo privs
+## Add Clouder user and sudo privileges
 useradd -s /bin/bash cloudera
 mkdir -p /home/cloudera/.ssh
 cp /home/opc/.ssh/authorized_keys /home/cloudera/.ssh/
