@@ -56,7 +56,7 @@ JOBROLE="root"
 JOBFUNCTION="root"
 COMPANY="Oracle"
 
-## 
+##
 ## END CONFIGURATION
 ##
 
@@ -71,20 +71,20 @@ pip install pyopenssl ndg-httpsclient pyasn1
 yum install libffi-devel -y
 pip install "cm_api<20"
 echo "Starting SCM Server..."
-service cloudera-scm-server start 
+service cloudera-scm-server start
 ## Scrape hosts file to gather all IPs - this allows for dynamic number of hosts in cluster
 for ip in `cat /home/opc/hosts | sed 1d | gawk '{print $1}'`; do
 	if [ -z $cluster_host_ip ]; then
 		cluster_host_ip="$ip"
 	else
-		cluster_host_ip="$cluster_host_ip,$ip"	
+		cluster_host_ip="$cluster_host_ip,$ip"
 	fi
 done;
 ## Setup known_hosts entries for all hosts
-for host in `cat /home/opc/hosts | gawk '{print $2}'`; do 
-	host_ip=`cat /home/opc/hosts | grep -w $host | gawk '{print $1}'`; 
-	host_key=`ssh-keyscan -t rsa -H $host 2>&1 | sed 1d | gawk '{print $3}'`; 
-	echo -e $host,$host_ip ecdsa-sha2-nistp256 $host_key >> ~/.ssh/known_hosts; 
+for host in `cat /home/opc/hosts | gawk '{print $2}'`; do
+	host_ip=`cat /home/opc/hosts | grep -w $host | gawk '{print $1}'`;
+	host_key=`ssh-keyscan -t rsa -H $host 2>&1 | sed 1d | gawk '{print $3}'`;
+	echo -e $host,$host_ip ecdsa-sha2-nistp256 $host_key >> ~/.ssh/known_hosts;
 done;
 ## Check that SCM is running - the SCM startup takes some time
 echo -n "Waiting for SCM server to be available [*"

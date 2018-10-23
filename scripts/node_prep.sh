@@ -44,5 +44,5 @@ sleep .001
 ## OS Tuning parameters
 sudo screen -S tune -X stuff '/home/opc/tune.sh\n'
 sleep .001
-## Disk Formatting for all but /dev/sda 
+## Disk Formatting for all but /dev/sda
 sudo screen -S disk -X stuff '/home/opc/disk_setup.sh\n'

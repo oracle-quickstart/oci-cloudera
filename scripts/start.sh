@@ -5,7 +5,7 @@ echo -e "Installing Screen on Bastion"
 sudo yum install screen.x86_64 -y
 sudo sed -i 's/1000/10000/g' /etc/screenrc
 sudo tee -a ~/.screenrc << EOF
-screen -t setup 
+screen -t setup
 select 0
 screen -t logwatch
 select 1
@@ -27,7 +27,7 @@ shelltitle "shell"
 shell -$SHELL
 EOF
 echo -e "Starting Master Cluster Provisioning Process"
-sudo screen -dmLS bastion 
+sudo screen -dmLS bastion
 sleep .001
 ## Start Bastion setup script, time it so the cluster build time is tracked
 sudo screen -S bastion -t setup -X stuff '/usr/bin/time /home/opc/bastion.sh\n'

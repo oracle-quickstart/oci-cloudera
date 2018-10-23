@@ -290,10 +290,10 @@ def setup_zookeeper(HA):
         print "Create %s service" % service_name
         cluster.create_service(service_name, service_type)
         service = cluster.get_service(service_name)
-        
+
         hosts = management.get_hosts()
         cmhost= management.get_cmhost()
-        
+
         service.update_config({"zookeeper_datadir_autocreate": True})
 
         # Ensure zookeeper has access to folder
@@ -361,7 +361,7 @@ def setup_hdfs(HA):
         dfs_name_dir_list = default_name_dir_list
         dfs_snn_dir_list = default_snn_dir_list
         dfs_data_dir_list = default_data_dir_list
-	
+
 	data_tiering_file = os.path.isfile("/home/opc/hdfs_data_tiering.txt")
 	if data_tiering_file is True:
 		with open("/home/opc/hdfs_data_tiering.txt") as d:
@@ -385,8 +385,8 @@ def setup_hdfs(HA):
             nn_host_id = [host for host in hosts if host.id == 0][0]
             snn_host_id = [host for host in hosts if host.id == 1][0]
 
-        
-        
+
+
         # Role Config Group equivalent to Service Default Group
         for rcg in [x for x in service.get_all_role_config_groups()]:
             if rcg.roleType == "NAMENODE":
@@ -421,7 +421,7 @@ def setup_hdfs(HA):
                 rcg.update_config({"failover_controller_log_dir": LOG_DIR+"/hadoop-hdfs"})
             if rcg.roleType == "HTTPFS":
                 rcg.update_config({"httpfs_log_dir": LOG_DIR+"/hadoop-httpfs"})
-                
+
             if rcg.roleType == "GATEWAY":
                 # hdfs-GATEWAY - Default Group
                 rcg.update_config({"dfs_client_use_trash": True})
@@ -439,7 +439,7 @@ def setup_hdfs(HA):
         for role_type in ['GATEWAY']:
             for host in management.get_hosts(include_cm_host=(role_type == 'GATEWAY')):
                 cdh.create_service_role(service, role_type, host)
-                
+
         nn_role_type = service.get_roles_by_type("NAMENODE")[0]
         commands = service.format_hdfs(nn_role_type.name)
         for cmd in commands:
@@ -476,7 +476,7 @@ def setup_hbase():
         service.update_config(cdh.dependencies_for(service))
 
         master_host_id = [host for host in hosts if host.id == 0][0]
-        backup_master_host_id = [host for host in hosts if host.id == 1][0]    
+        backup_master_host_id = [host for host in hosts if host.id == 1][0]
         cmhost = management.get_cmhost()
 
         for rcg in [x for x in service.get_all_role_config_groups()]:
@@ -671,7 +671,7 @@ def setup_yarn(HA):
                                    "mr2_jobhistory_log_dir": LOG_DIR+"/hadoop-mapreduce"})
 
                 cdh.create_service_role(service, rcg.roleType, cmhost)
-                
+
             if rcg.roleType == "NODEMANAGER":
                 # yarn-NODEMANAGER - Default Group
                 rcg.update_config({"yarn_nodemanager_heartbeat_interval_ms": "100",
@@ -810,8 +810,8 @@ def setup_hive():
         hs2.update_config({"hive_log_dir": LOG_DIR+"/hive"})
         hms = service.get_role_config_group("{0}-HIVEMETASTORE-BASE".format(service_name))
         hms.update_config({"hive_log_dir": LOG_DIR+"/hive"})
-        
-        
+
+
         #install to CM node, mingrui
         cmhost= management.get_cmhost()
         for role_type in ['HIVEMETASTORE', 'HIVESERVER2']:
@@ -916,7 +916,7 @@ def setup_impala(HA):
         cluster.create_service(service_name, service_type)
         service = cluster.get_service(service_name)
         service_config = {"impala_cmd_args_safety_valve": "-scratch_dirs=%s" % (impala_dir_list) }
-        service.update_config(service_config)        
+        service.update_config(service_config)
         service = cluster.get_service(service_name)
         hosts = management.get_hosts()
 
@@ -1475,7 +1475,7 @@ class ManagementActions:
             mgmt_password = match[match.index(idx) + len(idx):]
 
         return mgmt_password
-    
+
     @classmethod
     def get_cmhost(cls):
         """
@@ -1485,7 +1485,7 @@ class ManagementActions:
 
         idx = len(set(enumerate(cmx.host_names)))
 
-        
+
         _host = [x for x in api.get_all_hosts() if x.ipAddress == socket.gethostbyname(cmx.cm_server)][0]
         cmhost={
             'id': idx,
@@ -2033,7 +2033,7 @@ def main():
     # You can uncomment below after you've setup the CDH services.
     # setup_hdfs_ha()
     # setup_yarn_ha()
-        
+
     #if options.highAvailability:
     #    setup_hdfs_ha()
     #    setup_yarn_ha()

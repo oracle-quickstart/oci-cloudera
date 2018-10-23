@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Install Java 
+## Install Java
 sudo yum install java-1.8.0-openjdk.x86_64 -y
 
 ## Disable Transparent Huge Pages

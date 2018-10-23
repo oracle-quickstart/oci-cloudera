@@ -31,7 +31,7 @@ ssh_check () {
                 fi
         done;
 	echo -ne "*] - DONE\n"
-        unset sshchk 
+        unset sshchk
 	unset user
 }
 
@@ -94,19 +94,19 @@ sudo echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com publ
 sudo echo "nameserver 169.254.169.254" >> /etc/resolv.conf
 
 ## Cleanup any exiting files just in case
-if [ -f host_list ]; then 
+if [ -f host_list ]; then
 	rm -f host_list;
 	rm -f datanodes;
 	rm -f hosts;
 fi
 
-## Continue with Main Setup 
+## Continue with Main Setup
 # First do some network & host discovery
 host_discovery >> host_list
 cat host_list | grep worker >> datanodes
 utilfqdn=`cat host_list | grep cdh-utility-1`
 w1fqdn=`cat host_list | grep cdh-worker-1`
-for host in `cat host_list`; do 
+for host in `cat host_list`; do
 	h_ip=`dig +short $host`
 	echo -e "$h_ip\t$host" >> hosts
 done;
@@ -173,7 +173,7 @@ for host in `cat host_list | gawk -F '.' '{print $1}'`; do
                                 echo -e "\tSetting up Firewall port 19888 for Job History Server access on $host"
                                 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=19888/tcp"
                                 echo -e "\tSetting up Firewall port 8088 for Resource Manager access on $host"
-                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=8088/tcp" 
+                                ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-port=8088/tcp"
 			fi
                         echo -e "\tAdding whitelist for network ${local_network} to local firewall on $host."
                         ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@$hostfqdn "sudo firewall-cmd --zone=public --add-source=${local_network}"
@@ -223,21 +223,20 @@ done
 echo -e "CDH Manager Setup Complete."
 echo -e "Copying (if exists) HDFS Data Tiering file from first Worker."
 scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa root@cdh-worker-1:/home/opc/hdfs_data_tiering.txt .
-if [ -f "hdfs_data_tiering.txt" ]; then 
+if [ -f "hdfs_data_tiering.txt" ]; then
 	echo -e "HDFS Data Tiering file found!  Copying to Utility node."
 	scp -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa hdfs_data_tiering.txt root@cdh-utility-1:/home/opc/hdfs_data_tiering.txt
 fi
 echo -e "Starting CDH provisioning via SCM..."
-## Invoke SCM bootstrapping and initialization 
+## Invoke SCM bootstrapping and initialization
 ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@${utilfqdn} "sudo /home/opc/startup.sh"
 echo -e "--------------------------------------------------------------------"
 echo -e "---------------------CLUSTER SETUP COMPLETE-------------------------"
 echo -e "--------------------------------------------------------------------"
 
-if [ -d post-setup-scripts ]; then 
+if [ -d post-setup-scripts ]; then
 	echo -e "---Running Post Installation Scripts---"
 	for script in `ls post-setup-scripts/`; do
 		sh post-setup-scripts/${script}
 	done;
 fi
-

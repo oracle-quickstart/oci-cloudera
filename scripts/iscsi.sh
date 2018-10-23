@@ -27,4 +27,3 @@ fi
 echo -e "$v" > /tmp/bvcount
 sleep 5
 rm -f /tmp/iscsi.lock
-
