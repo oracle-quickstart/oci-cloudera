@@ -19,18 +19,18 @@ stop_db()
 
 fail_or_continue()
 {
-    local RET=$1
-    local STR=$2
+  local RET=$1
+  local STR=$2
 
-    if [[ $RET -ne 0 ]]; then
-        stop_db
-        if [[ -z $STR ]]; then
-            STR="--> Error $RET"
-        fi
-        log "$STR, giving up"
-        log "------- initialize-postgresql.sh failed -------"
-        exit "$RET"
+  if [[ $RET -ne 0 ]]; then
+    stop_db
+    if [[ -z $STR ]]; then
+      STR="--> Error $RET"
     fi
+    log "$STR, giving up"
+    log "------- initialize-postgresql.sh failed -------"
+    exit "$RET"
+  fi
 }
 
 create_database()
@@ -454,7 +454,7 @@ NOW=$(date +%Y%m%d-%H%M%S)
 
 configure_postgresql_conf $DATA_DIR/postgresql.conf 0
 
-  # Add header to pg_hba.conf.
+# Add header to pg_hba.conf.
 echo "# Accept connections from all hosts" >> $DATA_DIR/pg_hba.conf
 
 
@@ -467,7 +467,7 @@ echo "# Accept connections from all hosts" >> $DATA_DIR/pg_hba.conf
 
 #put this line to the top of the ident to allow all local access
 sed -i '/host.*127.*ident/i \
-host    all         all         127.0.0.1/32          md5  \ ' $DATA_DIR/pg_hba.conf
+  host    all         all         127.0.0.1/32          md5  \ ' $DATA_DIR/pg_hba.conf
 #append this line as well, need both to allow access
 #echo "host    all         all         0.0.0.0/0          md5"
 

@@ -56,10 +56,10 @@ if [ $statuschk = "0" ]; then
   continue
 else
   while [ $statuschk != "0" ]; do
-		systemctl restart docker
-		statuschk=`echo -e $?`
-		sleep 1
-	done;
+    systemctl restart docker
+    statuschk=`echo -e $?`
+    sleep 1
+  done;
 fi
 
 echo -e "Downloading CDH5 Docker Container..."
@@ -74,9 +74,9 @@ docker run -d --hostname=quickstart.cloudera --privileged=true -it -p 7180:7180 
 echo -e "Waiting 120 seconds on startup..."
 t=0
 while [ $t -le 120 ]; do
-	echo -e "$t"
-	sleep 5
-	t=$((t+5))
+  echo -e "$t"
+  sleep 5
+  t=$((t+5))
 done;
 
 echo -e "Starting CDH Manager..."
