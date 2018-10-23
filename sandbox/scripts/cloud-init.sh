@@ -23,6 +23,6 @@ elif [ $speedup = "1" ]; then
 fi
 
 ## Custom Boot Volume Extension
-sudo yum -y install cloud-utils-growpart
-sudo yum -y install gdisk
-sudo reboot
+#sudo yum -y install cloud-utils-growpart
+#sudo yum -y install gdisk
+#sudo reboot
