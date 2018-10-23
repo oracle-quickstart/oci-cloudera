@@ -72,6 +72,9 @@ else
 fi
 
 echo -e "Downloading CDH5 Docker Container..."
+# This module specifically uses wget to fetch a specific version of the Cloudera Docker container.
+# This is because the version currently available in public Docker registry is an older version.
+# The wget command should be updated to fetch the latest Cloudera Docker container when new versions are released.
 wget https://downloads.cloudera.com/demo_vm/docker/cloudera-quickstart-vm-5.13.0-0-beta-docker.tar.gz
 tar -zxvf cloudera-quickstart-vm-5.13.0-0-beta-docker.tar.gz
 docker import - cloudera/quickstart:latest < cloudera-quickstart-vm-*-docker/*.tar
