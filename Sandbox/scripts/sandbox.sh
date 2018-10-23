@@ -7,7 +7,9 @@ firewall_on="1"
 #### MAIN EXECUTION BEGIN ####
 cd /home/opc/
 setenforce 0
+
 ### Tune Host
+
 ## Install Java
 yum install java-1.8.0-openjdk.x86_64 -y
 
@@ -37,22 +39,23 @@ sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
 
 ## Firewall Setup
 if [ $firewall_on = "1" ]; then
-        echo -e "\tSetting up Firewall Ports"
-               	echo -e "Port 7180"
-               	 firewall-cmd --zone=public --add-port=7180/tcp
-		echo -e "Port 8888"
-		 firewall-cmd --zone=public --add-port=8888/tcp
-		echo -e "Port 80"
-		 firewall-cmd --zone=public --add-port=80/tcp
-                 firewall-cmd --runtime-to-permanent
-		echo -e "DONE"
-        else
-                systemctl stop firewalld
-                systemctl disable firewalld
-	fi
+  echo -e "\tSetting up Firewall Ports"
+  echo -e "Port 7180"
+  firewall-cmd --zone=public --add-port=7180/tcp
+  echo -e "Port 8888"
+  firewall-cmd --zone=public --add-port=8888/tcp
+  echo -e "Port 80"
+  firewall-cmd --zone=public --add-port=80/tcp
+  firewall-cmd --runtime-to-permanent
+  echo -e "DONE"
+else
+  systemctl stop firewalld
+  systemctl disable firewalld
+fi
 
 echo -e "Downloading CDH5 Docker Container..."
 echo -e "Installing Docker..."
+
 yum install docker.x86_64 -y
 #sed -i 's/DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS= --storage-opt dm.basesize=20G/g' /etc/sysconfig/docker-storage
 systemctl start docker
