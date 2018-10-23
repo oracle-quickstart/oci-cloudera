@@ -1,4 +1,10 @@
 # Usage Guide
+This is the most powerful preconfigured option.  It provides high density, high performance and high availability.  It is an appropriate entry point for scaling up a production big data practice.
+
+|             | Worker Nodes   | Bastion Instance         | Utility and Master Instances |
+|-------------|----------------|--------------------------|------------------------------|
+| Minimum     | BM.DenseIO1.36 | VM.Standard1.4           | VM.Standard1.8               |                                
+| Recommended | BM.DenseIO2.52 | VM.Standard2.4           | VM.Standard2.8               |                                   
 
 ## Prerequisites
 Installation has a dependency on Terraform being installed and configured for the user tenancy.   As such an "env-vars" file is included with this package that contains all the necessary environment variables.  This file should be updated with the appropriate values prior to installation.  To source this file prior to installation, either reference it in your .rc file for your shell's or run the following:

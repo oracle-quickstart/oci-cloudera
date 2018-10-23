@@ -1,4 +1,5 @@
 # AD-Spanning
+This is a variation of the N-Node deployment that spans all ADs in a region.  This provides the most highly available solution for running Cloudera EDH on OCI.
 
 ## Prerequisites
 Installation has a dependency on Terraform being installed and configured for the user tenancy.   As such an `env-vars` file is included with this package that contains all the necessary environment variables.  This file should be updated with the appropriate values prior to installation.  To source this file prior to installation, either reference it in your .rc file for your shell's or run the following:

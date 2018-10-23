@@ -1,4 +1,16 @@
 # Development
+This is for small implementations.  This deployment consists of five instances:
+
+* 1 Bastion Instance
+* 1 Utility Instance
+* 3 worker Nodes
+
+This environment provides a much higher HDFS storage capacity, along with a compute and memory resources for use with a variety of big data workloads.   This environment is not a good fit for users who want high availability.
+
+|             | Worker Nodes                                       | Bastion Instance | Utility Instance |
+|-------------|----------------------------------------------------|------------------|------------------|
+| Minimum     | BM.Standard1.16 with 3x700GB Block Storage Devices | VM.Standard1.4   | VM.Standard1.8   |                   
+| Recommended | BM.Standard2.24 with 3x1TB Block Storage Devices   | VM.Standard2.4   | VM.Standard2.8   |
 
 ## Prerequisites
 Installation has a dependency on Terraform being installed and configured for the user tenancy.  As such an `env-vars` file is included with this package that contains all the necessary environment variables.  This file should be updated with the appropriate values prior to installation.  To source this file prior to installation, either reference it in your .rc file for your shell's or run the following:
