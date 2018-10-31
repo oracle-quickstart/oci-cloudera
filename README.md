@@ -14,7 +14,7 @@ First off you'll need to do some pre deploy setup.  That's all detailed [here](h
 Now, you'll want a local copy of this repo.  You can make that with the commands:
 
     git clone https://github.com/cloud-partners/oci-cloudera-edh.git
-    cd oci-couchbase/terraform
+    cd oci-cloudera-edh/terraform
     ls
 
 ## Deploy
