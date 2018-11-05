@@ -9,8 +9,8 @@ if [ $speedup = "0" ]; then
     selinuxchk=`sudo cat /etc/selinux/config | grep enforcing`
     selinux_chk=`echo -e $?`
     if [ $selinux_chk = "0" ]; then
-      sudo sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-      sudo reboot
+      sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+      reboot
     fi
   fi
 elif [ $speedup = "1" ]; then
@@ -18,15 +18,15 @@ elif [ $speedup = "1" ]; then
     selinuxchk=`sudo cat /etc/selinux/config | grep enforcing`
     selinux_chk=`echo -e $?`
     if [ $selinux_chk = "0" ]; then
-      sudo sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-      sudo setenforce 0
+      sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+      setenforce 0
     fi
   fi
 fi
 
 ## Custom Boot Volume Extension
-sudo yum -y install cloud-utils-growpart
-sudo yum -y install gdisk
+yum -y install cloud-utils-growpart
+yum -y install gdisk
 growpart /dev/sda 3
 echo "0" > /home/opc/.done
-sudo reboot
+reboot
