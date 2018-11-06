@@ -1,8 +1,8 @@
 resource "oci_core_instance" "UtilityNode" {
   availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.AD - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
-  display_name        = "CDH Utility1"
-  hostname_label      = "CDH-Utility1"
+  display_name        = "CDH Utility-1"
+  hostname_label      = "CDH-Utility-1"
   shape               = "${var.MasterInstanceShape}"
   subnet_id           = "${oci_core_subnet.public.*.id[var.AD - 1]}"
 
