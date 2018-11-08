@@ -54,6 +54,10 @@ variable "WorkerInstanceShape" {
   default = "BM.DenseIO2.52"
 }
 
+variable "ssh_keypath" {
+  default = "/home/opc/.ssh/id_rsa"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Constants
 # You probably don't need to change these.

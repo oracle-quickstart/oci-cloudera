@@ -28,7 +28,7 @@ resource "null_resource" "cdh-setup" {
   }
 
   provisioner "file" {
-    source      = "/home/opc/.ssh/id_rsa"
+    source      = "${var.ssh_keypath}"
     destination = "/home/opc/.ssh/id_rsa"
 
     connection {

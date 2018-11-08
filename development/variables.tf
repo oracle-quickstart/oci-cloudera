@@ -56,6 +56,10 @@ variable "WorkerInstanceShape" {
   default = "BM.Standard1.36"
 }
 
+variable "ssh_keypath" {
+  default = "/home/opc/.ssh/id_rsa"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Constants
 # You probably don't need to change these.
