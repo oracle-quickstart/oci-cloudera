@@ -1996,7 +1996,7 @@ def parse_options():
     # Install CDH5 latest version
     # Modify this for custom cloudera install
     cmx_config_options['parcel'].append(manifest_to_dict(
-        'http://archive.cloudera.com/cdh5/parcels/5.15.1/manifest.json'))
+        'http://archive.cloudera.com/cdh5/parcels/5/manifest.json'))
 
     msg_req_args = "Please specify the required arguments: "
     if cmx_config_options['cm_server'] is None:
