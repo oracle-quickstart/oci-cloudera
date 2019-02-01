@@ -1,4 +1,4 @@
-# oci-cloudera-edh
+# oci-cloudera
 These are Terraform modules for deploying Cloudera Enterprise Data Hub (EDH) on Oracle Cloud Infrastructure (OCI):
 
 This consists of two sub-modules, one for Cloudera EDH v5, and one for Cloudera EDH v6.
