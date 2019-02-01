@@ -8,13 +8,13 @@ These are Terraform modules for deploying Cloudera Enterprise Data Hub (EDH) on 
 * [ad-spanning](ad-spanning) is a variation of the N-Node deployment that spans all ADs in a region.  This provides the most highly available solution for running Cloudera EDH on OCI.
 
 ## Prerequisites
-First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/cloud-partners/oci-prerequisites).
+First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oci-quickstart/oci-prerequisites).
 
 ## Clone the Module
 Now, you'll want a local copy of this repo.  You can make that with the commands:
 
-    git clone https://github.com/cloud-partners/oci-cloudera-edh.git
-    cd oci-cloudera-edh
+    git clone https://github.com/oci-quickstart/oci-cloudera-edh.git
+    cd oci-cloudera-edh/v5
     ls
 
 ## Deploy

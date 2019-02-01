@@ -8,26 +8,36 @@ import cm_client
 from cm_client import ApiUser2
 from cm_client.rest import ApiException
 from pprint import pprint
-# import json
+import hashlib
 import re
+from paramiko import SFTPClient, SSHClient, AutoAddPolicy
+import json
+import time, datetime
 
+start_time = time.time()
 #
 # Set Global Parameters here
 #
 
-# These will be passed eventually
-vmsize = 'VM.Standard2.16'  # type: str
+# This will be passed eventually
 disk_count = '3'  # type: int
 
-# Enable Debug Output set this to 'True'
+# Enable Debug Output set this to 'True' for detailed output during execution
 debug = 'False'  # type: str
 
 # Define new admin username and password
 user_name = 'cdhadmin'  # type: str
 password = 'somepassword'  # type: str
 
+# Set this to 'Yes' if you want to perform host lookups from the Cloudera Manager host for building your cluster
+# Any other value will revert to static host list set in "build_host_list" function - you will need to manually set
+# these values in this script.
+remotely_detect_hosts = 'Yes'
+# If above is not set to 'Yes', you will need to set the Worker Shape manually - this applies specific OCI tunings
+worker_shape = 'VM.Standard2.16'  # type: str
+
 # This will be passed as part of TF deployment (refactor for local exec, strip IP and then execute)
-cm_server = '132.145.152.119'  # type: str
+cm_server = '129.146.44.165'  # type: str
 
 # Define cluster name
 cluster_name = 'TestCluster'  # type: str
@@ -48,27 +58,43 @@ ssh_keyfile = '/Users/zsmith/.ssh/id_rsa'  # type: str
 # Modify this list to pick which services to install
 #
 # cluster_service_list = ['SOLR', 'ACCUMULO_C6', 'ADLS_CONNECTOR', 'LUNA_KMS', 'HBASE', 'SENTRY', 'HIVE', 'KUDU', 
-#                        'HUE', 'FLUME', 'SPARK_ON_YARN', 'THALES_KMS', 'HDFS', 'OOZIE', 'ISILON', 'SQOOP_CLIENT', 
-#                        'KS_INDEXER', 'ZOOKEEPER', 'YARN', 'KMS', 'KEYTRUSTEE', 'KEYTRUSTEE_SERVER', 'KAFKA', 'IMPALA',
-#                        'AWS_S3']
+#                         'HUE', 'FLUME', 'SPARK_ON_YARN', 'THALES_KMS', 'HDFS', 'OOZIE', 'ISILON', 'SQOOP_CLIENT',
+#                         'KS_INDEXER', 'ZOOKEEPER', 'YARN', 'KMS', 'KEYTRUSTEE', 'KEYTRUSTEE_SERVER', 'KAFKA', 'IMPALA',
+#                         'AWS_S3']
 
 # MAXIMAL - NON KERBEROS
-cluster_service_list = ['SOLR', 'ACCUMULO_C6', 'HBASE', 'HIVE', 'HUE', 'FLUME',
-                        'SPARK_ON_YARN', 'HDFS', 'OOZIE', 'SQOOP_CLIENT', 'ZOOKEEPER',
+cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE', 'SQOOP_CLIENT', 'ZOOKEEPER',
                         'YARN', 'KAFKA', 'IMPALA']
 
 # MINIMAL - NON KERBEROS
 # cluster_service_list = ['HDFS', 'YARN', 'SOLR', 'ZOOKEEPER']
 
-# Cluster Host Mapping
-# Use define these variables to pattern match when building host lists to use for role and
-# service mapping.  For example, if your worker nodes have "worker" in the hostname, set that here.   If you want your
-# Cloudera manager on a specific host, set he host identifier here.   See the "cluster_host_id_map" function.
+# Management Roles List
+#  Available role types:
+#
+#  mgmt_roles_list = [ 'SERVICEMONITOR', 'ACTIVITYMONITOR', 'HOSTMONITOR', 'REPORTSMANAGER', 'EVENTSERVER'
+#                      'ALERTPUBLISHER', 'NAVIGATOR', 'NAVIGATORMETASERVER']
+#
+# REPORTSMANAGER, NAVIGATOR, NAVIGATORMETASERVER are only available with Licensed Cloudera Manager Enterprise Edition.
+#
+mgmt_roles_list = ['ACTIVITYMONITOR', 'ALERTPUBLISHER', 'EVENTSERVER', 'HOSTMONITOR', 'SERVICEMONITOR']
 
-worker_hosts_contain = "worker"
-namenode_host_contains = "master-1"
-secondary_namenode_host_contains = "master-2"
-cloudera_manager_host_contains = "utility"
+# Cluster Host Mapping
+# Define these variables to pattern match when building host lists to use for role and
+# service mapping.  For example, if your worker nodes have "cdh-worker" in the hostname, set that here.
+# If you want your Cloudera Manager on a specific host, set he host identifier here.
+# This is used in "cluster_host_id_map" and "remote_host_detection"
+#
+# Worker Host Prefix
+worker_hosts_contain = 'cdh-worker'
+# Master Host Prefix
+master_hosts_contain = 'cdh-master'
+# Explicit hostname of the Master Host for NameNode
+namenode_host_contains = 'cdh-master-1'
+# Explicit hostname of the Master Host for SecondaryNameNode
+secondary_namenode_host_contains = 'cdh-master-2'
+# Explicit hostname of the Cloudera Manager Host
+cloudera_manager_host_contains = 'cdh-utility-1'
 
 # Specify Log directory on cluster hosts
 LOG_DIR = '/log/cloudera'
@@ -81,7 +107,7 @@ LOG_DIR = '/log/cloudera'
 #
 # OCI Shape Specific Tunings - Modify at your own discretion
 #
-def get_parameter_value(vmsize, parameter):
+def get_parameter_value(worker_shape, parameter):
     switcher = {
         "BM.DenseIO2.52:yarn_nodemanager_resource_cpu_vcores": "208",
         "BM.DenseIO2.52:yarn_nodemanager_resource_memory_mb": "786432",
@@ -100,37 +126,37 @@ def get_parameter_value(vmsize, parameter):
         "BM.Standard2.52:impalad_memory_limit": "274877906944",
         "BM.Standard2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.Standard2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "BM.Standard2.52:dfs_replication": "1",
+        "BM.Standard2.52:dfs_replication": "3",
         "BM.Standard1.36:yarn_nodemanager_resource_cpu_vcores": "128",
         "BM.Standard1.36:yarn_nodemanager_resource_memory_mb": "242688",
         "BM.Standard1.36:impalad_memory_limit": "122857142857",
         "BM.Standard1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.Standard1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-        "BM.Standard1.36:dfs_replication": "1",
+        "BM.Standard1.36:dfs_replication": "3",
         "VM.Standard2.24:yarn_nodemanager_resource_cpu_vcores": "80",
         "VM.Standard2.24:yarn_nodemanager_resource_memory_mb": "308224",
         "VM.Standard2.24:impalad_memory_limit": "122857142857",
         "VM.Standard2.24:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
         "VM.Standard2.24:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
-        "VM.Standard2.24:dfs_replication": "1",
+        "VM.Standard2.24:dfs_replication": "3",
         "VM.Standard2.16:yarn_nodemanager_resource_cpu_vcores": "48",
         "VM.Standard2.16:yarn_nodemanager_resource_memory_mb": "237568",
         "VM.Standard2.16:impalad_memory_limit": "42949672960",
         "VM.Standard2.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard2.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard2.16:dfs_replication": "1",
+        "VM.Standard2.16:dfs_replication": "3",
         "VM.Standard1.16:yarn_nodemanager_resource_cpu_vcores": "48",
         "VM.Standard1.16:yarn_nodemanager_resource_memory_mb": "95232",
         "VM.Standard1.16:impalad_memory_limit": "42949672960",
         "VM.Standard1.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard1.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard1.16:dfs_replication": "1",
+        "VM.Standard1.16:dfs_replication": "3",
         "VM.Standard2.8:yarn_nodemanager_resource_cpu_vcores": "16",
         "VM.Standard2.8:yarn_nodemanager_resource_memory_mb": "114688",
         "VM.Standard2.8:impalad_memory_limit": "21500000000",
         "VM.Standard2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.Standard2.8:dfs_replication": "1",
+        "VM.Standard2.8:dfs_replication": "3",
         "VM.DenseIO2.8:yarn_nodemanager_resource_cpu_vcores": "16",
         "VM.DenseIO2.8:yarn_nodemanager_resource_memory_mb": "114688",
         "VM.DenseIO2.8:impalad_memory_limit": "21500000000",
@@ -148,13 +174,13 @@ def get_parameter_value(vmsize, parameter):
         "VM.Standard1.8:impalad_memory_limit": "21500000000",
         "VM.Standard1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.Standard1.8:dfs_replication": "1"
+        "VM.Standard1.8:dfs_replication": "3"
     }
-    return switcher.get(vmsize + ":" + parameter, "NOT FOUND")
+    return switcher.get(worker_shape + ":" + parameter, "NOT FOUND")
 
 
 #
-# Main Functions Section
+# SECONDARY FUNCTIONS SECTION
 #
 
 def parse_ssh_key():
@@ -192,7 +218,8 @@ def build_api_endpoints():
     global clusters_api_instance, users_api_instance, manager_api_instance, parcels_api_instance, parcel_api_instance, \
         cluster_services_api_instance, auth_roles_api_instance, roles_config_api_instance, all_hosts_api_instance, \
         roles_resource_api_instance, mgmt_service_resource_api_instance, services_resource_api_instance, \
-        mgmt_role_commands_resource_api_instance, mgmt_role_config_groups_resource_api_instance
+        mgmt_role_commands_resource_api_instance, mgmt_role_config_groups_resource_api_instance, \
+        mgmt_roles_resource_api_instance
     clusters_api_instance = cm_client.ClustersResourceApi(api_client)
     users_api_instance = cm_client.UsersResourceApi(api_client)
     manager_api_instance = cm_client.ClouderaManagerResourceApi(api_client)
@@ -207,11 +234,13 @@ def build_api_endpoints():
     services_resource_api_instance = cm_client.ServicesResourceApi(api_client)
     mgmt_role_commands_resource_api_instance = cm_client.MgmtRoleCommandsResourceApi(api_client)
     mgmt_role_config_groups_resource_api_instance = cm_client.MgmtRoleConfigGroupsResourceApi(api_client)
+    mgmt_roles_resource_api_instance = cm_client.MgmtRolesResourceApi(api_client)
 
 
-def wait_for_active_commands(active_command):
+def wait_for_active_cluster_commands(active_command):
     """
-    Wait until Cloudera Manager finishes running active_command
+    Wait until Cloudera Manager finishes running cluster active_command
+    :param active_command: Descriptive of what should be running - this just waits if any task is detected running
     :return:
     """
     view = 'summary'
@@ -221,6 +250,32 @@ def wait_for_active_commands(active_command):
     while done == '0':
         try:
             api_response = manager_api_instance.list_active_commands(view=view)
+            if not api_response.items:
+                done = '1'
+                break
+            else:
+                print('\r%s - Waiting: %s' % (active_command, wait_status))
+                time.sleep(10)
+                wait_status = wait_status + '*'
+                sys.stdout.flush()
+        except ApiException as e:
+            print('Exception waiting for active commands: {}'.format(e))
+    print('\n')
+
+
+def wait_for_active_mgmt_commands(active_command):
+    """
+    Wait until Cloudera Manager finishes running mgmt active_command
+    :param active_command: Descriptive of what should be running - this just waits if any task is detected running
+    :return:
+    """
+    view = 'summary'
+    wait_status = '*'
+    done = '0'
+
+    while done == '0':
+        try:
+            api_response = mgmt_service_resource_api_instance.list_active_commands(view=view)
             if not api_response.items:
                 done = '1'
                 break
@@ -242,14 +297,33 @@ def list_active_commands():
 
     try:
         api_response = manager_api_instance.list_active_commands(view=view)
+        if debug == 'True':
+            pprint(api_response)
         if not api_response.items:
             pass
         else:
             print('Active Command Running : %s' % api_response.items)
-            if debug == 'True':
-                pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClouderaManagerResourceApi->list_active_commands: {}\n'.format(e))
+
+
+def list_active_mgmt_commands():
+    """
+    Check Cloudera Manager for running commands
+    :return:
+    """
+    view = 'summary'
+
+    try:
+        api_response = mgmt_service_resource_api_instance.list_active_commands(view=view)
+        if debug == 'True':
+            pprint(api_response)
+        if not api_response.items:
+            pass
+        else:
+            print('Active Command Running : %s' % api_response.items)
+    except ApiException as e:
+        print('Exception when calling MgmtServiceResourceApi->list_active_commands: {}\n'.format(e))
 
 
 def init_admin_user():
@@ -348,21 +422,133 @@ def read_cluster():
         print('Exception while calling ClustersResourceAPI->read_cluster: {}\n'.format(e))
 
 
-def build_host_list():
+def remote_host_detection():
     """
-    Create Host List for host management
+    SSH to Cloudera Manager Server and detect cluster hosts
     :return:
     """
+    print('->Building Host FQDN List dynamically using SSH')
+    global host_fqdn_list, output
+    host_fqdn_list = []
+    ssh_client = SSHClient()
+    ssh_client.set_missing_host_key_policy(AutoAddPolicy)
+    ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
+    # Cloudera Manager FQDN lookup
+    print('->Lookup Cloudera Manager FQDN')
+    try:
+        ssh_command = '/usr/bin/host ' + cloudera_manager_host_contains
+        stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
+        output = stdout.read()
+        fqdn = output.strip().split()
+        if debug == 'True':
+            print('Host Detection output for Cloudera Manager - %s - FQDN: %s' % (output, fqdn[0]))
+
+        if stdout.channel.recv_exit_status() == 0:
+            host_fqdn_list.append(fqdn[0])
+
+    except:
+        pass
+    print('\t%d found' % len(host_fqdn_list))
+    # Master Host Detection
+    x = 1
+    print('->Lookup Master Hosts FQDN')
+    for n in range(x, 6):
+        try:
+            ssh_command = '/usr/bin/host ' + master_hosts_contain + '-%d' % (x,)
+            stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
+            output = stdout.read()
+            fqdn = output.strip().split()
+            if debug == 'True':
+                print('Host Detection output for Master Hosts - %s - FQDN: %s' % (output, fqdn[0]))
+
+            if stdout.channel.recv_exit_status() == 0:
+                host_fqdn_list.append(fqdn[0])
+
+            else:
+                print('\t%d found' % (x - 1))
+                x = 0
+
+        except:
+            pass
+
+        if x == 0:
+            break
+        else:
+            x = x + 1
+
+    # Worker Host Detection
+    # For large scale cluster deployment, change this to a number higher than the number of workers
+    max_worker_count = 100
+    x = 1
+    print('->Lookup Worker Hosts FQDN')
+    for n in range(x, max_worker_count):
+        try:
+            ssh_command = '/usr/bin/host ' + worker_hosts_contain + '-%d' % (x,)
+            stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
+            output = stdout.read()
+            fqdn = output.strip().split()
+            if debug == 'True':
+                print('Host Detection output for Worker Hosts - %s - FQDN: %s' % (output, fqdn[0]))
+
+            if stdout.channel.recv_exit_status() == 0:
+                host_fqdn_list.append(fqdn[0])
+
+            else:
+                print('\t%d found' % (x - 1))
+                x = 0
+
+        except:
+            pass
+
+        if x == 0:
+            break
+
+        else:
+            x = x + 1
+
+
+def remote_worker_shape_detection():
+    """
+    SSH via the Cloudera Manager to the first worker in the cluster and lookup shape metadata, setting "worker_shape"
+    :return:
+    """
+    ssh_client = SSHClient()
+    ssh_client.set_missing_host_key_policy(AutoAddPolicy)
+    ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
+    ssh_command = "ssh -oStrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@" + worker_hosts_contain + "-1" + \
+                  " '/usr/bin/curl -s http://169.254.169.254/opc/v1/instance/'"
+    stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
+    worker_metadata = stdout.read()
+    if debug == 'True':
+        print('Worker Metadata from Shape Detection:')
+        print(worker_metadata)
+
+    parsed_metadata = json.loads(worker_metadata)
+    worker_shape = parsed_metadata['shape']
+
+
+def build_host_list():
+    """
+    Create Static Host List for host management - use this if not using remote_host_detection()
+    :return:
+    """
+    print('->Building Host FQDN List from Static Values\n')
     global host_fqdn_list
     host_fqdn_list = []
-    # TODO
-    # Replace the FQDN list from static object to a host detection function
-    #
-    host_fqdn_list = ['cdh-utility-1.public3.cdhvcn.oraclevcn.com', 'cdh-master-1.private3.cdhvcn.oraclevcn.com',
-                      'cdh-master-2.private3.cdhvcn.oraclevcn.com', 'cdh-worker-1.private3.cdhvcn.oraclevcn.com',
-                      'cdh-worker-2.private3.cdhvcn.oraclevcn.com', 'cdh-worker-3.private3.cdhvcn.oraclevcn.com']
-    ###
+    host_fqdn_list = ['cdh-utility-1.public3.cdhvcn.oraclevcn.com',
+                      'cdh-master-1.private3.cdhvcn.oraclevcn.com',
+                      'cdh-master-2.private3.cdhvcn.oraclevcn.com',
+                      'cdh-worker-1.private3.cdhvcn.oraclevcn.com',
+                      'cdh-worker-2.private3.cdhvcn.oraclevcn.com',
+                      'cdh-worker-3.private3.cdhvcn.oraclevcn.com']
 
+
+def build_cluster_host_list(host_fqdn_list):
+    """
+    Take values from host_fqdn_list and convert them using ApiHostRef
+    :param host_fqdn_list:
+    :return:
+    """
     global cluster_host_list
     cluster_host_list = []
     for host in host_fqdn_list:
@@ -556,6 +742,7 @@ def define_cluster_services(cluster_service_list):
 def create_cluster_services(api_service_list):
     """
     Create Cluster Services using cluster_service_list
+    api_service_list: API packet from define_cluster_services
     :return:
     """
     body = cm_client.ApiServiceList(api_service_list)
@@ -566,6 +753,202 @@ def create_cluster_services(api_service_list):
             pprint(api_response)
     except ApiException as e:
         print('Exception when calling ServicesResourceApi->create_services: {}\n'.format(e))
+
+
+def update_service_config(service_name, api_config_items):
+    """
+    Update Service Configuration with given values
+    :param service_name: Name of the Cluster Service
+    :param api_config_items: ApiConfig bundled item list
+    :return:
+    """
+    body = cm_client.ApiServiceConfig(items=api_config_items)
+
+    try:
+        api_response = services_resource_api_instance.update_service_config(cluster_name, service_name, body=body)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ServicesResourceApi -> update_service_config {}\n'.format(e))
+
+
+def get_mgmt_db_passwords():
+    """
+    Scrape flat file on CMS host to get DB passwords
+    This will need to be updated for MySQL/Oracle deployments, currently uses PostgreSQL
+    :return:
+    """
+    global amon_password, rman_password, navigator_password, navigator_meta_password, oozie_password, hive_meta_password
+    parse_ssh_key()
+    ssh_client = SSHClient()
+    ssh_client.set_missing_host_key_policy(AutoAddPolicy)
+    ssh_client.connect(hostname=cm_server, username='root', key_filename=ssh_keyfile)
+    sftp_client = ssh_client.open_sftp()
+    remote_file = sftp_client.open('/etc/cloudera-scm-server/db.mgmt.properties')
+    try:
+        for line in remote_file:
+            if 'com.cloudera.cmf.ACTIVITYMONITOR.db.password' in line:
+                amon_password = line.split('=')[1].rstrip()
+
+            if 'com.cloudera.cmf.REPORTSMANAGER.db.password' in line:
+                rman_password = line.split('=')[1].rstrip()
+
+            if 'com.cloudera.cmf.NAVIGATOR.db.password' in line:
+                navigator_password = line.split('=')[1].rstrip()
+
+            if 'com.cloudera.cmf.NAVIGATORMETASERVER.db.password' in line:
+                navigator_meta_password = line.split('=')[1].rstrip()
+
+            if 'com.cloudera.cmf.OOZIE.db.password' in line:
+                oozie_password = line.split('=')[1].rstrip()
+
+            if 'com.cloudera.cmf.HIVEMETASTORESERVER.db.password' in line:
+                hive_meta_password = line.split('=')[1].rstrip()
+
+    finally:
+        remote_file.close()
+
+
+def define_cms_mgmt_service():
+    """
+    Build API packet for CMS service list
+    :return:
+    """
+    global mgmt_api_packet
+    mgmt_api_packet = []
+    mgmt_api_packet = cm_client.ApiService(cluster_ref=api_cluster_name, display_name='Cloudera Management Service',
+                                           name='mgmt', type='MGMT')
+
+
+def setup_cms():
+    """
+    Setup the Cloudera Management Services.
+    :return:
+    """
+    try:
+        print('->Setting up %s \n' % mgmt_api_packet.display_name)
+        api_response = mgmt_service_resource_api_instance.setup_cms(body=mgmt_api_packet)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling MgmtServiceResourceApi -> setup_cms {}\n'.format(e))
+
+
+def begin_trial():
+    """
+    Start Trial License
+    :return:
+    """
+    try:
+        api_response = manager_api_instance.begin_trial()
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClouderaManagerResourceApi -> begin_trial: {}\n'.format(e))
+
+
+def update_mgmt_rcg(rcg_name, role, display_name, rcg_config):
+    """
+    Create Management Services using api_mgmt_service_list
+
+    :return:
+    """
+    print('-->Updating RCG: %s\n' % rcg_name)
+    body = cm_client.ApiRoleConfigGroup(name=rcg_name, role_type=role, display_name=display_name,
+                                               config=rcg_config)
+
+    try:
+        api_response = mgmt_role_config_groups_resource_api_instance.update_role_config_group(rcg_name, body=body)
+        if debug == 'True':
+                pprint(api_response)
+    except ApiException as e:
+        print('Exception calling MgmtRoleConfigGroupsResourceApi -> update_role_config_group {}\n'.format(e))
+
+
+def setup_mgmt_rcg(mgmt_roles_list):
+    """
+    Build API packet for Managment Services
+    :param mgmt_service_list: List of all Management Services
+    :return:
+    """
+    for role in mgmt_roles_list:
+        rcg_name = 'mgmt-' + role + '-BASE'
+        if role == "ACTIVITYMONITOR":
+            display_name = 'Activity Monitor Default Group'
+            firehose_database_host = [cm_client.ApiConfig(name='firehose_database_host', value=cm_hostname + ':5432')]
+            firehose_database_user = [cm_client.ApiConfig(name='firehose_database_user', value='amon')]
+            firehose_database_password = [cm_client.ApiConfig(name='firehose_database_password', value=amon_password)]
+            firehose_database_type = [cm_client.ApiConfig(name='firehose_database_type', value='postgresql')]
+            firehose_database_name = [cm_client.ApiConfig(name='firehose_database_name', value='amon')]
+            mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-firehose')]
+            firehose_heapsize = [cm_client.ApiConfig(name='firehose_heapsize', value='268435456')]
+            role_config_list = [firehose_database_host, firehose_database_name, firehose_database_password,
+                                firehose_database_type, firehose_database_user, mgmt_log_dir, firehose_heapsize]
+
+        if role == "ALERTPUBLISHER":
+            display_name = 'Alert Publisher Default Group'
+            mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloduera-scm-alertpublisher')]
+            role_config_list = [mgmt_log_dir]
+
+        if role == "EVENTSERVER":
+            display_name = 'Event SErver Default Group'
+            event_server_heapsize = [cm_client.ApiConfig(name='event_server_heapsize', value='268435456')]
+            mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-eventserver')]
+            eventserver_index_dir = [cm_client.ApiConfig(name='eventserver_index_dir',
+                                                         value=LOG_DIR + '/lib/cloudera-scm-eventserver')]
+            role_config_list = [event_server_heapsize, mgmt_log_dir, eventserver_index_dir]
+
+        if role == "HOSTMONITOR":
+            display_name = 'Host Monitor Default Group'
+            mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-firehose')]
+            firehose_storage_dir = [cm_client.ApiConfig(name='firehose_storage_dir',
+                                                        value=LOG_DIR + "/lib/cloudera-host-monitor")]
+            role_config_list = [mgmt_log_dir, firehose_storage_dir]
+
+        if role == "SERVICEMONITOR":
+            display_name = 'Service Monitor Default Group'
+            mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-firehose')]
+            firehose_storage_dir = [cm_client.ApiConfig(name='firehose_storage_dir',
+                                                        value=LOG_DIR + "/lib/cloudera-service-monitor")]
+            role_config_list = [mgmt_log_dir, firehose_storage_dir]
+
+        if role == "NAVIGATOR":
+            display_name = 'Navigator Default Group'
+            continue
+
+        if role == "NAVIGATORMETADATASERVER":
+            display_name = 'Navigator Metadata Server Default Group'
+            continue
+
+        if role == "REPORTSMANAGER":
+            display_name = 'Reports Manager Default Group'
+            headlamp_database_host = [cm_client.ApiConfig(name='headlamp_database_host', value=cm_hostname + ':5432')]
+            headlamp_database_name = [cm_client.ApiConfig(name='headlamp_database_name', value='rman')]
+            headlamp_databse_password = [cm_client.ApiConfig(name='headlamp_database_password', value=rman_password)]
+            headlamp_database_type = [cm_client.ApiConfig(name='headlamp_database_type', value='postgresql')]
+            headlamp_database_user = [cm_client.ApiConfig(name='headlamp_database_user', value='rman')]
+            headlamp_scratch_dir = [cm_client.ApiConfig(name='headlamp_scrtch_dir',
+                                                        value=LOG_DIR + '/lib/cloudera-scm-headlamp')]
+            mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/lib/cloudera-scm-headlamp')]
+            role_config_list = [headlamp_database_host, headlamp_database_name, headlamp_database_type,
+                                headlamp_database_user, headlamp_databse_password, headlamp_scratch_dir,
+                                mgmt_log_dir]
+
+        if role == "OOZIE":
+            display_name = 'Oozie Default Group'
+            oozie_database_host = [cm_client.ApiConfig(name='oozie_database_host', value=cm_hostname + ':5432')]
+            oozie_database_name = [cm_client.ApiConfig(name='oozie_database_name', value='oozie')]
+            oozie_database_password = [cm_client.ApiConfig(name='oozie_database_password', value=oozie_password)]
+            oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value='postgresql')]
+            oozie_database_user = [cm_client.ApiConfig(name='oozie_database_user', value='oozie')]
+            oozie_log_dir = [cm_client.ApiConfig(name='oozie_log_dir', value=LOG_DIR + '/oozie')]
+            role_config_list = [oozie_database_host, oozie_database_name, oozie_database_password,
+                                oozie_database_type, oozie_database_user, oozie_log_dir]
+        for config in role_config_list:
+            rcg_config = cm_client.ApiConfigList(config)
+            update_mgmt_rcg(rcg_name=rcg_name, role=role, display_name=display_name, rcg_config=rcg_config)
+        create_mgmt_roles(mgmt_rcg=rcg_name, mgmt_rcg_roletype=role, mgmt_host_id=cm_host_id, mgmt_hostname=cm_hostname,
+                          mrc=1)
 
 
 def update_cluster_rcg_configuration(cluster_service_list):
@@ -583,6 +966,8 @@ def update_cluster_rcg_configuration(cluster_service_list):
         try:
             api_response = roles_config_api_instance.update_config(cluster_name, rcg, service, message=message,
                                                                    body=body)
+            if debug == 'True':
+                pprint(api_response)
         except ApiException as e:
             print('Exception updating %s - %s: \n%s' % (service, rcg, e))
 
@@ -590,13 +975,52 @@ def update_cluster_rcg_configuration(cluster_service_list):
         build_role_config_group_list(service)
         message = 'Cluster Build Update'
         print('->Updating ' + service + ' Configuration\n')
+        if service == 'FLUME':
+            for rcg in role_config_group_list:
+                if rcg == 'FLUME-AGENT-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'AGENT'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
+                    pass
+
+        if service == 'HBASE':
+            for rcg in role_config_group_list:
+                if rcg == 'HBASE-HBASETHRIFTSERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HBASETHRIFTSERVER'
+                    pass
+
+                if rcg == 'HBASE-MASTER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'MASTER'
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
+                    create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 2)
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
+
+                if rcg == 'HBASE-REGIONSERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'REGIONSERVER'
+                    n = 0
+                    for host_id in worker_host_ids:
+                        create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+                        n = n + 1
+
+                if rcg == 'HBASE-HBASERESTSERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    pass
+
+                if rcg == 'HBASE-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
+                    create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 2)
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
+
         if service == 'HDFS':
             for rcg in role_config_group_list:
-                print('->Updating RCG: %s\n' % rcg)
                 if rcg == 'HDFS-NAMENODE-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'NAMENODE'  # type: str
-                    dfs_replication = [cm_client.ApiConfig(name='dfs_replication',
-                                                           value=get_parameter_value(vmsize, 'dfs_replication'))]
                     dfs_name_dir = [cm_client.ApiConfig(name='dfs_name_dir_list', value='/data/dfs/nn')]
                     dfs_namenode_handler_count = [cm_client.ApiConfig(name='dfs_namenode_handler_count', value='70')]
                     dfs_namenode_service_handler_count = [cm_client.ApiConfig(name='dfs_namenode_service_handler_count',
@@ -612,9 +1036,10 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HDFS-DATANODE-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'DATANODE'  # type: str
                     dfs_replication = [cm_client.ApiConfig(name='dfs_replication',
-                                                           value=get_parameter_value(vmsize, 'dfs_replication'))]
+                                                           value=get_parameter_value(worker_shape, 'dfs_replication'))]
                     dfs_block_local = [cm_client.ApiConfig(name='dfs_block_local_path_acess_user',
                                                            value='impala,hbase,mapred,spark')]
                     dfs_data_dir = [cm_client.ApiConfig(name='dfs_data_dir_list', value=dfs_data_dir_list)]
@@ -634,6 +1059,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                       dfs_datanode_max_xcievers, datanode_log_dir]
                     for config in dn_config_list:
                         push_rcg_config(config)
+                    update_service_config(service_name=service, api_config_items=dfs_replication)
                     n = 0
                     if debug == 'True':
                         print('->DEBUG - Number of Workers: ' + str(len(worker_host_ids)))
@@ -641,11 +1067,9 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
                         n = n + 1
 
-
                 if rcg == 'HDFS-SECONDARYNAMENODE-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'SECONDARYNAMENODE'  # type: str
-                    dfs_replication = [cm_client.ApiConfig(name='dfs_replication_factor',
-                                                           value=get_parameter_value(vmsize, 'dfs_replication'))]
                     fs_checkpoint_dir = [cm_client.ApiConfig(name='fs_checkpoint_dir_list', value='/data/dfs/snn')]
                     secondary_namenode_java_heapsize = [cm_client.ApiConfig(name='secondary_namenode_java_heapsize',
                                                                             value='41960000000')]
@@ -657,45 +1081,246 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
-                if rcg == 'HDFS-FAILOVERCONTROLLER-BASEx':
+                if rcg == 'HDFS-FAILOVERCONTROLLER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'FAILOVERCONTROLLER'
                     failover_controller_log_dir = [cm_client.ApiConfig(name='failover_controller_log_dir',
                                                                        value=LOG_DIR + '/hadoop-hdfs')]
                     push_rcg_config(failover_controller_log_dir)
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'HDFS-HTTPFS-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HTTPFS'
                     httpfs_log_dir = [cm_client.ApiConfig(name='httpfs_log_dir', value=LOG_DIR + '/hadoop-httpfs')]
                     push_rcg_config(httpfs_log_dir)
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HDFS-GATEWAY-BASE':
-                    dfs_client_use_trash = [cm_client.ApiConfig(name='dfs_client_use_trash', value='True')]
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    dfs_client_use_trash = [cm_client.ApiConfig(name='dfs_client_use_trash', value='true')]
                     push_rcg_config(dfs_client_use_trash)
 
                 if rcg == 'HDFS-BALANCER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'BALANCER'  # type: str
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
-        if service == 'SOLR':
-            for rcg in role_config_group_list:
-                print('->Updating RCG: %s\n' % rcg)
-                if rcg == 'SOLR-GATEWAY-BASE':
+                if rcg == 'HDFS-NFSGATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'NFSGATEWAY'
                     pass
 
+                if rcg == 'HDFS-JOURNALNODE-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'JOURNALNODE'
+                    dfs_journalnode_edits_dir = [cm_client.ApiConfig(name='dfs_journalnode_edits_dir',
+                                                                     value='/data/dfs/jn')]
+                    push_rcg_config(dfs_journalnode_edits_dir)
+                    create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 1)
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 2)
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
+                    pass
+
+        if service == 'HIVE':
+            for rcg in role_config_group_list:
+                if rcg == 'HIVE-HIVESERVER2-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HIVESERVER2'
+                    hiveserver2_spark_driver_memory = [cm_client.ApiConfig(name='hiveserver2_spark_driver_memory',
+                                                                           value='11596411699')]
+                    hiveserver2_spark_executor_cores = [cm_client.ApiConfig(name='hiveserver2_spark_executor_cores',
+                                                                            value='4')]
+                    hiveserver2_spark_executor_memory = [cm_client.ApiConfig(name='hiveserver2_spark_executor_memory',
+                                                                             value='17230744780')]
+                    hiveserver2_spark_yarn_driver_memory_overhead = \
+                        [cm_client.ApiConfig(name='hiveserver2_spark_yarn_driver_memory_overhead',
+                                             value='1228')]
+                    hiveserver2_spark_yarn_executor_memory_overhead = \
+                        [cm_client.ApiConfig(name='hiveserver2_spark_yarn_executor_memory_overhead',
+                                             value='2899')]
+                    hive2_config_list = [hiveserver2_spark_driver_memory, hiveserver2_spark_executor_cores,
+                                         hiveserver2_spark_yarn_driver_memory_overhead,
+                                         hiveserver2_spark_yarn_executor_memory_overhead,
+                                         hiveserver2_spark_executor_memory]
+                    for config in hive2_config_list:
+                        push_rcg_config(config)
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
+
+                if rcg == 'HIVE-HIVEMETASTORE-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HIVEMETASTORE'
+                    hive_metastore_server_max_message_size = \
+                        [cm_client.ApiConfig(name='hive_metastore_server_max_message_size', value='858993459')]
+                    hive_metastore_database_host = [cm_client.ApiConfig(name='hive_metastore_database_host',
+                                                                        value=cm_hostname)]
+                    hive_metastore_database_user = [cm_client.ApiConfig(name='hive_metastore_database_user',
+                                                                        value='hive')]
+                    hive_metastore_database_name = [cm_client.ApiConfig(name='hive_metastore_database_name',
+                                                                        value='metastore')]
+                    hive_metastore_database_password = [cm_client.ApiConfig(name='hive_metastore_database_password',
+                                                                             value=hive_meta_password)]
+                    hive_metastore_database_port = [cm_client.ApiConfig(name='hive_metastore_database_port',
+                                                                        value='5432')]
+                    hive_metastore_database_type = [cm_client.ApiConfig(name='hive_metastore_database_type',
+                                                                        value='postgresql')]
+                    hive_meta_config = [ hive_metastore_database_host, hive_metastore_database_name,
+                                         hive_metastore_database_password, hive_metastore_database_port,
+                                         hive_metastore_database_type, hive_metastore_database_user]
+                    push_rcg_config(hive_metastore_server_max_message_size)
+                    for config in hive_meta_config:
+                        update_service_config(service_name=service, api_config_items=config)
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
+
+                if rcg == 'HIVE-WEBHCAT-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'WEBHCAT'
+                    pass
+
+                if rcg == 'HIVE-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    n = 0
+                    for host_id in worker_host_ids:
+                        create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+                        n = n + 1
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, (n + 1))
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, (n + 2))
+
+        if service == 'HUE':
+            for rcg in role_config_group_list:
+                if rcg == 'HUE-HUE_LOAD_BALANCER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HUE_LOAD_BALANCER'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
+                if rcg == 'HUE-KT_RENEWER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'KT_RENEWER'
+                    pass
+
+                if rcg == 'HUE-HUE_SERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HUE_SERVER'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
+        if service == 'IMPALA':
+            for rcg in role_config_group_list:
+                if rcg == 'IMPALA-IMPALAD-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'IMPALAD'
+                    n = 0
+                    for host_id in worker_host_ids:
+                        create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+                        n = n + 1
+
+                if rcg == 'IMPALA-STATESTORE-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'STATESTORE'
+                    create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 1)
+
+                if rcg == 'IMPALA-CATALOGSERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'CATALOGSERVER'
+                    create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 1)
+
+        if service == 'KAFKA':
+            for rcg in role_config_group_list:
+                if rcg == 'KAFKA-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
+                if rcg == 'KAFKA-KAFKA_BROKER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'KAFKA_BROKER'
+                    n = 0
+                    for host_id in worker_host_ids:
+                        create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+                        n = n + 1
+
+                if rcg == 'KAFKA-KAFKA_MIRROR_MAKER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'KAFKA_MIRROR_MAKER'
+                    pass
+
+        if service == 'OOZIE':
+            for rcg in role_config_group_list:
+                if rcg == 'OOZIE-OOZIE_SERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'OOZIE_SERVER'
+                    oozie_database_host = [cm_client.ApiConfig(name='oozie_database_host', value=cm_hostname)]
+                    oozie_database_password = [cm_client.ApiConfig(name='oozie_database_password',
+                                                                   value=oozie_password)]
+                    oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value='postgresql')]
+                    oozie_database_user = [cm_client.ApiConfig(name='oozie_database_user', value='oozie')]
+                    oozie_config = [oozie_database_host, oozie_database_password, oozie_database_type,
+                                    oozie_database_user]
+                    for config in oozie_config:
+                        push_rcg_config(config)
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
+        if service == 'SOLR':
+            for rcg in role_config_group_list:
+                if rcg == 'SOLR-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
                 if rcg == 'SOLR-SOLR_SERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'SOLR_SERVER'
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
+        if service == 'SPARK':
+            for rcg in role_config_group_list:
+                if rcg == 'SPARK-HISTORYSERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'HISTORYSERVER'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
+                if rcg == 'SPARK-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    pass
+
+
+        if service == 'SPARK_ON_YARN':
+            for rcg in role_config_group_list:
+                if rcg == 'SPARK_ON_YARN-SPARK_YARN_HISTORY_SERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'SPARK_YARN_HISTORY_SERVER'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
+                if rcg == 'SPARK_ON_YARN-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    n = 0
+                    for host_id in worker_host_ids:
+                        create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+                        n = n + 1
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, (n + 1))
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, (n + 2))
+
+        if service == 'SQOOP_CLIENT':
+            for rcg in role_config_group_list:
+                if rcg == 'SQOOP_CLIENT-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
+                    rcg_roletype = 'GATEWAY'
+                    create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+
         if service == 'YARN':
             for rcg in role_config_group_list:
-                print('->Updating RCG: %s\n' % rcg)
                 if rcg == 'YARN-GATEWAY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'GATEWAY'  # type: str
                     mapred_submit_replication = [cm_client.ApiConfig(name='mapred_submit_replication', value='3')]
                     mapreduce_map_java_opts = \
                         [cm_client.ApiConfig(name='mapreduce_map_java_opts',
-                                             value=get_parameter_value(vmsize, 'mapreduce_map_java_opts'))]
+                                             value=get_parameter_value(worker_shape, 'mapreduce_map_java_opts'))]
                     mapreduce_reduce_java_opts = \
                         [cm_client.ApiConfig(name='mapreduce_reduce_java_opts',
-                                             value=get_parameter_value(vmsize, 'mapreduce_reduce_java_opts'))]
+                                             value=get_parameter_value(worker_shape, 'mapreduce_reduce_java_opts'))]
                     io_file_buffer_size = [cm_client.ApiConfig(name='io_file_buffer_size', value='131072')]
                     io_sort_mb = [cm_client.ApiConfig(name='io_sort_mb', value='1024')]
                     yarn_app_mapreduce_am_resource_mb = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_resource_mb',
@@ -710,6 +1335,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'YARN-NODEMANAGER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'NODEMANAGER'  # type: str
                     yarn_nodemanager_heartbeat_interval_ms = \
                         [cm_client.ApiConfig(name='yarn_nodemanager_heartbeat_interval_ms', value='100')]
@@ -719,10 +1345,10 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                                                        value=yarn_data_dir_list)]
                     yarn_nodemanager_resource_cpu_vcores = \
                         [cm_client.ApiConfig(name='yarn_nodemanager_resource_cpu_vcores',
-                                             value=get_parameter_value(vmsize, 'yarn_nodemanager_resource_cpu_vcores'))]
+                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_resource_cpu_vcores'))]
                     yarn_nodemanager_resource_memory_mb = \
                         [cm_client.ApiConfig(name='yarn_nodemanager_resource_memory_mb',
-                                             value=get_parameter_value(vmsize, 'yarn_nodemanager_resource_memory_mb'))]
+                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_resource_memory_mb'))]
                     node_manager_log_dir = [cm_client.ApiConfig(name='node_manager_log_dir',
                                                                 value=LOG_DIR + '/hadoop-yarn')]
                     yarn_nodemanager_log_dirs = [cm_client.ApiConfig(name='yarn_nodemanager_log_dirs',
@@ -741,6 +1367,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         n = n + 1
 
                 if rcg == 'YARN-RESOURCEMANAGER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'RESOURCEMANAGER'  # type: str
                     resource_manager_java_heapsize = [cm_client.ApiConfig(name='resource_manager_java_heapsize',
                                                                           value='2000000000')]
@@ -760,6 +1387,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'YARN-JOBHISTORY-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'JOBHISTORY'  # type: str
                     mr2_jobhistory_java_heapsize = [cm_client.ApiConfig(name='mr2_jobhistory_java_heapsize',
                                                                         value='1000000000')]
@@ -772,8 +1400,8 @@ def update_cluster_rcg_configuration(cluster_service_list):
 
         if service == 'ZOOKEEPER':
             for rcg in role_config_group_list:
-                print('->Updating RCG: %s\n' % rcg)
                 if rcg == 'ZOOKEEPER-SERVER-BASE':
+                    print('-->Updating RCG: %s\n' % rcg)
                     rcg_roletype = 'SERVER'  # type: str
                     maxclientcnxns = [cm_client.ApiConfig(name='maxClientCnxns', value='1024')]
                     datalogdir = [cm_client.ApiConfig(name='dataLogDir', value=LOG_DIR + '/zookeeper')]
@@ -830,9 +1458,11 @@ def build_role_config_group_list(service_name):
     role_config_group_list = []
     for x in range(len(api_response.items)):
         rcg_name = api_response.items[x].name
-        # print('Service %s - Role Config Group Found: %s' % (service_name, role_name))
+        if debug == 'True':
+            print('Service %s - Role Config Group Found: %s' % (service_name, rcg_name))
         role_config_group_list.append(rcg_name)
-
+    if debug == 'True':
+        print('Full Role Config Group List: %s' % role_config_group_list)
 
 def auto_configure_cluster():
     """
@@ -921,6 +1551,7 @@ def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
     role_api_packet = [cm_client.ApiRole(name=role_name, type=rcg_roletype, host_ref=host_ref,
                                          role_config_group_ref=role_config_group_ref, service_ref=service_ref)]
     body = cm_client.ApiRoleList(role_api_packet)
+    print('->Creating Role %s for %s\n' % (role_name, hostname))
 
     try:
         api_response = roles_resource_api_instance.create_roles(cluster_name, service, body=body)
@@ -928,6 +1559,32 @@ def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
             pprint(api_response)
     except ApiException as e:
         print('Exception when calling RolesResourceApi->create_roles: {}\n'.format(e))
+
+
+def create_mgmt_roles(mgmt_rcg, mgmt_rcg_roletype, mgmt_host_id, mgmt_hostname, mrc):
+    """
+    Create Management Roles to associate with Management Services
+    :param mgmt_rcg: Mgmt Role Config Group
+    :param mgmt_rcg_roletype: Mgmt Role Config Group Type - e.g. ALERTMONITOR, REPORTSMANAGER, etc
+    :param mgmt_host_id: Mgmt Host Cluster UUID
+    :param mgmt_hostname: Hostname for the Mgmt Host
+    :param mrc: Mgmt Role Count - Integer to increment role name when creating multiple roles for the same rcg/service
+    :return:
+    """
+    role_name = 'MGMT-' + mgmt_rcg_roletype + '-%d' % (mrc,)
+    host_ref = cm_client.ApiHostRef(host_id=mgmt_host_id, hostname=mgmt_hostname)
+    role_config_group_ref = cm_client.ApiRoleConfigGroupRef(mgmt_rcg)
+    service_ref = cm_client.ApiServiceRef(cluster_name=cluster_name, service_name='mgmt')
+    mgmt_role_api_packet = [cm_client.ApiRole(name=role_name, type=mgmt_rcg_roletype, host_ref=host_ref,
+                                              role_config_group_ref=role_config_group_ref, service_ref=service_ref)]
+    body = cm_client.ApiRoleList(mgmt_role_api_packet)
+
+    try:
+        api_response = mgmt_roles_resource_api_instance.create_roles(body=body)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling MgmtRolesResourceApi -> create_roles {}\n'.format(e))
 
 
 def show_roles_full():
@@ -1022,37 +1679,122 @@ def cluster_action(action, *kwargs):
             print('Exception running ServicesResourceApi->first_run {}\n'.format(e))
 
 
+def build_api_role_list(role):
+    """
+    Build API Role Name List based on role
+    :param role: Role to look up RCGs
+    :return:
+    """
+    global api_role_name_list
+    api_role_name_list = []
+    rcg_name = 'mgmt-' + role + '-BASE'
+    api_role_list = mgmt_role_config_groups_resource_api_instance.read_roles(rcg_name).items
+    for list_item in api_role_list:
+        api_role_name = list_item.name
+        if debug == 'True':
+            print('api_role_name : %s' % api_role_name)
+
+        api_role_name_list.append(api_role_name)
+
+
 def mgmt_role_commands(action):
     """
     Execute Management Role Command using MgmtRoleCommandsResourceApi
-    Unused commands are passed here
+    :param action: Action to perform
+    :param role: Role to perform action on
     :return:
     """
+
     if action == 'restart_command':
-        try:
-            api_response = mgmt_role_commands_resource_api_instance.restart_command()
-            if debug == 'True':
-                pprint(api_response)
-        except ApiException as e:
-            print('Exception running MgmtRoleCommandsResourceApi->restart_command {}\n'.format(e))
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.restart_command(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->restart_command {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
     if action == 'start_command':
-        pass
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.start_command(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->start_command {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
     if action == 'stop_command':
-        pass
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.stop_command(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->stop_command {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
     if action == 'jmap_dump':
-        pass
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.jmap_dump(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->jmap_dump {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
     if action == 'jmap_histo':
-        pass
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.jmap_histo(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->jmap_history {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
     if action == 'jstack':
-        pass
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.jstack(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->jstack {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
     if action == 'lsof':
-        pass
+        for role in mgmt_roles_list:
+            build_api_role_list(role)
+            body = cm_client.ApiRoleNameList(api_role_name_list)
+            try:
+                api_response = mgmt_role_commands_resource_api_instance.lsof(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception running MgmtRoleCommandsResourceApi->lsof {}\n'.format(e))
+            active_command = action + ' ' + role
+            wait_for_active_mgmt_commands(active_command)
 
 
 def mgmt_role_config_commands(action, *kwargs):
@@ -1073,7 +1815,7 @@ def mgmt_role_config_commands(action, *kwargs):
 
     if action == 'read_role_config_group':
         try:
-            api_response = mgmt_role_config_groups_resource_api_instance.read_role_config_groups(
+            api_response = mgmt_role_config_groups_resource_api_instance.read_role_config_group(
                 role_config_group_name=str(kwargs))
             pprint(api_response)
         except ApiException as e:
@@ -1100,36 +1842,153 @@ def mgmt_role_config_commands(action, *kwargs):
         pass
 
 
+def mgmt_service(action):
+    """
+    Start the Cloudera Management Services
+    :param action: Execute action
+    :return:
+    """
+    if action == 'start_command':
+        try:
+            api_response = mgmt_service_resource_api_instance.start_command()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> start_command {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'restart_command':
+        try:
+            api_response = mgmt_service_resource_api_instance.restart_command()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> restart_command {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'stop_command':
+        try:
+            api_response = mgmt_service_resource_api_instance.stop_command()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> stop_command {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'auto_assign_roles':
+        try:
+            api_response = mgmt_service_resource_api_instance.auto_assign_roles()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> auto_assign_roles {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'auto_configure_roles':
+        try:
+            api_response = mgmt_service_resource_api_instance.auto_configure()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> auto_configure_roles {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'delete_cms':
+        try:
+            api_response = mgmt_service_resource_api_instance.delete_cms()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> delete_cms {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'enter_maintenance_mode':
+        try:
+            api_response = mgmt_service_resource_api_instance.enter_maintenance_mode()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> enter_maintenance_mode {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'exit_maintenance_mode':
+        try:
+            api_response = mgmt_service_resource_api_instance.exit_maintenance_mode()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> exit_maintenance_mode {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
+    if action == 'auto_configure_roles':
+        try:
+            api_response = mgmt_service_resource_api_instance.auto_configure()
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception calling MgmtServiceResourceApi -> auto_configure {}\n'.format(e))
+        active_command = 'MGMT ' + action
+        wait_for_active_mgmt_commands(active_command)
+
 
 #
-# END FUNCTIONS
+# END SECONDARY FUNCTIONS
 #
 
 #
-# MAIN FUNCTION
+# MAIN FUNCTION FOR DEPLOYMENT
 #
 
 def main():
     parse_ssh_key()
     build_disk_lists()
-    print('->Creating new admin user %s\n' % user_name)
-    init_admin_user()
     print('->Building API Endpoints\n')
     build_api_endpoints()
-    print('->Deleting default admin user\n')
-    delete_default_admin_user()
+    try:
+        api_response = users_api_instance.read_user2(user_name)
+        if api_response.auth_roles:
+            print('%s user exists...' % user_name)
+            if debug == 'True':
+                pprint(api_response)
+
+    except ApiException as e:
+        if debug == 'True':
+            pprint(e)
+
+        print('->Creating new admin user %s\n' % user_name)
+        init_admin_user()
+        build_api_endpoints()
+        print('->Deleting default admin user\n')
+        delete_default_admin_user()
+
+    build_api_endpoints()
     print('->Initializing Cluster %s\n' % cluster_name)
     init_cluster()
-    print('->Building Host List\n')
-    build_host_list()
+    if remotely_detect_hosts == 'Yes':
+        remote_host_detection()
+        build_cluster_host_list(host_fqdn_list)
+        remote_worker_shape_detection()
+
+    else:
+        build_host_list()
+        build_cluster_host_list(host_fqdn_list)
+
     read_cluster()
     install_hosts()
     active_command = 'Host Agents Installing'
-    wait_for_active_commands(active_command)
+    wait_for_active_cluster_commands(active_command)
     print('\n->Host Installation Complete')
     add_hosts_to_cluster()
     active_command = 'Hosts Adding to Cluster ' + cluster_name
-    wait_for_active_commands(active_command)
+    wait_for_active_cluster_commands(active_command)
     print('\n->Hosts added to Cluster %s\n' % cluster_name)
     print('->Updating Parcel Remote Repo: %s\n' % remote_parcel_url)
     update_parcel_repo(remote_parcel_url, parcel_distribution_rate)
@@ -1138,15 +1997,48 @@ def main():
     if debug == 'True':
         print('-->DEBUG - Reading Parcel Status\n')
         get_parcel_status('CDH')
+    print('->Mapping Cluster Hostnames and Host IDs\n')
+    cluster_host_id_map()
+    print('->Reading DB Passwords\n')
+    get_mgmt_db_passwords()
     print('->Creating Cluster Services: %s\n' % cluster_service_list)
     define_cluster_services(cluster_service_list)
     create_cluster_services(api_service_list)
+    print('->Running Cluster Auto Configuration\n')
     auto_configure_cluster()
-    cluster_host_id_map()
+    print('->Updating Cluster Service Role Config Groups\n')
     update_cluster_rcg_configuration(cluster_service_list)
     if debug == 'True':
         print('-->DEBUG - Reading Cluster Services\n')
         read_cluster_services()
+    print('->Setting up CMS\n')
+    define_cms_mgmt_service()
+    setup_cms()
+    print('->Auto Configuring Management Roles\n')
+    mgmt_service('auto_configure_roles')
+    print('->Updating Management RCG\n')
+    setup_mgmt_rcg(mgmt_roles_list)
+    print('->Restart MGMT Service\n')
+    mgmt_service('restart_command')
+    wait_for_active_mgmt_commands('MGMT Service Restart')
+    print('->Restart MGMT Roles\n')
+    mgmt_role_commands(action='restart_command')
+    # TODO - Need to refactor here if license is provided
+    print('->Activating Trial License\n')
+    begin_trial()
+    print('->Executing first_run on Cluster - %s' % cluster_name)
+    try:
+        api_response = clusters_api_instance.first_run(cluster_name)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClustersResourceApi -> first_run {}\n'.format(e))
+    active_command = 'First Run on ' + cluster_name
+    wait_for_active_cluster_commands(active_command)
+    print('---> CLUSTER SETUP COMPLETE <---')
+    deployment_seconds = time.time() - start_time
+    print('SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_seconds)))
+
 
 
 #
@@ -1155,43 +2047,33 @@ def main():
 
 main()
 
-#build_api_endpoints()
+# user_name='admin'
+# password='admin'
+# cluster_name = 'Cluster 1'
+# cm_server = '132.145.159.228'
+# build_api_endpoints()
+# try:
+#     api_response = services_resource_api_instance.read_service_config(cluster_name, 'hive')
+#     pprint(api_response)
+# except ApiException as e:
+#     print(e)
 
-#show_roles_full()
-#for service in cluster_service_list:
-#    cluster_action(action='first_run')
+# def discover_roles():
+#     # Discover and List Roles in a Cluster
+#     cluster_service_list = []
+#     services = cluster_services_api_instance.read_services(cluster_name, view='summary')
+#     x = 0
+#     for x in range(len(services.items)):
+#         cluster_service_list.append(services.items[x].name)
+#     show_roles_full(cluster_service_list)
 
-# cluster_action('first_run', 'ZOOKEEPER')
-# cluster_action(action='mgmt_restart')
-
-#api_instance = cm_client.RoleConfigGroupsResourceApi(api_client)
+# Get Deployment for cluster
+#cloudera_manager_resource_api = cm_client.ClouderaManagerResourceApi(api_client)
 #try:
-#    api_response = api_instance.read_role_config_group(cluster_name, 'HDFS-DATANODE-BASE', 'HDFS')
-#    pprint(api_response)
+#   api_response = cloudera_manager_resource_api.get_deployment2()
+#   pprint(api_response)
 #except ApiException as e:
-#    pprint(e)
+#   print(e)
 
-# Config Deployment Test
-#build_disk_lists()
-#cluster_host_id_map()
-#update_cluster_rcg_configuration(cluster_service_list)
 
-# cluster_host_id_map()
-# worker_count = len(worker_hostnames)
-# or x in range(0, len(worker_hostnames)):
-#    print(worker_hostnames[x])
 
-# list_hosts()
-
-# auto_configure_cluster()
-# show_rcg_full()
-# update_cluster_rcg_configuration(cluster_service_list)
-
-# list_hosts()
-# print(cluster_host_list.items[0])
-
-# list_active_commands()
-
-# auto_assign_roles()
-# auto_configure_cluster()
-# delete_parcel()
