@@ -2152,7 +2152,7 @@ if __name__ == '__main__':
             wait_status = wait_status + '*'
 
 
-    # main()
+    main()
 
 
 
