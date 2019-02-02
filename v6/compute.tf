@@ -1,20 +1,19 @@
-resource "oci_core_instance" "UtilityNode" {
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.AD - 1],"name")}"
+resource "oci_core_instance" "Utility" {
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "CDH Utility-1"
   hostname_label      = "CDH-Utility-1"
-  shape               = "${var.MasterInstanceShape}"
-  subnet_id           = "${oci_core_subnet.public.*.id[var.AD - 1]}"
+  shape               = "${var.master_instance_shape}"
+  subnet_id           = "${oci_core_subnet.public.*.id[var.availability_domain - 1]}"
 
   source_details {
     source_type             = "image"
     source_id               = "${var.InstanceImageOCID[var.region]}"
-    boot_volume_size_in_gbs = "${var.boot_volume_size}"
   }
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data           = "${base64encode(file("../scripts/boot.sh"))}"
+    user_data           = "${base64encode(file("scripts/cm_boot.sh"))}"
   }
 
   timeouts {
@@ -22,24 +21,23 @@ resource "oci_core_instance" "UtilityNode" {
   }
 }
 
-resource "oci_core_instance" "MasterNode" {
-  count               = "${var.MasterNodeCount}"
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.AD - 1],"name")}"
+resource "oci_core_instance" "Master" {
+  count               = "${var.master_node_count}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "CDH Master ${format("%01d", count.index+1)}"
   hostname_label      = "CDH-Master-${format("%01d", count.index+1)}"
-  shape               = "${var.MasterInstanceShape}"
-  subnet_id           = "${oci_core_subnet.private.*.id[var.AD - 1]}"
+  shape               = "${var.master_instance_shape}"
+  subnet_id           = "${oci_core_subnet.private.*.id[var.availability_domain - 1]}"
 
   source_details {
     source_type             = "image"
     source_id               = "${var.InstanceImageOCID[var.region]}"
-    boot_volume_size_in_gbs = "${var.boot_volume_size}"
   }
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data           = "${base64encode(file("../scripts/boot.sh"))}"
+    user_data           = "${base64encode(file("scripts/boot.sh"))}"
   }
 
   timeouts {
@@ -48,22 +46,21 @@ resource "oci_core_instance" "MasterNode" {
 }
 
 resource "oci_core_instance" "Bastion" {
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.AD - 1],"name")}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "CDH Bastion"
   hostname_label      = "CDH-Bastion"
-  shape               = "${var.BastionInstanceShape}"
-  subnet_id           = "${oci_core_subnet.bastion.*.id[var.AD - 1]}"
+  shape               = "${var.bastion_instance_shape}"
+  subnet_id           = "${oci_core_subnet.bastion.*.id[var.availability_domain - 1]}"
 
   source_details {
     source_type             = "image"
     source_id               = "${var.InstanceImageOCID[var.region]}"
-    boot_volume_size_in_gbs = "${var.boot_volume_size}"
   }
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data           = "${base64encode(file("../scripts/boot.sh"))}"
+    user_data           = "${base64encode(file("scripts/boot.sh"))}"
   }
 
   timeouts {
@@ -71,24 +68,23 @@ resource "oci_core_instance" "Bastion" {
   }
 }
 
-resource "oci_core_instance" "WorkerNode" {
-  count               = "${var.nodecount}"
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.AD - 1],"name")}"
+resource "oci_core_instance" "Worker" {
+  count               = "${var.worker_node_count}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "CDH Worker ${format("%01d", count.index+1)}"
   hostname_label      = "CDH-Worker-${format("%01d", count.index+1)}"
-  shape               = "${var.WorkerInstanceShape}"
-  subnet_id           = "${oci_core_subnet.private.*.id[var.AD - 1]}"
+  shape               = "${var.worker_instance_shape}"
+  subnet_id           = "${oci_core_subnet.private.*.id[var.availability_domain - 1]}"
 
   source_details {
     source_type             = "image"
     source_id               = "${var.InstanceImageOCID[var.region]}"
-    boot_volume_size_in_gbs = "${var.boot_volume_size}"
   }
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data           = "${base64encode(file("../scripts/boot.sh"))}"
+    user_data           = "${base64encode(file("scripts/boot.sh"))}"
   }
 
   timeouts {

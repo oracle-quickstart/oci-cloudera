@@ -4,6 +4,7 @@ from __future__ import print_function
 import socket
 import time
 import sys
+from sys import stdout
 import cm_client
 from cm_client import ApiUser2
 from cm_client.rest import ApiException
@@ -12,15 +13,27 @@ import hashlib
 import re
 from paramiko import SFTPClient, SSHClient, AutoAddPolicy
 import json
-import time, datetime
+import time
+import datetime
+import argparse
+
 
 start_time = time.time()
+
 #
-# Set Global Parameters here
+# Global Parameter Defaults - These are passed to the script, do not modify
 #
 
-# This will be passed eventually
-disk_count = '3'  # type: int
+disk_count = 'None'
+worker_shape = 'None'
+cm_server = 'None'
+input_host_list = 'None'
+license_file = 'None'
+host_fqdn_list = []
+
+#
+# Custom Global Parameters - Customize below here until Functions section
+#
 
 # Enable Debug Output set this to 'True' for detailed output during execution
 debug = 'False'  # type: str
@@ -32,26 +45,27 @@ password = 'somepassword'  # type: str
 # Set this to 'Yes' if you want to perform host lookups from the Cloudera Manager host for building your cluster
 # Any other value will revert to static host list set in "build_host_list" function - you will need to manually set
 # these values in this script.
-remotely_detect_hosts = 'Yes'
-# If above is not set to 'Yes', you will need to set the Worker Shape manually - this applies specific OCI tunings
-worker_shape = 'VM.Standard2.16'  # type: str
-
-# This will be passed as part of TF deployment (refactor for local exec, strip IP and then execute)
-cm_server = '129.146.44.165'  # type: str
+# remotely_detect_hosts = 'Yes'
+# Disabling for now as invocation from Terraform should provide valid hosts
 
 # Define cluster name
 cluster_name = 'TestCluster'  # type: str
+# This converts the cluster name into API friendly format, do not modify
 api_cluster_name = cm_client.ApiClusterRef(cluster_name, cluster_name)  # type: str
+# Set port number for Cloudera Manager - used to build API endpoints and check if Manger is up/listening
+cm_port = '7180'
+# Set API version to use with Cloudera Manager
+api_version = 'v31'
 
 # Define Cloudera Version 6 to deploy
 cluster_version = '6.1.0'  # type: str
 
-# Define Remote Parcel URL & Distribution Rate
+# Define Remote Parcel URL & Distribution Rate if desired
 remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
 parcel_distribution_rate = "1024000"  # type: int
 
-# Define SSH Keyfile for access to deploy on cluster hosts
-# ssh_keyfile = '/home/opc/.ssh/id_rsa'  # type: str
+# Define SSH Keyfile for access to cluster hosts - required for Cloudera Manager to deploy agents
+# Example ssh_keyfile = '/home/opc/.ssh/id_rsa'  # type: str
 ssh_keyfile = '/Users/zsmith/.ssh/id_rsa'  # type: str
 
 # Cluster Services List
@@ -80,10 +94,10 @@ cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE
 mgmt_roles_list = ['ACTIVITYMONITOR', 'ALERTPUBLISHER', 'EVENTSERVER', 'HOSTMONITOR', 'SERVICEMONITOR']
 
 # Cluster Host Mapping
-# Define these variables to pattern match when building host lists to use for role and
+# Define these variables to match when building host lists to use for role and
 # service mapping.  For example, if your worker nodes have "cdh-worker" in the hostname, set that here.
 # If you want your Cloudera Manager on a specific host, set he host identifier here.
-# This is used in "cluster_host_id_map" and "remote_host_detection"
+# This is used in "cluster_host_id_map" and "remote_host_detection" (if used)
 #
 # Worker Host Prefix
 worker_hosts_contain = 'cdh-worker'
@@ -97,12 +111,11 @@ secondary_namenode_host_contains = 'cdh-master-2'
 cloudera_manager_host_contains = 'cdh-utility-1'
 
 # Specify Log directory on cluster hosts
-LOG_DIR = '/log/cloudera'
+LOG_DIR = '/var/log/cloudera'
 
 #
-# End Global
+# End Global Parameters
 #
-
 
 #
 # OCI Shape Specific Tunings - Modify at your own discretion
@@ -208,10 +221,8 @@ def build_api_endpoints():
     cm_client.configuration.username = user_name
     cm_client.configuration.password = password
     api_host = 'http://' + cm_server
-    port = '7180'
-    api_version = 'v31'
     global api_url, api_client
-    api_url = api_host + ':' + port + '/api/' + api_version
+    api_url = api_host + ':' + cm_port + '/api/' + api_version
     if debug == 'True':
         print("->API URL: " + api_url)
     api_client = cm_client.ApiClient(api_url)
@@ -219,7 +230,7 @@ def build_api_endpoints():
         cluster_services_api_instance, auth_roles_api_instance, roles_config_api_instance, all_hosts_api_instance, \
         roles_resource_api_instance, mgmt_service_resource_api_instance, services_resource_api_instance, \
         mgmt_role_commands_resource_api_instance, mgmt_role_config_groups_resource_api_instance, \
-        mgmt_roles_resource_api_instance
+        mgmt_roles_resource_api_instance, cloudera_manager_resource_api
     clusters_api_instance = cm_client.ClustersResourceApi(api_client)
     users_api_instance = cm_client.UsersResourceApi(api_client)
     manager_api_instance = cm_client.ClouderaManagerResourceApi(api_client)
@@ -235,6 +246,7 @@ def build_api_endpoints():
     mgmt_role_commands_resource_api_instance = cm_client.MgmtRoleCommandsResourceApi(api_client)
     mgmt_role_config_groups_resource_api_instance = cm_client.MgmtRoleConfigGroupsResourceApi(api_client)
     mgmt_roles_resource_api_instance = cm_client.MgmtRolesResourceApi(api_client)
+    cloudera_manager_resource_api = cm_client.ClouderaManagerResourceApi(api_client)
 
 
 def wait_for_active_cluster_commands(active_command):
@@ -248,16 +260,17 @@ def wait_for_active_cluster_commands(active_command):
     done = '0'
 
     while done == '0':
+        stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
         try:
             api_response = manager_api_instance.list_active_commands(view=view)
             if not api_response.items:
                 done = '1'
+                stdout.write('\n')
                 break
             else:
-                print('\r%s - Waiting: %s' % (active_command, wait_status))
+                sys.stdout.flush()
                 time.sleep(10)
                 wait_status = wait_status + '*'
-                sys.stdout.flush()
         except ApiException as e:
             print('Exception waiting for active commands: {}'.format(e))
     print('\n')
@@ -274,16 +287,18 @@ def wait_for_active_mgmt_commands(active_command):
     done = '0'
 
     while done == '0':
+        stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
         try:
             api_response = mgmt_service_resource_api_instance.list_active_commands(view=view)
             if not api_response.items:
                 done = '1'
+                stdout.write('\n')
                 break
             else:
-                print('\r%s - Waiting: %s' % (active_command, wait_status))
+                stdout.flush()
                 time.sleep(10)
                 wait_status = wait_status + '*'
-                sys.stdout.flush()
+
         except ApiException as e:
             print('Exception waiting for active commands: {}'.format(e))
 
@@ -666,11 +681,12 @@ def dda_parcel(parcel_product):
                 break
             if parcel.state.errors:
                 raise Exception(str(parcel.state.errors))
-            print("\rParcel %s progress %s: %s / %s" % (parcel_product, parcel.stage, parcel.state.progress,
+            stdout.write("\rParcel %s progress %s: %s / %s" % (parcel_product, parcel.stage, parcel.state.progress,
                                                         parcel.state.total_progress))
             time.sleep(5)
-            sys.stdout.flush()
+            stdout.flush()
 
+    sdtout.write('\n')
     parcels = parcels_api_instance.read_parcels(cluster_name, view='FULL')
     for parcel in parcels.items:
         if parcel.product == parcel_product:
@@ -1939,12 +1955,76 @@ def mgmt_service(action):
         wait_for_active_mgmt_commands(active_command)
 
 
+def discover_roles():
+    """
+    Discover and List Roles in a Cluster
+    :return:
+    """
+    cluster_service_list = []
+    services = cluster_services_api_instance.read_services(cluster_name, view='summary')
+    x = 0
+    for x in range(len(services.items)):
+        cluster_service_list.append(services.items[x].name)
+    show_roles_full(cluster_service_list)
+
+
+def get_deployment_full():
+    """
+    Get Deployment for cluster
+    :return:
+    """
+    try:
+        api_response = cloudera_manager_resource_api.get_deployment2()
+        pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClouderaManagerResourceApi->get_deployment2 {}\n'.format(e))
+
+
+def check_cm_version():
+    """
+    Check to see if CM API is listening by trying to get version
+    :return:
+    """
+    global success, cm_version
+    try:
+        api_response = cloudera_manager_resource_api.get_version()
+        cm_version = pprint(api_response)
+        success = 0
+    except:
+        success = 1
+
+
 #
 # END SECONDARY FUNCTIONS
 #
 
+def options_parser(args=None):
+    """
+    Parse command line options passed to the script
+    :return:
+    """
+    global objects
+    parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH v6 Cluster on '
+                                                                                 'OCI using cm_client with Cloudera '
+                                                                                 'Manager API')
+
+    parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
+                      help='Cloudera Manager IP to connect to using cm_client')
+    parser.add_argument('-i', '--input_host_list', metavar='host.fqdn', nargs='+', required='True',
+                      help='List of Cluster Hosts (FQDN) to deploy')
+    parser.add_argument('-d', '--disk_count', metavar='disk_count', required='True',
+                      help='Number of disks attached to Worker Instances, used to calculate DFS configuration')
+    parser.add_argument('-l', '--license_file', metavar='license_file',
+                      help='Cloudera Manager License File Name')
+    parser.add_argument('-w', '--worker_shape', metavar='worker_shape', required='True',
+                      help='Shape of Worker Instances in the Cluster')
+
+    options = parser.parse_args(args)
+    return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape)
+
+
 #
-# MAIN FUNCTION FOR DEPLOYMENT
+# MAIN FUNCTION FOR CLUSTER DEPLOYMENT
 #
 
 def main():
@@ -1972,15 +2052,15 @@ def main():
     build_api_endpoints()
     print('->Initializing Cluster %s\n' % cluster_name)
     init_cluster()
-    if remotely_detect_hosts == 'Yes':
-        remote_host_detection()
-        build_cluster_host_list(host_fqdn_list)
-        remote_worker_shape_detection()
+    # if remotely_detect_hosts == 'Yes':
+    #     remote_host_detection()
+    #     build_cluster_host_list(host_fqdn_list)
+    #     remote_worker_shape_detection()
 
-    else:
-        build_host_list()
-        build_cluster_host_list(host_fqdn_list)
-
+    # else:
+    #     build_host_list()
+    #     build_cluster_host_list(host_fqdn_list)
+    build_cluster_host_list(host_fqdn_list)
     read_cluster()
     install_hosts()
     active_command = 'Host Agents Installing'
@@ -2045,35 +2125,37 @@ def main():
 # MAIN EXECUTION
 #
 
-main()
+if __name__ == '__main__':
+    cm_server, host_fqdn_list, disk_count, license_file, worker_shape = options_parser(sys.argv[1:])
+    if debug == 'True':
+        print('cm_server = %s' % cm_server)
+        print('input_host_list = %s' % host_fqdn_list)
+        print('disk_count = %s' % disk_count)
+        print('license_file = %s' % license_file)
+        print('worker_shape = %s' % worker_shape)
 
-# user_name='admin'
-# password='admin'
-# cluster_name = 'Cluster 1'
-# cm_server = '132.145.159.228'
-# build_api_endpoints()
-# try:
-#     api_response = services_resource_api_instance.read_service_config(cluster_name, 'hive')
-#     pprint(api_response)
-# except ApiException as e:
-#     print(e)
+    user_name = 'admin'
+    password = 'admin'
+    ready = 1
+    active_command = 'Cloudera Manager Startup'
+    wait_status = '*'
+    while ready == 1:
+        stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
+        check_cm_version()
+        if success == 0:
+            stdout.write('\n')
+            print('\nCloudera Manager Detected: %s' % cm_version)
+            ready = 0
+        else:
+            sys.stdout.flush()
+            time.sleep(30)
+            wait_status = wait_status + '*'
 
-# def discover_roles():
-#     # Discover and List Roles in a Cluster
-#     cluster_service_list = []
-#     services = cluster_services_api_instance.read_services(cluster_name, view='summary')
-#     x = 0
-#     for x in range(len(services.items)):
-#         cluster_service_list.append(services.items[x].name)
-#     show_roles_full(cluster_service_list)
 
-# Get Deployment for cluster
-#cloudera_manager_resource_api = cm_client.ClouderaManagerResourceApi(api_client)
-#try:
-#   api_response = cloudera_manager_resource_api.get_deployment2()
-#   pprint(api_response)
-#except ApiException as e:
-#   print(e)
+    # main()
+
+
+
 
 
 

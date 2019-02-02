@@ -2,19 +2,68 @@
 
 LOG_FILE="/var/log/cloudera-OCI-initialize.log"
 
-# manually set EXECNAME because this file is called from another script and it $0 is "bash"
-EXECNAME="install-postgresql.sh"
-CURRENT_VERSION_MARKER='OCI_1'
-SLEEP_INTERVAL=5
-
 # logs everything to the $LOG_FILE
 log() {
   echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}"
 }
 
+EXECNAME="TUNING"
+
+log "->START"
+## Modify resolv.conf to ensure DNS lookups work
+rm -f /etc/resolv.conf
+echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
+echo "nameserver 169.254.169.254" >> /etc/resolv.conf
+
+## Disable Transparent Huge Pages
+echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
+echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
+
+## Set vm.swappiness to 1
+echo vm.swappiness=0 | tee -a /etc/sysctl.conf
+echo 0 | tee /proc/sys/vm/swappiness
+
+## Tune system network performance
+echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
+echo net.ipv4.tcp_sack=1 >> /etc/sysctl.conf
+echo net.core.rmem_max=4194304 >> /etc/sysctl.conf
+echo net.core.wmem_max=4194304 >> /etc/sysctl.conf
+echo net.core.rmem_default=4194304 >> /etc/sysctl.conf
+echo net.core.wmem_default=4194304 >> /etc/sysctl.conf
+echo net.core.optmem_max=4194304 >> /etc/sysctl.conf
+echo net.ipv4.tcp_rmem="4096 87380 4194304" >> /etc/sysctl.conf
+echo net.ipv4.tcp_wmem="4096 65536 4194304" >> /etc/sysctl.conf
+echo net.ipv4.tcp_low_latency=1 >> /etc/sysctl.conf
+
+## Tune File System options
+sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
+
+## Set Limits
+echo "hdfs  -       nofile  32768
+hdfs  -       nproc   2048
+hbase -       nofile  32768
+hbase -       nproc   2048" >> /etc/security/limits.conf
+ulimit -n 262144
+
+## INSTALL CLOUDERA MANAGER
+EXECNAME="Cloudera Manager & Pre-Reqs Install"
+log "-> Installation"
+rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cloudera
+wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+yum install oracle-j2sdk* cloudera-manager-daemons cloudera-manager-server java-1.8.0-openjdk.x86_64 postgresql-server -y
+
+##
+## POSTGRES SETUP BELOW
+##
+
+# manually set EXECNAME because this file is called from another script and it $0 is "bash"
+EXECNAME="Postgresql Bootstrap"
+CURRENT_VERSION_MARKER='OCI_1'
+SLEEP_INTERVAL=5
+
 stop_db()
 {
-  sudo service postgresql stop
+  systemctl stop postgresql
 }
 
 fail_or_continue()
@@ -35,7 +84,7 @@ fail_or_continue()
 
 create_database()
 {
-  local DB_CMD="sudo -u postgres psql"
+  local DB_CMD="-u postgres psql"
   local DBNAME=$1
   local PW=$2
   local ROLE=$DBNAME
@@ -426,7 +475,7 @@ wait_for_db_server_to_start()
   until [ $i -ge 5 ]
   do
     i=$((i+1))
-    sudo -u postgres psql -l && break
+    -u postgres psql -l && break
     sleep "${SLEEP_INTERVAL}"
   done
   if [ $i -ge 5 ]; then
@@ -438,8 +487,8 @@ wait_for_db_server_to_start()
 
 log "------- initialize-postgresql.sh starting -------"
 
-sudo service postgresql initdb
-sudo service postgresql start
+postgresql-setup initdb
+systemctl start postgresql
 SCM_PWD=$(create_random_password)
 DATA_DIR=/var/lib/pgsql/data
 DB_HOST=$(hostname -f)
@@ -451,12 +500,10 @@ MGMT_DB_PROP_FILE=/etc/cloudera-scm-server/db.mgmt.properties
 DB_LIST_FILE=$DATA_DIR/scm.db.list
 NOW=$(date +%Y%m%d-%H%M%S)
 
-
 configure_postgresql_conf $DATA_DIR/postgresql.conf 0
 
 # Add header to pg_hba.conf.
 echo "# Accept connections from all hosts" >> $DATA_DIR/pg_hba.conf
-
 
 #echo "export LANGUAGE=en_US.UTF-8" >> ~/.bashrc
 #echo "export LANG=en_US.UTF-8" >> ~/.bashrc
@@ -474,8 +521,8 @@ sed -i '/host.*127.*ident/i \
 #echo "listen_addresses = '*'" >> $DATA_DIR/postgresql.conf
 
 #configure the postgresql server to start at boot
-sudo /sbin/chkconfig postgresql on
-sudo service postgresql restart
+/sbin/chkconfig postgresql on
+service postgresql restart
 
 wait_for_db_server_to_start
 
@@ -485,6 +532,7 @@ create_mgmt_role_db REPORTSMANAGER rman
 create_mgmt_role_db NAVIGATOR nav
 create_mgmt_role_db NAVIGATORMETASERVER navms
 create_mgmt_role_db OOZIE oozie
+create_mgmt_role_db HUE	hue
 create_hive_metastore
 #host    oozie         oozie         0.0.0.0/0             md5
 #create_mgmt_role_db HiveMetastoreServer navms
@@ -496,11 +544,109 @@ create_hive_metastore
 configure_remote_connections
 
 # restart to make sure all configuration take effects
-sudo service postgresql restart
+service postgresql restart
 
 wait_for_db_server_to_start
 
 log "------- initialize-postgresql.sh succeeded -------"
 
-# always `exit 0` on success
-exit 0
+## DISK SETUP
+
+## Look for all ISCSI devices in sequence, finish on first failure
+EXECNAME="ISCSI"
+v="0"
+done="0"
+log "-- Mapping Block Volumes --"
+for i in `seq 2 33`; do
+  if [ $done = "0" ]; then
+    iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+    iscsi_chk=`echo -e $?`
+    if [ $iscsi_chk = "0" ]; then
+      iqn=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'`
+      log "-> Success for volume $((i-1)) - IQN: $iqn"
+      log "-> Finishing volume setup"
+      iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260
+      iscsiadm -m node -o update -T $iqn -n node.startup -v automatic
+      iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l
+      v=$((v+1))
+      continue
+    else
+      log "--> Completed - $((i-2)) volumes found"
+      done="1"
+    fi
+  fi
+done;
+
+EXECNAME="DISK PROVISIONING"
+#
+# Disk Setup uses drives /dev/sdb and /dev/sdc for statically mapped Cloudera partitions (logs, parcels)
+# If customizing your Terraform Templates - be sure to pay attention here to ensure proper mounts are presented
+#
+## Primary Disk Mounting Function
+data_mount () {
+  log "-->Mounting /dev/$disk to /data$dcount"
+  mkdir -p /data$dcount
+  mount -o noatime,barrier=1 -t ext4 /dev/$disk /data$dcount
+  UUID=`lsblk -no UUID /dev/$disk`
+  echo "UUID=$UUID   /data$dcount    ext4   defaults,noatime,discard,barrier=0 0 1" | tee -a /etc/fstab
+}
+
+block_data_mount () {
+  log "-->Mounting /dev/oracleoci/$disk to /data$dcount"
+  mkdir -p /data$dcount
+  mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /data$dcount
+  UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+  echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+}
+
+## Check for x>0 devices
+log "->Checking for disks..."
+nvcount="0"
+bvcount="0"
+## Execute - will format all devices except sda for use as data disks in HDFS
+dcount=0
+for disk in `cat /proc/partitions | grep nv`; do
+        log "-->Processing /dev/$disk"
+        mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/$disk
+        data_mount
+        dcount=$((dcount+1))
+done;
+for disk in `ls /dev/oracleoci/ | grep -ivw 'oraclevda' | grep -ivw 'oraclevda[1-3]'`; do
+        log "-->Processing /dev/oracleoci/$disk"
+        mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
+        if [ $disk = "oraclevdb" ]; then
+                log "-->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
+                mkdir -p /var/log/cloudera
+                mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
+                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+        elif [ $disk = "oraclevdc" ]; then
+                log "-->Mounting /dev/oracleoci/$disk to /opt/cloudera"
+		if [ -d /opt/cloudera ]; then 
+			mv /opt/cloudera /opt/cloudera_pre
+			mkdir -p /opt/cloudera
+			mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
+			mv /opt/cloudera_pre/* /opt/cloudera
+			rm -fR /opt/cloudera_pre
+		else
+	                mkdir -p /opt/cloudera
+        	        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
+		fi
+                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+        else
+                block_data_mount
+                dcount=$((dcount+1))
+        fi
+        /sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
+done;
+
+## START CLOUDERA MANAGER
+log "------- Starting Cloudera Manager -------"
+chown -R cloudera-scm:cloudera-scm /etc/cloudera-scm-server
+chown cloudera-scm:cloudera-scm /opt/cloudera
+chown cloudera-scm:cloudera-scm /var/log/cloudera
+systemctl start cloudera-scm-server
+
+EXECNAME="END"
+log "->DONE"
