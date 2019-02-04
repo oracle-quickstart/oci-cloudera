@@ -73,24 +73,28 @@ v="0"
 done="0"
 log "-- Mapping Block Volumes --"
 for i in `seq 2 33`; do
-  if [ $done = "0" ]; then
-    iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
-    iscsi_chk=`echo -e $?`
-    if [ $iscsi_chk = "0" ]; then
-      iqn=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'` 
-      log "-> Success for volume $((i-1)) - IQN: $iqn"
-      log "-> Finishing volume setup"
-      iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260
-      iscsiadm -m node -o update -T $iqn -n node.startup -v automatic
-      iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l
-      v=$((v+1))
-      continue
-    else
-      log "--> Completed - $((i-2)) volumes found"
-      done="1"
-    fi
-  fi
+	if [ $done = "0" ]; then
+		iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+		iscsi_chk=`echo -e $?`
+		if [ $iscsi_chk = "0" ]; then
+			iqn[$((v+1))]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'` 
+			log "-> Discovered volume $((i-1)) - IQN: $iqn"
+			v=$((v+1))
+			continue
+		else
+			log "--> Discovery Complete - $((i-2)) volumes found"
+			done="1"
+		fi
+	fi
 done;
+if [ $v -ge 1]; then
+	for i in `seq 1 $v`; do 
+		log "-> Finishing Volume Setup - Volume $v : IQN $iqn[$i]"
+                nohup iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260 &
+                nohup iscsiadm -m node -o update -T $iqn -n node.startup -v automatic &
+                nohup iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l &
+	done;
+fi
 
 EXECNAME="boot.sh - DISK PROVISIONING"
 #

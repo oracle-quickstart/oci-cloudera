@@ -50,7 +50,8 @@ EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
 rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cloudera
 wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
-yum install oracle-j2sdk* cloudera-manager-daemons cloudera-manager-server java-1.8.0-openjdk.x86_64 postgresql-server -y
+yum install oracle-j2sdk* cloudera-manager-daemons cloudera-manager-server java-1.8.0-openjdk.x86_64 postgresql-server python-pip -y
+pip install psycopg2==2.7.5 --ignore-installed
 
 ##
 ## POSTGRES SETUP BELOW
@@ -59,7 +60,7 @@ yum install oracle-j2sdk* cloudera-manager-daemons cloudera-manager-server java-
 # manually set EXECNAME because this file is called from another script and it $0 is "bash"
 EXECNAME="Postgresql Bootstrap"
 CURRENT_VERSION_MARKER='OCI_1'
-SLEEP_INTERVAL=5
+SLEEP_INTERVAL=2
 
 stop_db()
 {
@@ -475,7 +476,7 @@ wait_for_db_server_to_start()
   until [ $i -ge 5 ]
   do
     i=$((i+1))
-    -u postgres psql -l && break
+    su -u postgres psql -l && break
     sleep "${SLEEP_INTERVAL}"
   done
   if [ $i -ge 5 ]; then
@@ -487,7 +488,9 @@ wait_for_db_server_to_start()
 
 log "------- initialize-postgresql.sh starting -------"
 
-postgresql-setup initdb
+echo 'LC_ALL="en_US.UTF-8"' >> /etc/locale.conf
+su -l postgres -c "postgresql-setup initdb"
+#postgresql-setup initdb
 systemctl start postgresql
 SCM_PWD=$(create_random_password)
 DATA_DIR=/var/lib/pgsql/data
@@ -522,10 +525,8 @@ sed -i '/host.*127.*ident/i \
 
 #configure the postgresql server to start at boot
 /sbin/chkconfig postgresql on
-service postgresql restart
-
+systemctl restart postgresql
 wait_for_db_server_to_start
-
 create_scm_db "$SCM_PWD"
 create_mgmt_role_db ACTIVITYMONITOR amon
 create_mgmt_role_db REPORTSMANAGER rman
@@ -533,6 +534,7 @@ create_mgmt_role_db NAVIGATOR nav
 create_mgmt_role_db NAVIGATORMETASERVER navms
 create_mgmt_role_db OOZIE oozie
 create_mgmt_role_db HUE	hue
+create_mgmt_role_db SENTRY sentry
 create_hive_metastore
 #host    oozie         oozie         0.0.0.0/0             md5
 #create_mgmt_role_db HiveMetastoreServer navms
@@ -544,7 +546,7 @@ create_hive_metastore
 configure_remote_connections
 
 # restart to make sure all configuration take effects
-service postgresql restart
+systemctl restart postgresql
 
 wait_for_db_server_to_start
 
@@ -558,24 +560,28 @@ v="0"
 done="0"
 log "-- Mapping Block Volumes --"
 for i in `seq 2 33`; do
-  if [ $done = "0" ]; then
-    iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
-    iscsi_chk=`echo -e $?`
-    if [ $iscsi_chk = "0" ]; then
-      iqn=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'`
-      log "-> Success for volume $((i-1)) - IQN: $iqn"
-      log "-> Finishing volume setup"
-      iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260
-      iscsiadm -m node -o update -T $iqn -n node.startup -v automatic
-      iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l
-      v=$((v+1))
-      continue
-    else
-      log "--> Completed - $((i-2)) volumes found"
-      done="1"
-    fi
-  fi
+        if [ $done = "0" ]; then
+                iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+                iscsi_chk=`echo -e $?`
+                if [ $iscsi_chk = "0" ]; then
+                        iqn[$((v+1))]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'`
+                        log "-> Discovered volume $((i-1)) - IQN: $iqn"
+                        v=$((v+1))
+                        continue
+                else
+                        log "--> Discovery Complete - $((i-2)) volumes found"
+                        done="1"
+                fi
+        fi
 done;
+if [ $v -ge 1]; then
+        for i in `seq 1 $v`; do
+                log "-> Finishing Volume Setup - Volume $v : IQN $iqn[$i]"
+                nohup iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260 &
+                nohup iscsiadm -m node -o update -T $iqn -n node.startup -v automatic &
+                nohup iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l &
+        done;
+fi
 
 EXECNAME="DISK PROVISIONING"
 #
