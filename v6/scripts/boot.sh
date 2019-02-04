@@ -7,6 +7,8 @@ log() {
   echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}"
 }
 
+me=`whoami`
+log "-> Whoami: $me"
 
 EXECNAME="TUNING"
 log "->TUNING START"
@@ -65,36 +67,83 @@ ulimit -n 262144
 EXECNAME="SLEEP"
 ## SLEEP HERE - GIVE TIME FOR BLOCK VOLUMES TO ATTACH
 log "->SLEEP"
-sleep 120 
+sleep 180 
+
+vol_match() {
+case $i in
+	1) disk="oraclevdb";;
+	2) disk="oraclevdc";;
+	3) disk="oraclevdd";;
+	4) disk="oraclevde";;
+	5) disk="oraclevdf";;
+	6) disk="oraclevdg";;
+	7) disk="oraclevdh";;
+	8) disk="oraclevdi";;
+	9) disk="oraclevdj";;
+	10) disk="oraclevdk";;
+	11) disk="oraclevdl";;
+	12) disk="oraclevdm";;
+	13) disk="oraclevdn";;
+	14) disk="oraclevdo";;
+	15) disk="oraclevdp";;
+	16) disk="oraclevdq";;
+	17) disk="oraclevdr";;
+	18) disk="oraclevds";;
+	19) disk="oraclevdt";;
+	20) disk="oraclevdu";;
+	21) disk="oraclevdv";;
+	22) disk="oraclevdw";;
+	23) disk="oraclevdx";;
+	24) disk="oraclevdy";;
+	25) disk="oraclevdz";;
+	26) disk="oraclevdab";;
+	27) disk="oraclevdac";;
+	28) disk="oraclevdad";;
+	29) disk="oraclevdae";;
+	30) disk="oraclevdaf";;
+	31) disk="oraclevdag";;
+esac
+}
+
+iscsi_setup() {
+        log "-> ISCSI Volume Setup - Volume ${i} : IQN ${iqn[$n]}"
+        iscsiadm -m node -o new -T ${iqn[$n]} -p 169.254.2.${n}:3260
+        log "--> Volume ${iqn[$n]} added"
+        iscsiadm -m node -o update -T ${iqn[$n]} -n node.startup -v automatic
+        log "--> Volume ${iqn[$n]} startup set"
+        iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l
+        log "--> Volume ${iqn[$n]} done"
+}
+
+iscsi_target_only(){
+	log "-->Logging into Volume ${iqn[$n]}"
+	su - opc -c "sudo iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l"
+}
 
 ## Look for all ISCSI devices in sequence, finish on first failure
 EXECNAME="ISCSI"
-v="0"
 done="0"
-log "-- Mapping Block Volumes --"
+log "-- Detecting Block Volumes --"
 for i in `seq 2 33`; do
 	if [ $done = "0" ]; then
 		iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
 		iscsi_chk=`echo -e $?`
 		if [ $iscsi_chk = "0" ]; then
-			iqn[$((v+1))]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'` 
-			log "-> Discovered volume $((i-1)) - IQN: $iqn"
-			v=$((v+1))
+			# IQN list is important set up this array with discovered IQNs
+			iqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'` 
+			log "-> Discovered volume $((i-1)) - IQN: ${iqn[${i}]}"
 			continue
 		else
-			log "--> Discovery Complete - $((i-2)) volumes found"
+			log "--> Discovery Complete - ${#iqn[@]} volumes found"
 			done="1"
 		fi
 	fi
 done;
-if [ $v -ge 1]; then
-	for i in `seq 1 $v`; do 
-		log "-> Finishing Volume Setup - Volume $v : IQN $iqn[$i]"
-                nohup iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260 &
-                nohup iscsiadm -m node -o update -T $iqn -n node.startup -v automatic &
-                nohup iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l &
-	done;
-fi
+log "-- Setup for ${#iqn[@]} Block Volumes --"
+for i in `seq 1 ${#iqn[@]}`; do
+	n=$((i+1))
+	iscsi_setup
+done;
 
 EXECNAME="boot.sh - DISK PROVISIONING"
 #
@@ -131,26 +180,39 @@ for disk in `ls /dev/ | grep nvme`; do
     	data_mount
 	dcount=$((dcount+1))
 done;
-for disk in `ls /dev/oracleoci/ | grep -ivw 'oraclevda' | grep -ivw 'oraclevda[1-3]'`; do 
-	log "-->Processing /dev/oracleoci/$disk"
-	mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
-	if [ $disk = "oraclevdb" ]; then
-                log "-->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
-                mkdir -p /var/log/cloudera
-                mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
-                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-	elif [ $disk = "oraclevdc" ]; then
-		log "-->Mounting /dev/oracleoci/$disk to /opt/cloudera"
-		mkdir -p /opt/cloudera
-		mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
-		UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-		echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-	else
-		block_data_mount
-                dcount=$((dcount+1))
-  	fi
-	/sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
+#for disk in `ls /dev/oracleoci/ | grep -ivw 'oraclevda' | grep -ivw 'oraclevda[1-3]'`; do 
+for i in `seq 1 ${#iqn[@]}`; do
+	n=$((i+1))
+	dsetup="0"
+	while [ $dsetup = "0" ]; do
+		vol_match
+		log "-->Checking /dev/oracleoci/$disk"
+		if [ -h /dev/oracleoci/$disk ]; then
+			mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
+			if [ $disk = "oraclevdb" ]; then
+                		log "--->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
+	                	mkdir -p /var/log/cloudera
+	        	        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
+        	        	UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+	        	        echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+			elif [ $disk = "oraclevdc" ]; then
+				log "--->Mounting /dev/oracleoci/$disk to /opt/cloudera"
+				mkdir -p /opt/cloudera
+				mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
+				UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+				echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+			else
+				block_data_mount
+                		dcount=$((dcount+1))
+		  	fi
+			/sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
+			dsetup="1"
+		else
+			log "--->${disk} not found, running ISCSI again."
+			iscsi_target_only
+			sleep 5
+		fi
+	done;
 done;
 EXECNAME="END"
 log "->DONE"

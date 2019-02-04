@@ -22,6 +22,7 @@ resource "oci_core_instance" "Utility" {
 }
 
 resource "oci_core_instance" "Master" {
+  depends_on	      = ["oci_core_instance.Utility"]
   count               = "${var.master_node_count}"
   availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
@@ -46,6 +47,7 @@ resource "oci_core_instance" "Master" {
 }
 
 resource "oci_core_instance" "Bastion" {
+  depends_on          = ["oci_core_instance.Utility"]
   availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "CDH Bastion"
@@ -69,6 +71,7 @@ resource "oci_core_instance" "Bastion" {
 }
 
 resource "oci_core_instance" "Worker" {
+  depends_on          = ["oci_core_instance.Utility"]
   count               = "${var.worker_node_count}"
   availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
   compartment_id      = "${var.compartment_ocid}"

@@ -50,8 +50,9 @@ EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
 rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cloudera
 wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
-yum install oracle-j2sdk* cloudera-manager-daemons cloudera-manager-server java-1.8.0-openjdk.x86_64 postgresql-server python-pip -y
+yum install oracle-j2sdk* cloudera-manager-server java-1.8.0-openjdk.x86_64 postgresql-server python-pip -y
 pip install psycopg2==2.7.5 --ignore-installed
+yum install cloudera-manager-daemons -y
 
 ##
 ## POSTGRES SETUP BELOW
@@ -60,7 +61,7 @@ pip install psycopg2==2.7.5 --ignore-installed
 # manually set EXECNAME because this file is called from another script and it $0 is "bash"
 EXECNAME="Postgresql Bootstrap"
 CURRENT_VERSION_MARKER='OCI_1'
-SLEEP_INTERVAL=2
+SLEEP_INTERVAL=5
 
 stop_db()
 {
@@ -85,7 +86,7 @@ fail_or_continue()
 
 create_database()
 {
-  local DB_CMD="-u postgres psql"
+  local DB_CMD="sudo -u postgres psql"
   local DBNAME=$1
   local PW=$2
   local ROLE=$DBNAME
@@ -476,21 +477,22 @@ wait_for_db_server_to_start()
   until [ $i -ge 5 ]
   do
     i=$((i+1))
-    su -u postgres psql -l && break
+    sudo -u postgres psql -l && break
     sleep "${SLEEP_INTERVAL}"
   done
   if [ $i -ge 5 ]; then
     log "DB failed to start within $((i * SLEEP_INTERVAL)) seconds, exit with status 1"
-    log "------- initialize-postgresql.sh failed -------"
+    log "------- Postgresql startup failed -------"
     exit 1
   fi
 }
 
-log "------- initialize-postgresql.sh starting -------"
+log "------- Begin Postgresql Setup  -------"
 
 echo 'LC_ALL="en_US.UTF-8"' >> /etc/locale.conf
+log "-- Running Postgresql initdb --"
 su -l postgres -c "postgresql-setup initdb"
-#postgresql-setup initdb
+log "-- Starting Postgresql --"
 systemctl start postgresql
 SCM_PWD=$(create_random_password)
 DATA_DIR=/var/lib/pgsql/data
@@ -502,7 +504,7 @@ MGMT_DB_PROP_FILE=/etc/cloudera-scm-server/db.mgmt.properties
 
 DB_LIST_FILE=$DATA_DIR/scm.db.list
 NOW=$(date +%Y%m%d-%H%M%S)
-
+log "-- Configuring Postgresql --"
 configure_postgresql_conf $DATA_DIR/postgresql.conf 0
 
 # Add header to pg_hba.conf.
@@ -525,9 +527,13 @@ sed -i '/host.*127.*ident/i \
 
 #configure the postgresql server to start at boot
 /sbin/chkconfig postgresql on
+log "-- Restarting Postgresql --"
 systemctl restart postgresql
 wait_for_db_server_to_start
+log "-- Postgres DB Started --"
+log "-- Setting up SCM DB --"
 create_scm_db "$SCM_PWD"
+log "-- Setting up additional CM DBs --"
 create_mgmt_role_db ACTIVITYMONITOR amon
 create_mgmt_role_db REPORTSMANAGER rman
 create_mgmt_role_db NAVIGATOR nav
@@ -535,53 +541,103 @@ create_mgmt_role_db NAVIGATORMETASERVER navms
 create_mgmt_role_db OOZIE oozie
 create_mgmt_role_db HUE	hue
 create_mgmt_role_db SENTRY sentry
+log "-- Creating HIVE Metastore --"
 create_hive_metastore
 #host    oozie         oozie         0.0.0.0/0             md5
 #create_mgmt_role_db HiveMetastoreServer navms
 # with dynamic db creation, no need to call "create_mgmt_role_db" for new roles
 # above calls kept for consistency
 
-/usr/share/cmf/schema/scm_prepare_database.sh postgresql scm scm "$SCM_PWD" >> "${LOG_FILE}" 2>&1
+log "-- Running SCM DB Bootstrap --"
+/opt/cloudera/cm/schema/scm_prepare_database.sh postgresql scm scm "$SCM_PWD" >> "${LOG_FILE}" 2>&1
 
+log "-- Configuring Remote Connections --"
 configure_remote_connections
 
 # restart to make sure all configuration take effects
+log "-- Restarting Postgresql to refresh config --"
 systemctl restart postgresql
 
 wait_for_db_server_to_start
 
-log "------- initialize-postgresql.sh succeeded -------"
-
+log "-- DONE --"
 ## DISK SETUP
+
+vol_match() {
+case $i in
+        1) disk="oraclevdb";;
+        2) disk="oraclevdc";;
+        3) disk="oraclevdd";;
+        4) disk="oraclevde";;
+        5) disk="oraclevdf";;
+        6) disk="oraclevdg";;
+        7) disk="oraclevdh";;
+        8) disk="oraclevdi";;
+        9) disk="oraclevdj";;
+        10) disk="oraclevdk";;
+        11) disk="oraclevdl";;
+        12) disk="oraclevdm";;
+        13) disk="oraclevdn";;
+        14) disk="oraclevdo";;
+        15) disk="oraclevdp";;
+        16) disk="oraclevdq";;
+        17) disk="oraclevdr";;
+        18) disk="oraclevds";;
+        19) disk="oraclevdt";;
+        20) disk="oraclevdu";;
+        21) disk="oraclevdv";;
+        22) disk="oraclevdw";;
+        23) disk="oraclevdx";;
+        24) disk="oraclevdy";;
+        25) disk="oraclevdz";;
+        26) disk="oraclevdab";;
+        27) disk="oraclevdac";;
+        28) disk="oraclevdad";;
+        29) disk="oraclevdae";;
+        30) disk="oraclevdaf";;
+        31) disk="oraclevdag";;
+esac
+}
+
+
+iscsi_setup() {
+        log "-> ISCSI Volume Setup - Volume $i : IQN ${iqn[$n]}"
+        iscsiadm -m node -o new -T ${iqn[$n]} -p 169.254.2.${n}:3260
+        log "--> Volume ${iqn[$n]} added"
+        iscsiadm -m node -o update -T ${iqn[$n]} -n node.startup -v automatic
+        log "--> Volume ${iqn[$n]} startup set"
+        iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l
+        log "--> Volume ${iqn[$n]} done"
+}
+
+iscsi_target_only(){
+        log "-->Logging into Volume ${iqn[$n]}"
+        iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l
+}
 
 ## Look for all ISCSI devices in sequence, finish on first failure
 EXECNAME="ISCSI"
-v="0"
 done="0"
-log "-- Mapping Block Volumes --"
+log "-- Detecting Block Volumes --"
 for i in `seq 2 33`; do
         if [ $done = "0" ]; then
-                iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+                iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 2>&1 2>/dev/null
                 iscsi_chk=`echo -e $?`
                 if [ $iscsi_chk = "0" ]; then
-                        iqn[$((v+1))]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 | gawk '{print $2}'`
-                        log "-> Discovered volume $((i-1)) - IQN: $iqn"
-                        v=$((v+1))
+                        iqn[$i]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'`
+                        log "-> Discovered volume $((i-1)) - IQN: ${iqn[$i]}"
                         continue
                 else
-                        log "--> Discovery Complete - $((i-2)) volumes found"
+                        log "--> Discovery Complete - ${#iqn[@]} volumes found"
                         done="1"
                 fi
         fi
 done;
-if [ $v -ge 1]; then
-        for i in `seq 1 $v`; do
-                log "-> Finishing Volume Setup - Volume $v : IQN $iqn[$i]"
-                nohup iscsiadm -m node -o new -T $iqn -p 169.254.2.$i:3260 &
-                nohup iscsiadm -m node -o update -T $iqn -n node.startup -v automatic &
-                nohup iscsiadm -m node -T $iqn -p 169.254.2.$i:3260 -l &
-        done;
-fi
+log "-- Setup for ${#iqn[@]} Block Volumes --"
+for i in `seq 1 ${#iqn[@]}`; do
+	n=$((i+1))
+	iscsi_setup
+done;
 
 EXECNAME="DISK PROVISIONING"
 #
@@ -617,34 +673,46 @@ for disk in `cat /proc/partitions | grep nv`; do
         data_mount
         dcount=$((dcount+1))
 done;
-for disk in `ls /dev/oracleoci/ | grep -ivw 'oraclevda' | grep -ivw 'oraclevda[1-3]'`; do
-        log "-->Processing /dev/oracleoci/$disk"
-        mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
-        if [ $disk = "oraclevdb" ]; then
-                log "-->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
-                mkdir -p /var/log/cloudera
-                mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
-                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-        elif [ $disk = "oraclevdc" ]; then
-                log "-->Mounting /dev/oracleoci/$disk to /opt/cloudera"
-		if [ -d /opt/cloudera ]; then 
-			mv /opt/cloudera /opt/cloudera_pre
-			mkdir -p /opt/cloudera
-			mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
-			mv /opt/cloudera_pre/* /opt/cloudera
-			rm -fR /opt/cloudera_pre
-		else
-	                mkdir -p /opt/cloudera
-        	        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
-		fi
-                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-        else
-                block_data_mount
-                dcount=$((dcount+1))
-        fi
-        /sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
+for i in `seq 1 ${#iqn[@]}`; do
+	n=$((i+1))
+        dsetup="0"
+        while [ $dsetup = "0" ]; do
+                vol_match
+                log "-->Checking /dev/oracleoci/$disk"
+                if [ -h /dev/oracleoci/$disk ]; then
+                        mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
+                        if [ $disk = "oraclevdb" ]; then
+                                log "--->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
+                                mkdir -p /var/log/cloudera
+                                mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
+                                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+                                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+                        elif [ $disk = "oraclevdc" ]; then
+                                log "--->Mounting /dev/oracleoci/$disk to /opt/cloudera"
+				if [ -d /opt/cloudera ]; then
+		                        mv /opt/cloudera /opt/cloudera_pre
+                		        mkdir -p /opt/cloudera
+		                        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
+		                        mv /opt/cloudera_pre/* /opt/cloudera
+                		        rm -fR /opt/cloudera_pre
+		                else
+                		        mkdir -p /opt/cloudera
+		                        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
+		                fi
+                                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+                        else
+                                block_data_mount
+                                dcount=$((dcount+1))
+                        fi
+                        /sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
+                        dsetup="1"
+                else
+                        log "--->${disk} not found, running ISCSI setup again."
+                        iscsi_target_only
+                        sleep 5
+                fi
+        done;
 done;
 
 ## START CLOUDERA MANAGER
