@@ -7,9 +7,6 @@ log() {
   echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}"
 }
 
-me=`whoami`
-log "-> Whoami: $me"
-
 EXECNAME="TUNING"
 log "->TUNING START"
 #
