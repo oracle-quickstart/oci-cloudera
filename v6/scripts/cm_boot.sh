@@ -63,6 +63,10 @@ EXECNAME="Postgresql Bootstrap"
 CURRENT_VERSION_MARKER='OCI_1'
 SLEEP_INTERVAL=5
 
+##
+## POSTGRES FUNCTIONS 
+##
+
 stop_db()
 {
   systemctl stop postgresql
@@ -147,7 +151,6 @@ EOF
   umask "$orig_umask"
   fail_or_continue $? "Error creating file $DB_PROP_FILE"
   echo "Created db properties file $DB_PROP_FILE"
-  backup_file "$DB_LIST_FILE"
   echo scm >> "$DB_LIST_FILE"
 }
 
@@ -169,11 +172,6 @@ create_hive_metastore()
   create_database "$db" "$pw" "$hive"
 
   echo "host    $db $hive  0.0.0.0/0   md5" >> "$DATA_DIR"/pg_hba.conf
-
-  if [[ $MGMT_DB_MODIFIED -eq 0 ]]; then
-    backup_file "$MGMT_DB_PROP_FILE"
-  fi
-  MGMT_DB_MODIFIED=1
 
   # Write the prop file header.
   if [[ ! -f $MGMT_DB_PROP_FILE ]]; then
@@ -217,7 +215,6 @@ EOF
   echo "host    $db   $hive   0.0.0.0/0   md5" >> "$DATA_DIR"/pg_hba.conf
 
   echo "Created DB for role $role"
-  backup_file "$DB_LIST_FILE"
   echo "$db" >> "$DB_LIST_FILE"
 }
 
@@ -237,11 +234,6 @@ create_mgmt_role_db()
   local pw
   pw=$(create_random_password)
   create_database "$db" "$pw"
-
-  if [[ $MGMT_DB_MODIFIED -eq 0 ]]; then
-    backup_file "$MGMT_DB_PROP_FILE"
-  fi
-  MGMT_DB_MODIFIED=1
 
   # Write the prop file header.
   if [[ ! -f $MGMT_DB_PROP_FILE ]]; then
@@ -284,8 +276,7 @@ EOF
   # Update pg_hba.conf for the new database.
   echo "host    $db   $db   0.0.0.0/0   md5" >> "$DATA_DIR"/pg_hba.conf
 
-  echo "Created DB for role $role"
-  backup_file "$DB_LIST_FILE"
+  log "-->Created DB for role $role"
   echo "$db" >> "$DB_LIST_FILE"
 }
 
@@ -311,7 +302,7 @@ configure_remote_connections()
   echo "$THIRDLINE" >> "$DATA_DIR"/pg_hba.conf
   echo "$FOURTHLINE" >> "$DATA_DIR"/pg_hba.conf
 
-  echo "Enabled remote connections"
+  log "-->Enabled remote connections"
 }
 
 # Get the amount of RAM on the system. Uses "free -b" to get the amount
@@ -406,14 +397,6 @@ get_standard_conforming_strings()
   fi
 }
 
-backup_file()
-{
-  local FILE=$1
-  if [[ -f $FILE ]] && [[ ! -f $FILE.$NOW ]]; then
-    cp "$FILE" "$FILE"."$NOW"
-  fi
-}
-
 configure_postgresql_conf()
 {
   local CONF_FILE="$1"
@@ -487,6 +470,10 @@ wait_for_db_server_to_start()
   fi
 }
 
+##
+## MAIN POSTGRES SETUP
+##
+
 log "------- Begin Postgresql Setup  -------"
 
 echo 'LC_ALL="en_US.UTF-8"' >> /etc/locale.conf
@@ -510,20 +497,9 @@ configure_postgresql_conf $DATA_DIR/postgresql.conf 0
 # Add header to pg_hba.conf.
 echo "# Accept connections from all hosts" >> $DATA_DIR/pg_hba.conf
 
-#echo "export LANGUAGE=en_US.UTF-8" >> ~/.bashrc
-#echo "export LANG=en_US.UTF-8" >> ~/.bashrc
-#echo "export LC_ALL=en_US.UTF-8" >> ~/.bashrc
-
-#source ~/.bashrc
-
-
 #put this line to the top of the ident to allow all local access
 sed -i '/host.*127.*ident/i \
   host    all         all         127.0.0.1/32          md5  \ ' $DATA_DIR/pg_hba.conf
-#append this line as well, need both to allow access
-#echo "host    all         all         0.0.0.0/0          md5"
-
-#echo "listen_addresses = '*'" >> $DATA_DIR/postgresql.conf
 
 #configure the postgresql server to start at boot
 /sbin/chkconfig postgresql on
@@ -543,10 +519,6 @@ create_mgmt_role_db HUE	hue
 create_mgmt_role_db SENTRY sentry
 log "-- Creating HIVE Metastore --"
 create_hive_metastore
-#host    oozie         oozie         0.0.0.0/0             md5
-#create_mgmt_role_db HiveMetastoreServer navms
-# with dynamic db creation, no need to call "create_mgmt_role_db" for new roles
-# above calls kept for consistency
 
 log "-- Running SCM DB Bootstrap --"
 /opt/cloudera/cm/schema/scm_prepare_database.sh postgresql scm scm "$SCM_PWD" >> "${LOG_FILE}" 2>&1
