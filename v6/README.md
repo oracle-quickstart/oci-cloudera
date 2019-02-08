@@ -1,1 +1,73 @@
-## Deployment Notes
+# oci-cloudera-edh v6 
+This module deploys a cluster of arbitrary size using Cloudera Enterprise Data Hub v6
+
+|             | Worker Nodes   | Bastion Instance | Utility and Master Instances |
+|-------------|----------------|------------------|------------------------------|
+| Recommended | BM.DenseIO2.52 | VM.Standard2.4   | VM.Standard2.16              |
+
+## Prerequisites
+Installation has a dependency on Terraform being installed and configured for the user tenancy.   As such an "env-vars" file is included with this package that contains all the necessary environment variables.  This file should be updated with the appropriate values prior to installation.  To source this file prior to installation, either reference it in your .rc file for your shell's or run the following:
+
+    source env-vars
+
+
+## Python Dependencies
+This template depends on Python, Paramiko, PIP, and cm_client.   These should be installed on the host where you are deploying the Terraform template.  
+
+On EL7 hosts, installation can be performed using the following commands:
+
+	sudo yum install python python-pip python-paramiko.noarch -y
+	sudo pip install --upgrade pip
+	sudo pip install cm_client
+
+On Mac, installation can be peformed using the following commands:
+
+	curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+	sudo python get-pip.py
+        sudo pip install --upgrade pip
+        sudo pip install cm_client paramiko
+
+## Python Deployment using cm_client
+The deployment script "deploy_on_oci.py" uses cm_client against Cloudera Manger API v31.  As such it does require some customization before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
+
+	admin_user_name
+	admin_password
+	cluster_name
+	ssh_keyfile
+	cluster_service_list
+
+Also if you modify the compute.tf in any way to change hostname parameters, you will need to update these variables for pattern matching, otherwise host detection and cluster layout will fail:
+
+	worker_hosts_contain
+	master_hosts_contain
+	namenode_host_contains
+	secondary_namenode_host_contains
+	cloudera_manager_host_contains
+
+In addition, further customization of the cluster deployment can be done by modification of the following functions:
+
+	setup_mgmt_rcg
+	update_cluster_rcg_configuration
+
+This does require some knowledge of Python - modify at your own risk.  These functions contain Cloudera specific tuning parameters as well as host mapping for roles.
+
+## Deployment Syntax
+Deployment of the template is straight forward using the following Terraform commands
+
+	terraform init
+	terraform plan
+	terraform apply
+
+This will create all the required elements in a compartment in the target OCI tenancy.  This includes VCN and Security List parameters.  Security audit of these in the network.tf is suggested.
+
+After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.
+
+## Deployment Caveats
+Currently this template requires Cloudera Manager (and API) to be on an edge host with an Public (Internet) IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
+
+Future enhancements to this template are planned to support a completely Private (non-Internet exposed) cluster deployment.
+
+
+
+
+
