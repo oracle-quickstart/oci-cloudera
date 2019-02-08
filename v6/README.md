@@ -12,7 +12,7 @@ Installation has a dependency on Terraform being installed and configured for th
 
 
 ## Python Dependencies
-This template depends on Python, Paramiko, PIP, and cm_client.   These should be installed on the host where you are deploying the Terraform template.  
+This module depends on Python, Paramiko, PIP, and cm_client.   These should be installed on the host you are using to deploy the Terraform module.  
 
 On EL7 hosts, installation can be performed using the following commands:
 
@@ -52,7 +52,7 @@ In addition, further customization of the cluster deployment can be done by modi
 This does require some knowledge of Python - modify at your own risk.  These functions contain Cloudera specific tuning parameters as well as host mapping for roles.
 
 ## Deployment Syntax
-Deployment of the template is straight forward using the following Terraform commands
+Deployment of the module is straight forward using the following Terraform commands
 
 	terraform init
 	terraform plan
@@ -63,9 +63,9 @@ This will create all the required elements in a compartment in the target OCI te
 After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.
 
 ## Deployment Caveats
-Currently this template requires Cloudera Manager API to be on an edge host with a Public IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
+Currently this module requires Cloudera Manager API to be on an edge host with a Public IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
 
-Future enhancements to this template are planned to support a completely Private (non-Internet exposed) cluster deployment.
+Future enhancements to this module are planned to support a completely Private (non-Internet exposed) cluster deployment.
 
 
 
