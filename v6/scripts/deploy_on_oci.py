@@ -16,6 +16,7 @@ import json
 import time
 import datetime
 import argparse
+import socket
 
 
 start_time = time.time()
@@ -39,14 +40,8 @@ host_fqdn_list = []
 debug = 'False'  # type: str
 
 # Define new admin username and password
-user_name = 'cdhadmin'  # type: str
-password = 'somepassword'  # type: str
-
-# Set this to 'Yes' if you want to perform host lookups from the Cloudera Manager host for building your cluster
-# Any other value will revert to static host list set in "build_host_list" function - you will need to manually set
-# these values in this script.
-# remotely_detect_hosts = 'Yes'
-# Disabling for now as invocation from Terraform should provide valid hosts
+admin_user_name = 'cdhadmin'  # type: str
+admin_password = 'somepassword'  # type: str
 
 # Define cluster name
 cluster_name = 'TestCluster'  # type: str
@@ -122,68 +117,68 @@ LOG_DIR = '/var/log/cloudera'
 #
 def get_parameter_value(worker_shape, parameter):
     switcher = {
-        "BM.DenseIO2.52:yarn_nodemanager_resource_cpu_vcores": "208",
-        "BM.DenseIO2.52:yarn_nodemanager_resource_memory_mb": "786432",
+        "BM.DenseIO2.52:yarn_nodemanager_cpu_vcores": "208",
+        "BM.DenseIO2.52:yarn_nodemanager_memory_mb": "786432",
         "BM.DenseIO2.52:impalad_memory_limit": "274877906944",
         "BM.DenseIO2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.DenseIO2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.DenseIO2.52:dfs_replication": "3",
-        "BM.DenseIO1.36:yarn_nodemanager_resource_cpu_vcores": "128",
-        "BM.DenseIO1.36:yarn_nodemanager_resource_memory_mb": "524288",
+        "BM.DenseIO1.36:yarn_nodemanager_cpu_vcores": "128",
+        "BM.DenseIO1.36:yarn_nodemanager_memory_mb": "524288",
         "BM.DenseIO1.36:impalad_memory_limit": "274877906944",
         "BM.DenseIO1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.DenseIO1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.DenseIO1.36:dfs_replication": "3",
-        "BM.Standard2.52:yarn_nodemanager_resource_cpu_vcores": "208",
-        "BM.Standard2.52:yarn_nodemanager_resource_memory_mb": "786432",
+        "BM.Standard2.52:yarn_nodemanager_cpu_vcores": "208",
+        "BM.Standard2.52:yarn_nodemanager_memory_mb": "786432",
         "BM.Standard2.52:impalad_memory_limit": "274877906944",
         "BM.Standard2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.Standard2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.Standard2.52:dfs_replication": "3",
-        "BM.Standard1.36:yarn_nodemanager_resource_cpu_vcores": "128",
-        "BM.Standard1.36:yarn_nodemanager_resource_memory_mb": "242688",
+        "BM.Standard1.36:yarn_nodemanager_cpu_vcores": "128",
+        "BM.Standard1.36:yarn_nodemanager_memory_mb": "242688",
         "BM.Standard1.36:impalad_memory_limit": "122857142857",
         "BM.Standard1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.Standard1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
         "BM.Standard1.36:dfs_replication": "3",
-        "VM.Standard2.24:yarn_nodemanager_resource_cpu_vcores": "80",
-        "VM.Standard2.24:yarn_nodemanager_resource_memory_mb": "308224",
+        "VM.Standard2.24:yarn_nodemanager_cpu_vcores": "80",
+        "VM.Standard2.24:yarn_nodemanager_memory_mb": "308224",
         "VM.Standard2.24:impalad_memory_limit": "122857142857",
         "VM.Standard2.24:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
         "VM.Standard2.24:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
         "VM.Standard2.24:dfs_replication": "3",
-        "VM.Standard2.16:yarn_nodemanager_resource_cpu_vcores": "48",
-        "VM.Standard2.16:yarn_nodemanager_resource_memory_mb": "237568",
+        "VM.Standard2.16:yarn_nodemanager_cpu_vcores": "48",
+        "VM.Standard2.16:yarn_nodemanager_memory_mb": "237568",
         "VM.Standard2.16:impalad_memory_limit": "42949672960",
         "VM.Standard2.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard2.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard2.16:dfs_replication": "3",
-        "VM.Standard1.16:yarn_nodemanager_resource_cpu_vcores": "48",
-        "VM.Standard1.16:yarn_nodemanager_resource_memory_mb": "95232",
+        "VM.Standard1.16:yarn_nodemanager_cpu_vcores": "48",
+        "VM.Standard1.16:yarn_nodemanager_memory_mb": "95232",
         "VM.Standard1.16:impalad_memory_limit": "42949672960",
         "VM.Standard1.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard1.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard1.16:dfs_replication": "3",
-        "VM.Standard2.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.Standard2.8:yarn_nodemanager_resource_memory_mb": "114688",
+        "VM.Standard2.8:yarn_nodemanager_cpu_vcores": "16",
+        "VM.Standard2.8:yarn_nodemanager_memory_mb": "114688",
         "VM.Standard2.8:impalad_memory_limit": "21500000000",
         "VM.Standard2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard2.8:dfs_replication": "3",
-        "VM.DenseIO2.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.DenseIO2.8:yarn_nodemanager_resource_memory_mb": "114688",
+        "VM.DenseIO2.8:yarn_nodemanager_cpu_vcores": "16",
+        "VM.DenseIO2.8:yarn_nodemanager_memory_mb": "114688",
         "VM.DenseIO2.8:impalad_memory_limit": "21500000000",
         "VM.DenseIO2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO2.8:dfs_replication": "3",
-        "VM.DenseIO1.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.DenseIO1.8:yarn_nodemanager_resource_memory_mb": "114688",
+        "VM.DenseIO1.8:yarn_nodemanager_cpu_vcores": "16",
+        "VM.DenseIO1.8:yarn_nodemanager_memory_mb": "114688",
         "VM.DenseIO1.8:impalad_memory_limit": "21500000000",
         "VM.DenseIO1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO1.8:dfs_replication": "3",
-        "VM.Standard1.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.Standard1.8:yarn_nodemanager_resource_memory_mb": "37888",
+        "VM.Standard1.8:yarn_nodemanager_cpu_vcores": "16",
+        "VM.Standard1.8:yarn_nodemanager_memory_mb": "37888",
         "VM.Standard1.8:impalad_memory_limit": "21500000000",
         "VM.Standard1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
@@ -213,9 +208,11 @@ def parse_ssh_key():
         print('->SSH Keyfile Found: %s' % ssh_keyfile)
 
 
-def build_api_endpoints():
+def build_api_endpoints(user_name, password):
     """
     Main API setup - define and make global all API endpoints used by functions
+    :param user_name: Username to connect with
+    :param password: Password for user_name
     :return:
     """
     cm_client.configuration.username = user_name
@@ -223,30 +220,30 @@ def build_api_endpoints():
     api_host = 'http://' + cm_server
     global api_url, api_client
     api_url = api_host + ':' + cm_port + '/api/' + api_version
+    api_success = '0'
     if debug == 'True':
         print("->API URL: " + api_url)
     api_client = cm_client.ApiClient(api_url)
-    global clusters_api_instance, users_api_instance, manager_api_instance, parcels_api_instance, parcel_api_instance, \
-        cluster_services_api_instance, auth_roles_api_instance, roles_config_api_instance, all_hosts_api_instance, \
-        roles_resource_api_instance, mgmt_service_resource_api_instance, services_resource_api_instance, \
-        mgmt_role_commands_resource_api_instance, mgmt_role_config_groups_resource_api_instance, \
-        mgmt_roles_resource_api_instance, cloudera_manager_resource_api
-    clusters_api_instance = cm_client.ClustersResourceApi(api_client)
-    users_api_instance = cm_client.UsersResourceApi(api_client)
-    manager_api_instance = cm_client.ClouderaManagerResourceApi(api_client)
-    parcels_api_instance = cm_client.ParcelsResourceApi(api_client)
-    parcel_api_instance = cm_client.ParcelResourceApi(api_client)
-    cluster_services_api_instance = cm_client.ServicesResourceApi(api_client)
-    auth_roles_api_instance = cm_client.AuthRolesResourceApi(api_client)
-    roles_config_api_instance = cm_client.RoleConfigGroupsResourceApi(api_client)
-    all_hosts_api_instance = cm_client.AllHostsResourceApi(api_client)
-    roles_resource_api_instance = cm_client.RolesResourceApi(api_client)
-    mgmt_service_resource_api_instance = cm_client.MgmtServiceResourceApi(api_client)
-    services_resource_api_instance = cm_client.ServicesResourceApi(api_client)
-    mgmt_role_commands_resource_api_instance = cm_client.MgmtRoleCommandsResourceApi(api_client)
-    mgmt_role_config_groups_resource_api_instance = cm_client.MgmtRoleConfigGroupsResourceApi(api_client)
-    mgmt_roles_resource_api_instance = cm_client.MgmtRolesResourceApi(api_client)
-    cloudera_manager_resource_api = cm_client.ClouderaManagerResourceApi(api_client)
+    global clusters_api, users_api, cloudera_manager_api, parcels_api, parcel_api, \
+        cluster_services_api, auth_roles_api, roles_config_api, all_hosts_api, \
+        roles_api, mgmt_service_api, services_api, \
+        mgmt_role_commands_api, mgmt_role_config_groups_api, \
+        mgmt_roles_api
+    clusters_api = cm_client.ClustersResourceApi(api_client)
+    users_api = cm_client.UsersResourceApi(api_client)
+    cloudera_manager_api = cm_client.ClouderaManagerResourceApi(api_client)
+    parcels_api = cm_client.ParcelsResourceApi(api_client)
+    parcel_api = cm_client.ParcelResourceApi(api_client)
+    cluster_services_api = cm_client.ServicesResourceApi(api_client)
+    auth_roles_api = cm_client.AuthRolesResourceApi(api_client)
+    roles_config_api = cm_client.RoleConfigGroupsResourceApi(api_client)
+    all_hosts_api = cm_client.AllHostsResourceApi(api_client)
+    roles_api = cm_client.RolesResourceApi(api_client)
+    mgmt_service_api = cm_client.MgmtServiceResourceApi(api_client)
+    services_api = cm_client.ServicesResourceApi(api_client)
+    mgmt_role_commands_api = cm_client.MgmtRoleCommandsResourceApi(api_client)
+    mgmt_role_config_groups_api = cm_client.MgmtRoleConfigGroupsResourceApi(api_client)
+    mgmt_roles_api = cm_client.MgmtRolesResourceApi(api_client)
 
 
 def wait_for_active_cluster_commands(active_command):
@@ -256,16 +253,16 @@ def wait_for_active_cluster_commands(active_command):
     :return:
     """
     view = 'summary'
-    wait_status = '*'
+    wait_status = '[*'
     done = '0'
 
     while done == '0':
-        stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
+        sys.stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
         try:
-            api_response = manager_api_instance.list_active_commands(view=view)
+            api_response = cloudera_manager_api.list_active_commands(view=view)
             if not api_response.items:
                 done = '1'
-                stdout.write('\n')
+                sys.stdout.write(']\n')
                 break
             else:
                 sys.stdout.flush()
@@ -283,19 +280,19 @@ def wait_for_active_mgmt_commands(active_command):
     :return:
     """
     view = 'summary'
-    wait_status = '*'
+    wait_status = '[*'
     done = '0'
 
     while done == '0':
-        stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
+        sys.stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
         try:
-            api_response = mgmt_service_resource_api_instance.list_active_commands(view=view)
+            api_response = mgmt_service_api.list_active_commands(view=view)
             if not api_response.items:
                 done = '1'
-                stdout.write('\n')
+                sys.stdout.write(']\n')
                 break
             else:
-                stdout.flush()
+                sys.stdout.flush()
                 time.sleep(10)
                 wait_status = wait_status + '*'
 
@@ -311,7 +308,7 @@ def list_active_commands():
     view = 'summary'
 
     try:
-        api_response = manager_api_instance.list_active_commands(view=view)
+        api_response = cloudera_manager_api.list_active_commands(view=view)
         if debug == 'True':
             pprint(api_response)
         if not api_response.items:
@@ -330,7 +327,7 @@ def list_active_mgmt_commands():
     view = 'summary'
 
     try:
-        api_response = mgmt_service_resource_api_instance.list_active_commands(view=view)
+        api_response = mgmt_service_api.list_active_commands(view=view)
         if debug == 'True':
             pprint(api_response)
         if not api_response.items:
@@ -364,13 +361,13 @@ def init_admin_user():
                 print('role.display_name matches role_display_name')
             custom_role_uuid = role.uuid
 
-    users_api_instance = cm_client.UsersResourceApi(api_client)
+    users_api = cm_client.UsersResourceApi(api_client)
     role_list = [cm_client.ApiAuthRoleRef(display_name=role_display_name, uuid=custom_role_uuid)]
-    user_list = [cm_client.ApiUser2(name=user_name, password=password, auth_roles=role_list)]
+    user_list = [cm_client.ApiUser2(name=admin_user_name, password=admin_password, auth_roles=role_list)]
     body = cm_client.ApiUser2List(user_list)
 
     try:
-        api_response = users_api_instance.create_users2(body=body)
+        api_response = users_api.create_users2(body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -384,7 +381,7 @@ def delete_default_admin_user():
     """
     delete_user_name = "admin"
     try:
-        api_response = users_api_instance.delete_user2(delete_user_name)
+        api_response = users_api.delete_user2(delete_user_name)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -400,7 +397,7 @@ def init_cluster():
     body = cm_client.ApiClusterList(cluster)
 
     try:
-        cluster_api_response = clusters_api_instance.create_clusters(body=body)
+        cluster_api_response = clusters_api.create_clusters(body=body)
         if debug == 'True':
             pprint(cluster_api_response)
     except ApiException as e:
@@ -414,7 +411,7 @@ def delete_cluster():
     """
 
     try:
-        cluster_api_response = clusters_api_instance.delete_cluster(cluster_name)
+        cluster_api_response = clusters_api.delete_cluster(cluster_name)
         pprint(cluster_api_response)
     except ApiException as e:
         print('Exception when calling ClustersResourceAPI->delete_cluster: {}\n'.format(e))
@@ -427,7 +424,7 @@ def read_cluster():
     """
 
     try:
-        api_response = clusters_api_instance.read_cluster(cluster_name)
+        api_response = clusters_api.read_cluster(cluster_name)
         global cluster_uuid
         cluster_uuid = api_response.uuid
         if debug == 'True':
@@ -544,18 +541,14 @@ def remote_worker_shape_detection():
 
 def build_host_list():
     """
-    Create Static Host List for host management - use this if not using remote_host_detection()
+    Create Static Host List for host management - convert the input_host_list input to a list
     :return:
     """
     print('->Building Host FQDN List from Static Values\n')
     global host_fqdn_list
     host_fqdn_list = []
-    host_fqdn_list = ['cdh-utility-1.public3.cdhvcn.oraclevcn.com',
-                      'cdh-master-1.private3.cdhvcn.oraclevcn.com',
-                      'cdh-master-2.private3.cdhvcn.oraclevcn.com',
-                      'cdh-worker-1.private3.cdhvcn.oraclevcn.com',
-                      'cdh-worker-2.private3.cdhvcn.oraclevcn.com',
-                      'cdh-worker-3.private3.cdhvcn.oraclevcn.com']
+    for host in input_host_list:
+        host_fqdn_list.append(host)
 
 
 def build_cluster_host_list(host_fqdn_list):
@@ -567,8 +560,12 @@ def build_cluster_host_list(host_fqdn_list):
     global cluster_host_list
     cluster_host_list = []
     for host in host_fqdn_list:
-        host_info = cm_client.ApiHostRef(host_id=host)
+        hostname = host.split('.')[0]
+        host_info = cm_client.ApiHostRef(host_id=host, hostname=hostname)
         cluster_host_list.append(host_info)
+
+    if debug == 'True':
+        print('Cluster Host List: %s' % cluster_host_list)
 
 
 def build_disk_lists():
@@ -580,7 +577,7 @@ def build_disk_lists():
     dfs_data_dir_list = ''
     global yarn_data_dir_list
     yarn_data_dir_list = ''
-    for x in range(int(disk_count)):
+    for x in range(0, int(disk_count)):
         if x is 0:
             dfs_data_dir_list += "/data%d/dfs/dn" % x
             yarn_data_dir_list += "/data%d/yarn/nm" % x
@@ -589,15 +586,16 @@ def build_disk_lists():
             yarn_data_dir_list += ",/data%d/yarn/nm" % x
 
 
-def add_hosts_to_cluster():
+def add_hosts_to_cluster(cluster_host_list):
     """
     Add hosts to cluster
+    :param cluster_host_list: List of hosts to add to the cluster
     :return:
     """
     body = cm_client.ApiHostRefList(cluster_host_list)
 
     try:
-        api_response = clusters_api_instance.add_hosts(cluster_name, body=body)
+        api_response = clusters_api.add_hosts(cluster_name, body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -611,7 +609,7 @@ def list_hosts():
     """
 
     try:
-        api_response = clusters_api_instance.list_hosts(cluster_name)
+        api_response = clusters_api.list_hosts(cluster_name)
         global cluster_host_list
         cluster_host_list = api_response
         if debug == 'True':
@@ -630,7 +628,7 @@ def install_hosts():
                                              parallel_install_count='20')
 
     try:
-        api_response = manager_api_instance.host_install_command(body=body)
+        api_response = cloudera_manager_api.host_install_command(body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -648,7 +646,7 @@ def update_parcel_repo(remote_parcel_url, parcel_distribution_rate):
         print('Remote parcel URL not passed to update_parcel_repo function properly, exiting.')
         sys.exit()
 
-    cm_configs = manager_api_instance.get_config(view='full')
+    cm_configs = cloudera_manager_api.get_config(view='full')
     old_parcel_repo_urls = None
     for cm_config in cm_configs.items:
         if cm_config.name == 'REMOTE_PARCEL_REPO_URLS':
@@ -661,7 +659,7 @@ def update_parcel_repo(remote_parcel_url, parcel_distribution_rate):
                                                value=parcel_distribution_rate)
     phone_home = cm_client.ApiConfig(name='PHONE_HOME', value="false")
     new_cm_configs = cm_client.ApiConfigList([repo_cm_config, distribute_cm_config, phone_home])
-    updated_cm_configs = manager_api_instance.update_config(body=new_cm_configs)
+    updated_cm_configs = cloudera_manager_api.update_config(body=new_cm_configs)
     if debug == 'True':
         pprint(updated_cm_configs)
     time.sleep(10)
@@ -676,34 +674,35 @@ def dda_parcel(parcel_product):
 
     def monitor_parcel(parcel_product, parcel_version, target_stage):
         while True:
-            parcel = parcel_api_instance.read_parcel(cluster_name, parcel_product, parcel_version)
+            parcel = parcel_api.read_parcel(cluster_name, parcel_product, parcel_version)
             if parcel.stage == target_stage:
                 break
             if parcel.state.errors:
                 raise Exception(str(parcel.state.errors))
-            stdout.write("\rParcel %s progress %s: %s / %s" % (parcel_product, parcel.stage, parcel.state.progress,
+
+            sys.stdout.write("\rParcel %s progress %s: %s / %s" % (parcel_product, parcel.stage, parcel.state.progress,
                                                         parcel.state.total_progress))
             time.sleep(5)
-            stdout.flush()
+            sys.stdout.flush()
 
-    sdtout.write('\n')
-    parcels = parcels_api_instance.read_parcels(cluster_name, view='FULL')
+    sys.stdout.write('\n')
+    parcels = parcels_api.read_parcels(cluster_name, view='FULL')
     for parcel in parcels.items:
         if parcel.product == parcel_product:
             parcel_version = parcel.version
 
     print("Starting Parcel Download for %s - %s\n" % (parcel_product, parcel_version))
-    parcel_api_instance.start_download_command(cluster_name, parcel_product, parcel_version)
+    parcel_api.start_download_command(cluster_name, parcel_product, parcel_version)
     target_stage = 'DOWNLOADED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
     print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
     print("Starting Distribution for %s - %s\n" % (parcel_product, parcel_version))
-    parcel_api_instance.start_distribution_command(cluster_name, parcel_product, parcel_version)
+    parcel_api.start_distribution_command(cluster_name, parcel_product, parcel_version)
     target_stage = 'DISTRIBUTED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
     print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
     print("Activating Parcel %s\n" % parcel_product)
-    parcel_api_instance.activate_command(cluster_name, parcel_product, parcel_version)
+    parcel_api.activate_command(cluster_name, parcel_product, parcel_version)
 
 
 def get_parcel_status(parcel_product):
@@ -712,9 +711,9 @@ def get_parcel_status(parcel_product):
     :param parcel_product: Parcel Product Name - e.g. CDH, SPARK_ON_YARN
     :return:
     """
-    parcels = parcels_api_instance.read_parcels(cluster_name, view='FULL')
+    parcels = parcels_api.read_parcels(cluster_name, view='FULL')
     print('PARCELS: \n')
-    for x in range(len(parcel.items)):
+    for x in range(0, len(parcel.items)):
         if parcel.items[x].name == parcel_product:
             print(parcels.items[x])
 
@@ -726,8 +725,8 @@ def delete_parcel(parcel_product, parcel_version):
     :param parcel_version: Version of Parcel
     :return:
     """
-    parcel_api_instance.start_removal_of_distribution_command(cluster_name, parcel_product, parcel_version)
-    parcel_api_instance.remove_download_command(cluster_name, parcel_product, parcel_version)
+    parcel_api.start_removal_of_distribution_command(cluster_name, parcel_product, parcel_version)
+    parcel_api.remove_download_command(cluster_name, parcel_product, parcel_version)
 
 
 def restart_cluster():
@@ -735,9 +734,9 @@ def restart_cluster():
     Restart Cluster
     :return:
     """
-    clusters_api_instance = cm_client.ClustersResourceApi(api_client)
+    clusters_api = cm_client.ClustersResourceApi(api_client)
     restart_args = cm_client.ApiRestartClusterArgs()
-    restart_command = clusters_api_instance.restart_command(cluster_name, body=restart_args)
+    restart_command = clusters_api.restart_command(cluster_name, body=restart_args)
     wait(restart_command)
 
 
@@ -764,7 +763,7 @@ def create_cluster_services(api_service_list):
     body = cm_client.ApiServiceList(api_service_list)
 
     try:
-        api_response = cluster_services_api_instance.create_services(cluster_name, body=body)
+        api_response = cluster_services_api.create_services(cluster_name, body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -781,7 +780,7 @@ def update_service_config(service_name, api_config_items):
     body = cm_client.ApiServiceConfig(items=api_config_items)
 
     try:
-        api_response = services_resource_api_instance.update_service_config(cluster_name, service_name, body=body)
+        api_response = services_api.update_service_config(cluster_name, service_name, body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -843,7 +842,7 @@ def setup_cms():
     """
     try:
         print('->Setting up %s \n' % mgmt_api_packet.display_name)
-        api_response = mgmt_service_resource_api_instance.setup_cms(body=mgmt_api_packet)
+        api_response = mgmt_service_api.setup_cms(body=mgmt_api_packet)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -856,7 +855,7 @@ def begin_trial():
     :return:
     """
     try:
-        api_response = manager_api_instance.begin_trial()
+        api_response = cloudera_manager_api.begin_trial()
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -874,7 +873,7 @@ def update_mgmt_rcg(rcg_name, role, display_name, rcg_config):
                                                config=rcg_config)
 
     try:
-        api_response = mgmt_role_config_groups_resource_api_instance.update_role_config_group(rcg_name, body=body)
+        api_response = mgmt_role_config_groups_api.update_role_config_group(rcg_name, body=body)
         if debug == 'True':
                 pprint(api_response)
     except ApiException as e:
@@ -980,7 +979,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
         body = cm_client.ApiConfigList(config)
 
         try:
-            api_response = roles_config_api_instance.update_config(cluster_name, rcg, service, message=message,
+            api_response = roles_config_api.update_config(cluster_name, rcg, service, message=message,
                                                                    body=body)
             if debug == 'True':
                 pprint(api_response)
@@ -1339,13 +1338,13 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                              value=get_parameter_value(worker_shape, 'mapreduce_reduce_java_opts'))]
                     io_file_buffer_size = [cm_client.ApiConfig(name='io_file_buffer_size', value='131072')]
                     io_sort_mb = [cm_client.ApiConfig(name='io_sort_mb', value='1024')]
-                    yarn_app_mapreduce_am_resource_mb = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_resource_mb',
+                    yarn_app_mapreduce_am_mb = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_mb',
                                                                              value='4096')]
                     yarn_app_mapreduce_am_max_heap = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_max_heap',
                                                                           value='1073741824')]
                     gw_config_list = [mapred_submit_replication, mapreduce_map_java_opts, mapreduce_reduce_java_opts,
                                       io_file_buffer_size, io_sort_mb, yarn_app_mapreduce_am_max_heap,
-                                      yarn_app_mapreduce_am_resource_mb]
+                                      yarn_app_mapreduce_am_mb]
                     for config in gw_config_list:
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
@@ -1359,19 +1358,19 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                                                       value='2000000000')]
                     yarn_nodemanager_local_dirs = [cm_client.ApiConfig(name='yarn_nodemanager_local_dirs',
                                                                        value=yarn_data_dir_list)]
-                    yarn_nodemanager_resource_cpu_vcores = \
-                        [cm_client.ApiConfig(name='yarn_nodemanager_resource_cpu_vcores',
-                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_resource_cpu_vcores'))]
-                    yarn_nodemanager_resource_memory_mb = \
-                        [cm_client.ApiConfig(name='yarn_nodemanager_resource_memory_mb',
-                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_resource_memory_mb'))]
+                    yarn_nodemanager_cpu_vcores = \
+                        [cm_client.ApiConfig(name='yarn_nodemanager_cpu_vcores',
+                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_cpu_vcores'))]
+                    yarn_nodemanager_memory_mb = \
+                        [cm_client.ApiConfig(name='yarn_nodemanager_memory_mb',
+                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_memory_mb'))]
                     node_manager_log_dir = [cm_client.ApiConfig(name='node_manager_log_dir',
                                                                 value=LOG_DIR + '/hadoop-yarn')]
                     yarn_nodemanager_log_dirs = [cm_client.ApiConfig(name='yarn_nodemanager_log_dirs',
                                                                      value=LOG_DIR + '/hadoop-yarn/container')]
                     nm_config_list = [yarn_nodemanager_heartbeat_interval_ms, node_manager_java_heapsize,
-                                      yarn_nodemanager_local_dirs, yarn_nodemanager_resource_cpu_vcores,
-                                      yarn_nodemanager_resource_memory_mb, node_manager_log_dir,
+                                      yarn_nodemanager_local_dirs, yarn_nodemanager_cpu_vcores,
+                                      yarn_nodemanager_memory_mb, node_manager_log_dir,
                                       yarn_nodemanager_log_dirs]
                     for config in nm_config_list:
                         push_rcg_config(config)
@@ -1440,7 +1439,7 @@ def update_cluster_services():
     body = cm_client.ApiCluster(cluster_name, services=api_service_list, uuid=cluster_uuid)
 
     try:
-        api_response = clusters_api_instance.update_cluster(cluster_name, body=body)
+        api_response = clusters_api.update_cluster(cluster_name, body=body)
         pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClustersResourceApi->update_cluster: {}\n'.format(e))
@@ -1453,7 +1452,7 @@ def auto_assign_roles():
     """
 
     try:
-        api_response = clusters_api_instance.auto_assign_roles(cluster_name)
+        api_response = clusters_api.auto_assign_roles(cluster_name)
         pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClouderaManagerResourceApi->auto_assign_roles: {}\n'.format(e))
@@ -1465,14 +1464,14 @@ def build_role_config_group_list(service_name):
     :return:
     """
     try:
-        api_response = roles_config_api_instance.read_role_config_groups(cluster_name, service_name=service_name)
+        api_response = roles_config_api.read_role_config_groups(cluster_name, service_name=service_name)
     except ApiException as e:
         print('Exception: {}'.format(e))
         api_response = ''
 
     global role_config_group_list
     role_config_group_list = []
-    for x in range(len(api_response.items)):
+    for x in range(0, len(api_response.items)):
         rcg_name = api_response.items[x].name
         if debug == 'True':
             print('Service %s - Role Config Group Found: %s' % (service_name, rcg_name))
@@ -1487,7 +1486,7 @@ def auto_configure_cluster():
     """
 
     try:
-        api_response = clusters_api_instance.auto_configure(cluster_name)
+        api_response = clusters_api.auto_configure(cluster_name)
         pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClouderaManagerResourceApi->auto_configure: {}\n'.format(e))
@@ -1498,7 +1497,7 @@ def read_cluster_services():
     Read Cluster Services - return all
     :return:
     """
-    services = cluster_services_api_instance.read_services(cluster_name, view='FULL')
+    services = cluster_services_api.read_services(cluster_name, view='FULL')
     pprint(services)
     for service in services.items:
         print(service.display_name, "-", service.type)
@@ -1551,7 +1550,7 @@ def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
     Create Role to associate with cluster hosts, services, RCGs
     REQUIRED FIELDS (ApiRole)-  name, type, host_ref(id), service_ref, role_config_group_ref
     ApiRoleList
-    api_instance.create_roles(cluster_name, service_name, body=body)
+    api.create_roles(cluster_name, service_name, body=body)
     :param rcg: Role Config Group
     :param rcg_roletype: Role Config Group Type - e.g. NAMENODE, DATANODE, NODEMANAGER
     :param service: Cluster Service - e.g. HDFS, YARN
@@ -1570,7 +1569,7 @@ def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
     print('->Creating Role %s for %s\n' % (role_name, hostname))
 
     try:
-        api_response = roles_resource_api_instance.create_roles(cluster_name, service, body=body)
+        api_response = roles_api.create_roles(cluster_name, service, body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -1596,7 +1595,7 @@ def create_mgmt_roles(mgmt_rcg, mgmt_rcg_roletype, mgmt_host_id, mgmt_hostname, 
     body = cm_client.ApiRoleList(mgmt_role_api_packet)
 
     try:
-        api_response = mgmt_roles_resource_api_instance.create_roles(body=body)
+        api_response = mgmt_roles_api.create_roles(body=body)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -1609,7 +1608,7 @@ def show_roles_full():
         filter = ''
         view = 'summary'
         try:
-            api_response = roles_resource_api_instance.read_roles(cluster_name, service, filter=filter, view=view)
+            api_response = roles_api.read_roles(cluster_name, service, filter=filter, view=view)
             print('ROLES FOR %s' % service)
             pprint(api_response)
         except ApiException as e:
@@ -1653,7 +1652,7 @@ def cluster_action(action, *kwargs):
     if action == 'restart_command':
         body = cm_client.ApiRestartClusterArgs(restart_only_stale_services=0, redeploy_client_configuration=1)
         try:
-            api_response = clusters_api_instance.restart_command(cluster_name, body=body)
+            api_response = clusters_api.restart_command(cluster_name, body=body)
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1662,7 +1661,7 @@ def cluster_action(action, *kwargs):
     if action == 'restart_stale_command':
         body = cm_client.ApiRestartClusterArgs(restart_only_stale_services=1, redeploy_client_configuration=1)
         try:
-            api_response = clusters_api_instance.restart_command(cluster_name, body=body)
+            api_response = clusters_api.restart_command(cluster_name, body=body)
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1672,7 +1671,7 @@ def cluster_action(action, *kwargs):
         body = cm_client.ApiRollingRestartArgs(slave_batch_size=1, sleep_seconds=5, slave_fail_count_threshold=1,
                                                stale_configs_only=0)
         try:
-            api_response = clusters_api_instance.rolling_restart(cluster_name, body=body)
+            api_response = clusters_api.rolling_restart(cluster_name, body=body)
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1680,7 +1679,7 @@ def cluster_action(action, *kwargs):
 
     if action == 'mgmt_restart':
         try:
-            api_response = mgmt_service_resource_api_instance.restart_command()
+            api_response = mgmt_service_api.restart_command()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1688,7 +1687,7 @@ def cluster_action(action, *kwargs):
 
     if action == 'first_run':
         try:
-            api_response = services_resource_api_instance.first_run(cluster_name, str(kwargs))
+            api_response = services_api.first_run(cluster_name, str(kwargs))
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1704,7 +1703,7 @@ def build_api_role_list(role):
     global api_role_name_list
     api_role_name_list = []
     rcg_name = 'mgmt-' + role + '-BASE'
-    api_role_list = mgmt_role_config_groups_resource_api_instance.read_roles(rcg_name).items
+    api_role_list = mgmt_role_config_groups_api.read_roles(rcg_name).items
     for list_item in api_role_list:
         api_role_name = list_item.name
         if debug == 'True':
@@ -1726,7 +1725,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.restart_command(body=body)
+                api_response = mgmt_role_commands_api.restart_command(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1739,7 +1738,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.start_command(body=body)
+                api_response = mgmt_role_commands_api.start_command(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1752,7 +1751,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.stop_command(body=body)
+                api_response = mgmt_role_commands_api.stop_command(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1765,7 +1764,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.jmap_dump(body=body)
+                api_response = mgmt_role_commands_api.jmap_dump(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1778,7 +1777,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.jmap_histo(body=body)
+                api_response = mgmt_role_commands_api.jmap_histo(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1791,7 +1790,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.jstack(body=body)
+                api_response = mgmt_role_commands_api.jstack(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1804,7 +1803,7 @@ def mgmt_role_commands(action):
             build_api_role_list(role)
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
-                api_response = mgmt_role_commands_resource_api_instance.lsof(body=body)
+                api_response = mgmt_role_commands_api.lsof(body=body)
                 if debug == 'True':
                     pprint(api_response)
             except ApiException as e:
@@ -1823,7 +1822,7 @@ def mgmt_role_config_commands(action, *kwargs):
     if action == 'read_config':
         view = 'summary'
         try:
-            api_response = mgmt_role_config_groups_resource_api_instance.read_config(role_config_group_name=str(kwargs),
+            api_response = mgmt_role_config_groups_api.read_config(role_config_group_name=str(kwargs),
                                                                                      view=view)
             pprint(api_response)
         except ApiException as e:
@@ -1831,7 +1830,7 @@ def mgmt_role_config_commands(action, *kwargs):
 
     if action == 'read_role_config_group':
         try:
-            api_response = mgmt_role_config_groups_resource_api_instance.read_role_config_group(
+            api_response = mgmt_role_config_groups_api.read_role_config_group(
                 role_config_group_name=str(kwargs))
             pprint(api_response)
         except ApiException as e:
@@ -1839,14 +1838,14 @@ def mgmt_role_config_commands(action, *kwargs):
 
     if action == 'read_role_config_groups':
         try:
-            api_response = mgmt_role_config_groups_resource_api_instance.read_role_config_groups()
+            api_response = mgmt_role_config_groups_api.read_role_config_groups()
             pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtRoleConfigGroupsResourceApi->read_role_config_groups \n'.format(e))
 
     if action == 'read_roles':
         try:
-            api_response = mgmt_role_config_groups_resource_api_instance.read_roles(role_config_group_name=str(kwargs))
+            api_response = mgmt_role_config_groups_api.read_roles(role_config_group_name=str(kwargs))
             pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtRoleConfigGroupsResourceApi->read_roles \n'.format(e))
@@ -1866,7 +1865,7 @@ def mgmt_service(action):
     """
     if action == 'start_command':
         try:
-            api_response = mgmt_service_resource_api_instance.start_command()
+            api_response = mgmt_service_api.start_command()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1876,7 +1875,7 @@ def mgmt_service(action):
 
     if action == 'restart_command':
         try:
-            api_response = mgmt_service_resource_api_instance.restart_command()
+            api_response = mgmt_service_api.restart_command()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1886,7 +1885,7 @@ def mgmt_service(action):
 
     if action == 'stop_command':
         try:
-            api_response = mgmt_service_resource_api_instance.stop_command()
+            api_response = mgmt_service_api.stop_command()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1896,7 +1895,7 @@ def mgmt_service(action):
 
     if action == 'auto_assign_roles':
         try:
-            api_response = mgmt_service_resource_api_instance.auto_assign_roles()
+            api_response = mgmt_service_api.auto_assign_roles()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1906,7 +1905,7 @@ def mgmt_service(action):
 
     if action == 'auto_configure_roles':
         try:
-            api_response = mgmt_service_resource_api_instance.auto_configure()
+            api_response = mgmt_service_api.auto_configure()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1916,7 +1915,7 @@ def mgmt_service(action):
 
     if action == 'delete_cms':
         try:
-            api_response = mgmt_service_resource_api_instance.delete_cms()
+            api_response = mgmt_service_api.delete_cms()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1926,7 +1925,7 @@ def mgmt_service(action):
 
     if action == 'enter_maintenance_mode':
         try:
-            api_response = mgmt_service_resource_api_instance.enter_maintenance_mode()
+            api_response = mgmt_service_api.enter_maintenance_mode()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1936,7 +1935,7 @@ def mgmt_service(action):
 
     if action == 'exit_maintenance_mode':
         try:
-            api_response = mgmt_service_resource_api_instance.exit_maintenance_mode()
+            api_response = mgmt_service_api.exit_maintenance_mode()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1946,7 +1945,7 @@ def mgmt_service(action):
 
     if action == 'auto_configure_roles':
         try:
-            api_response = mgmt_service_resource_api_instance.auto_configure()
+            api_response = mgmt_service_api.auto_configure()
             if debug == 'True':
                 pprint(api_response)
         except ApiException as e:
@@ -1961,9 +1960,9 @@ def discover_roles():
     :return:
     """
     cluster_service_list = []
-    services = cluster_services_api_instance.read_services(cluster_name, view='summary')
+    services = cluster_services_api.read_services(cluster_name, view='summary')
     x = 0
-    for x in range(len(services.items)):
+    for x in range(0, len(services.items)):
         cluster_service_list.append(services.items[x].name)
     show_roles_full(cluster_service_list)
 
@@ -1974,24 +1973,86 @@ def get_deployment_full():
     :return:
     """
     try:
-        api_response = cloudera_manager_resource_api.get_deployment2()
+        api_response = cloudera_manager_api.get_deployment2()
         pprint(api_response)
     except ApiException as e:
         print('Exception calling ClouderaManagerResourceApi->get_deployment2 {}\n'.format(e))
 
 
-def check_cm_version():
+def check_ip_port(host_ip, host_port):
     """
-    Check to see if CM API is listening by trying to get version
+    Check if an IP has open port - used for detecting Cloudera Manager is up or not
+    :param host_ip: IP to target
+    :param host_port: Port number to target
     :return:
     """
-    global success, cm_version
+    global success
+    s = socket.socket()
     try:
-        api_response = cloudera_manager_resource_api.get_version()
-        cm_version = pprint(api_response)
-        success = 0
+        s.connect((host_ip, host_port))
+        success = 'True'
+    except socket.error as e:
+        success = 'False'
+
+
+def check_cm_version():
+    """
+    Check Cloudera Manager Version
+    :return:
+    """
+    global cm_version
+    try:
+        api_response = cloudera_manager_api.get_version()
+        cm_version = api_response.version
     except:
-        success = 1
+        pass
+
+
+def read_clusters():
+    """
+    List all known clusters
+    :return: 
+    """
+    view = 'summary'
+    
+    try:
+        api_response = clusters_api.read_clusters(view=view)
+        if debug == 'True':
+            print('API Response - %s' % api_response)
+    except ApiException as e:
+        print('Exception calling ClustersResourceApi->read_clusters {}\n'.format(e))
+
+    return api_response
+
+
+def check_if_cluster_exists(cluster_name):
+    """
+    Check to see if the cluster exists
+    :param cluster_name: Name of the Cluster to lookup
+    :return:
+    """
+    global cluster_exists
+    cluster_exists = ''
+    cluster_list = read_clusters()
+    cluster_list_length = len(cluster_list.items)
+    if debug == 'True':
+        print('Cluster list length: %s' % cluster_list_length)
+
+    if cluster_list_length == 0:
+        cluster_exists = 'False'
+        if debug == 'True':
+            print('No Clusters found')
+
+    else:
+        for x in range(0, len(cluster_list.items)):
+            if cluster_name in cluster_list.items[x].display_name:
+                cluster_exists = 'True'
+                if debug == 'True':
+                    print('Cluster %s found in cluster list: %s' % (cluster_name, cluster_list.items))
+            else:
+                cluster_exists = 'False'
+                if debug == 'True':
+                    print('Cluster %s not found in cluster list' % cluster_name)
 
 
 #
@@ -2010,7 +2071,7 @@ def options_parser(args=None):
 
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
                       help='Cloudera Manager IP to connect to using cm_client')
-    parser.add_argument('-i', '--input_host_list', metavar='host.fqdn', nargs='+', required='True',
+    parser.add_argument('-i', '--input_host_list', metavar='host.fqdn', nargs='+',
                       help='List of Cluster Hosts (FQDN) to deploy')
     parser.add_argument('-d', '--disk_count', metavar='disk_count', required='True',
                       help='Number of disks attached to Worker Instances, used to calculate DFS configuration')
@@ -2027,15 +2088,13 @@ def options_parser(args=None):
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
 #
 
-def main():
+def build_cloudera_cluster():
     parse_ssh_key()
     build_disk_lists()
-    print('->Building API Endpoints\n')
-    build_api_endpoints()
     try:
-        api_response = users_api_instance.read_user2(user_name)
+        api_response = users_api.read_user2(admin_user_name)
         if api_response.auth_roles:
-            print('%s user exists...' % user_name)
+            print('%s user exists...' % admin_user_name)
             if debug == 'True':
                 pprint(api_response)
 
@@ -2043,30 +2102,29 @@ def main():
         if debug == 'True':
             pprint(e)
 
-        print('->Creating new admin user %s\n' % user_name)
+        print('->Creating new admin user %s\n' % admin_user_name)
         init_admin_user()
-        build_api_endpoints()
+        build_api_endpoints(admin_user_name, admin_password)
         print('->Deleting default admin user\n')
         delete_default_admin_user()
 
-    build_api_endpoints()
     print('->Initializing Cluster %s\n' % cluster_name)
     init_cluster()
-    # if remotely_detect_hosts == 'Yes':
-    #     remote_host_detection()
-    #     build_cluster_host_list(host_fqdn_list)
-    #     remote_worker_shape_detection()
+    if input_host_list == 'None':
+        print('->No input host list found, running remote detection via SSH')
+        remote_host_detection()
 
-    # else:
-    #     build_host_list()
-    #     build_cluster_host_list(host_fqdn_list)
+    else:
+        print('->Input host list found: %s' % input_host_list)
+        build_host_list()
+
     build_cluster_host_list(host_fqdn_list)
     read_cluster()
     install_hosts()
     active_command = 'Host Agents Installing'
     wait_for_active_cluster_commands(active_command)
     print('\n->Host Installation Complete')
-    add_hosts_to_cluster()
+    add_hosts_to_cluster(cluster_host_list)
     active_command = 'Hosts Adding to Cluster ' + cluster_name
     wait_for_active_cluster_commands(active_command)
     print('\n->Hosts added to Cluster %s\n' % cluster_name)
@@ -2108,7 +2166,7 @@ def main():
     begin_trial()
     print('->Executing first_run on Cluster - %s' % cluster_name)
     try:
-        api_response = clusters_api_instance.first_run(cluster_name)
+        api_response = clusters_api.first_run(cluster_name)
         if debug == 'True':
             pprint(api_response)
     except ApiException as e:
@@ -2136,23 +2194,40 @@ if __name__ == '__main__':
 
     user_name = 'admin'
     password = 'admin'
+    print('->Building API Endpoints')
+    build_api_endpoints(user_name, password)
+    print('->Looking for Cloudera Manager Server: %s:%s' % (cm_server, cm_port))
     ready = 1
-    active_command = 'Cloudera Manager Startup'
-    wait_status = '*'
+    active_command = 'Cloudera Manager Startup Detection'
+    wait_status = '[*'
     while ready == 1:
-        stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
-        check_cm_version()
-        if success == 0:
-            stdout.write('\n')
-            print('\nCloudera Manager Detected: %s' % cm_version)
+        sys.stdout.write('\r%s - Waiting for Response: %s' % (active_command, wait_status))
+        check_ip_port(cm_server, int(cm_port))
+        if success == 'True':
+            check_cm_version()
+            sys.stdout.write(']\n')
+            print('Cloudera Manager Detected: %s' % cm_version)
             ready = 0
         else:
             sys.stdout.flush()
             time.sleep(30)
             wait_status = wait_status + '*'
 
+    debug = 'True'
+    check_if_cluster_exists(cluster_name)
+    if cluster_exists == 'False':
+        print('%s does not exist - creating.' % cluster_name)
+        build_cloudera_cluster()
+    elif cluster_exists == 'True':
+        print('%s exists.' % cluster_name)
+        if debug == 'True':
+            list_hosts()
+            pprint(cluster_host_list)
+        delete_cluster()
+    else:
+        print('Cluster Check returned null: %s' % cluster_exists)
 
-    main()
+
 
 
 

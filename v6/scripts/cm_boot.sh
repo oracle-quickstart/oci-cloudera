@@ -45,6 +45,9 @@ hbase -       nofile  32768
 hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 
+systemctl stop firewalld
+systemctl disable firewalld
+
 ## INSTALL CLOUDERA MANAGER
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
@@ -606,10 +609,12 @@ for i in `seq 2 33`; do
         fi
 done;
 log "-- Setup for ${#iqn[@]} Block Volumes --"
-for i in `seq 1 ${#iqn[@]}`; do
-	n=$((i+1))
-	iscsi_setup
-done;
+if [ ${#iqn[@]} -gt 0 ]; then 
+	for i in `seq 1 ${#iqn[@]}`; do
+		n=$((i+1))
+		iscsi_setup
+	done;
+fi
 
 EXECNAME="DISK PROVISIONING"
 #
@@ -645,6 +650,7 @@ for disk in `cat /proc/partitions | grep nv`; do
         data_mount
         dcount=$((dcount+1))
 done;
+if [ ${#iqn[@]} -gt 0 ]; then
 for i in `seq 1 ${#iqn[@]}`; do
 	n=$((i+1))
         dsetup="0"
@@ -686,12 +692,12 @@ for i in `seq 1 ${#iqn[@]}`; do
                 fi
         done;
 done;
-
+fi
 ## START CLOUDERA MANAGER
 log "------- Starting Cloudera Manager -------"
 chown -R cloudera-scm:cloudera-scm /etc/cloudera-scm-server
-chown cloudera-scm:cloudera-scm /opt/cloudera
-chown cloudera-scm:cloudera-scm /var/log/cloudera
+#chown -R cloudera-scm:cloudera-scm /opt/cloudera
+#chown -R cloudera-scm:cloudera-scm /var/log/cloudera
 systemctl start cloudera-scm-server
 
 EXECNAME="END"

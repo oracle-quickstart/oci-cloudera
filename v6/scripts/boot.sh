@@ -55,6 +55,9 @@ hbase -       nofile  32768
 hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 
+systemctl stop firewalld
+systemctl disable firewalld
+
 ## Post Tuning Execution Below
 
 #
@@ -136,11 +139,13 @@ for i in `seq 2 33`; do
 		fi
 	fi
 done;
-log "-- Setup for ${#iqn[@]} Block Volumes --"
-for i in `seq 1 ${#iqn[@]}`; do
-	n=$((i+1))
-	iscsi_setup
-done;
+if [ ${#iqn[@]} -gt 0 ]; then 
+	log "-- Setup for ${#iqn[@]} Block Volumes --"
+	for i in `seq 1 ${#iqn[@]}`; do
+		n=$((i+1))
+		iscsi_setup
+	done;
+fi
 
 EXECNAME="boot.sh - DISK PROVISIONING"
 #
@@ -177,7 +182,8 @@ for disk in `ls /dev/ | grep nvme`; do
     	data_mount
 	dcount=$((dcount+1))
 done;
-#for disk in `ls /dev/oracleoci/ | grep -ivw 'oraclevda' | grep -ivw 'oraclevda[1-3]'`; do 
+
+if [ ${#iqn[@]} -gt 0 ]; then 
 for i in `seq 1 ${#iqn[@]}`; do
 	n=$((i+1))
 	dsetup="0"
@@ -211,5 +217,6 @@ for i in `seq 1 ${#iqn[@]}`; do
 		fi
 	done;
 done;
+fi
 EXECNAME="END"
 log "->DONE"
