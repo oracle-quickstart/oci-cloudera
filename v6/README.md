@@ -8,11 +8,9 @@ This module deploys a cluster of arbitrary size using Cloudera Enterprise Data H
 Host types can be customized in the env-vars file referenced below.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See "variables.tf" for more information in-line.
 
 ## Prerequisites
-Installation has a dependency on Terraform being installed and configured for the user tenancy.   As such an "env-vars" file is included with this package that contains all the necessary environment variables.  This file should be updated with the appropriate values prior to installation.  To source this file prior to installation, either reference it in your .rc file for your shell's or run the following:
+First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oci-quickstart/oci-prerequisites).
 
-    source env-vars
-
-## Python Dependencies
+### Additional Python Dependencies
 This module depends on Python, Paramiko, PIP, and cm_client.   These should be installed on the host you are using to deploy the Terraform module.  
 
 On EL7 hosts, installation can be performed using the following commands:
@@ -27,6 +25,13 @@ On Mac, installation can be peformed using the following commands:
 	sudo python get-pip.py
 	sudo pip install --upgrade pip
 	sudo pip install cm_client paramiko
+
+### Clone the Module
+Now, you'll want a local copy of this repo.  You can make that with the commands:
+
+    git clone https://github.com/oci-quickstart/oci-cloudera.git
+    cd oci-cloudera/v6
+    ls
 
 ## Python Deployment using cm_client
 The deployment script "deploy_on_oci.py" uses cm_client against Cloudera Manger API v31.  As such it does require some customization before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
@@ -62,6 +67,12 @@ Deployment of the module is straight forward using the following Terraform comma
 This will create all the required elements in a compartment in the target OCI tenancy.  This includes VCN and Security List parameters.  Security audit of these in the network.tf is suggested.
 
 After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.
+
+##Destroy the Deployment
+
+When you no longer need the deployment, you can run this command to destroy it:
+
+	terraform destroy
 
 ## Deployment Caveats
 Currently this module requires Cloudera Manager API to be on an edge host with a Public IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
