@@ -440,8 +440,9 @@ def remote_host_detection():
     :return:
     """
     print('->Building Host FQDN List dynamically using SSH')
-    global host_fqdn_list, output
+    global host_fqdn_list, host_ip_list, output
     host_fqdn_list = []
+    host_ip_list = []
     ssh_client = SSHClient()
     ssh_client.set_missing_host_key_policy(AutoAddPolicy)
     ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
@@ -453,10 +454,11 @@ def remote_host_detection():
         output = stdout.read()
         fqdn = output.strip().split()
         if debug == 'True':
-            print('Host Detection output for Cloudera Manager - %s - FQDN: %s' % (output, fqdn[0]))
+            print('Host Detection output for Cloudera Manager - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
 
         if stdout.channel.recv_exit_status() == 0:
             host_fqdn_list.append(fqdn[0])
+            host_ip_list.append(fqdn[3])
 
     except:
         pass
@@ -471,10 +473,11 @@ def remote_host_detection():
             output = stdout.read()
             fqdn = output.strip().split()
             if debug == 'True':
-                print('Host Detection output for Master Hosts - %s - FQDN: %s' % (output, fqdn[0]))
+                print('Host Detection output for Master Hosts - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
 
             if stdout.channel.recv_exit_status() == 0:
                 host_fqdn_list.append(fqdn[0])
+                host_ip_list.append(fqdn[3])
 
             else:
                 print('\t%d found' % (x - 1))
@@ -500,10 +503,11 @@ def remote_host_detection():
             output = stdout.read()
             fqdn = output.strip().split()
             if debug == 'True':
-                print('Host Detection output for Worker Hosts - %s - FQDN: %s' % (output, fqdn[0]))
+                print('Host Detection output for Worker Hosts - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
 
             if stdout.channel.recv_exit_status() == 0:
                 host_fqdn_list.append(fqdn[0])
+                host_ip_list.append(fqdn[3])
 
             else:
                 print('\t%d found' % (x - 1))
@@ -559,10 +563,13 @@ def build_cluster_host_list(host_fqdn_list):
     """
     global cluster_host_list
     cluster_host_list = []
+    h = 0
     for host in host_fqdn_list:
         hostname = host.split('.')[0]
+        host_ip = host_ip_list[h]
         host_info = cm_client.ApiHostRef(host_id=host, hostname=hostname)
         cluster_host_list.append(host_info)
+        h = h + 1
 
     if debug == 'True':
         print('Cluster Host List: %s' % cluster_host_list)
@@ -2001,6 +2008,7 @@ def check_cm_version():
     :return:
     """
     global cm_version
+    cm_version = 'Null'
     try:
         api_response = cloudera_manager_api.get_version()
         cm_version = api_response.version
@@ -2102,13 +2110,13 @@ def build_cloudera_cluster():
         if debug == 'True':
             pprint(e)
 
-        print('->Creating new admin user %s\n' % admin_user_name)
+        print('->Creating new admin user %s' % admin_user_name)
         init_admin_user()
         build_api_endpoints(admin_user_name, admin_password)
-        print('->Deleting default admin user\n')
+        print('->Deleting default admin user')
         delete_default_admin_user()
 
-    print('->Initializing Cluster %s\n' % cluster_name)
+    print('->Initializing Cluster %s' % cluster_name)
     init_cluster()
     if input_host_list == 'None':
         print('->No input host list found, running remote detection via SSH')
@@ -2123,46 +2131,46 @@ def build_cloudera_cluster():
     install_hosts()
     active_command = 'Host Agents Installing'
     wait_for_active_cluster_commands(active_command)
-    print('\n->Host Installation Complete')
+    print('->Host Installation Complete')
     add_hosts_to_cluster(cluster_host_list)
     active_command = 'Hosts Adding to Cluster ' + cluster_name
     wait_for_active_cluster_commands(active_command)
-    print('\n->Hosts added to Cluster %s\n' % cluster_name)
-    print('->Updating Parcel Remote Repo: %s\n' % remote_parcel_url)
+    print('->Hosts added to Cluster %s' % cluster_name)
+    print('->Updating Parcel Remote Repo: %s' % remote_parcel_url)
     update_parcel_repo(remote_parcel_url, parcel_distribution_rate)
     print('->Parcel Setup Running')
     dda_parcel('CDH')
     if debug == 'True':
-        print('-->DEBUG - Reading Parcel Status\n')
+        print('-->DEBUG - Reading Parcel Status')
         get_parcel_status('CDH')
-    print('->Mapping Cluster Hostnames and Host IDs\n')
+    print('->Mapping Cluster Hostnames and Host IDs')
     cluster_host_id_map()
-    print('->Reading DB Passwords\n')
+    print('->Reading DB Passwords')
     get_mgmt_db_passwords()
-    print('->Creating Cluster Services: %s\n' % cluster_service_list)
+    print('->Creating Cluster Services: %s' % cluster_service_list)
     define_cluster_services(cluster_service_list)
     create_cluster_services(api_service_list)
-    print('->Running Cluster Auto Configuration\n')
+    print('->Running Cluster Auto Configuration')
     auto_configure_cluster()
-    print('->Updating Cluster Service Role Config Groups\n')
+    print('->Updating Cluster Service Role Config Groups')
     update_cluster_rcg_configuration(cluster_service_list)
     if debug == 'True':
-        print('-->DEBUG - Reading Cluster Services\n')
+        print('-->DEBUG - Reading Cluster Services')
         read_cluster_services()
-    print('->Setting up CMS\n')
+    print('->Setting up CMS')
     define_cms_mgmt_service()
     setup_cms()
-    print('->Auto Configuring Management Roles\n')
+    print('->Auto Configuring Management Roles')
     mgmt_service('auto_configure_roles')
-    print('->Updating Management RCG\n')
+    print('->Updating Management RCG')
     setup_mgmt_rcg(mgmt_roles_list)
-    print('->Restart MGMT Service\n')
+    print('->Restart MGMT Service')
     mgmt_service('restart_command')
     wait_for_active_mgmt_commands('MGMT Service Restart')
-    print('->Restart MGMT Roles\n')
+    print('->Restart MGMT Roles')
     mgmt_role_commands(action='restart_command')
     # TODO - Need to refactor here if license is provided
-    print('->Activating Trial License\n')
+    print('->Activating Trial License')
     begin_trial()
     print('->Executing first_run on Cluster - %s' % cluster_name)
     try:
@@ -2205,6 +2213,10 @@ if __name__ == '__main__':
         check_ip_port(cm_server, int(cm_port))
         if success == 'True':
             check_cm_version()
+            if cm_version == 'Null':
+                build_api_endpoints(admin_user_name, admin_password)
+                check_cm_version()
+
             sys.stdout.write(']\n')
             print('Cloudera Manager Detected: %s' % cm_version)
             ready = 0
@@ -2213,7 +2225,7 @@ if __name__ == '__main__':
             time.sleep(30)
             wait_status = wait_status + '*'
 
-    debug = 'True'
+    #debug = 'True'
     check_if_cluster_exists(cluster_name)
     if cluster_exists == 'False':
         print('%s does not exist - creating.' % cluster_name)
@@ -2223,7 +2235,7 @@ if __name__ == '__main__':
         if debug == 'True':
             list_hosts()
             pprint(cluster_host_list)
-        delete_cluster()
+        #delete_cluster()
     else:
         print('Cluster Check returned null: %s' % cluster_exists)
 

@@ -48,6 +48,10 @@ ulimit -n 262144
 systemctl stop firewalld
 systemctl disable firewalld
 
+## Enable root login via SSH key
+cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
+cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
+
 ## INSTALL CLOUDERA MANAGER
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
