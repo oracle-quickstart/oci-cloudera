@@ -5,11 +5,12 @@ This module deploys a cluster of arbitrary size using Cloudera Enterprise Data H
 |-------------|----------------|------------------|------------------------------|
 | Recommended | BM.DenseIO2.52 | VM.Standard2.4   | VM.Standard2.16              |
 
+Host types can be customized in the env-vars file referenced below.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See "variables.tf" for more information in-line.
+
 ## Prerequisites
 Installation has a dependency on Terraform being installed and configured for the user tenancy.   As such an "env-vars" file is included with this package that contains all the necessary environment variables.  This file should be updated with the appropriate values prior to installation.  To source this file prior to installation, either reference it in your .rc file for your shell's or run the following:
 
     source env-vars
-
 
 ## Python Dependencies
 This module depends on Python, Paramiko, PIP, and cm_client.   These should be installed on the host you are using to deploy the Terraform module.  
