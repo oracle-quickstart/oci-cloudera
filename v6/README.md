@@ -24,8 +24,8 @@ On Mac, installation can be peformed using the following commands:
 
 	curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 	sudo python get-pip.py
-        sudo pip install --upgrade pip
-        sudo pip install cm_client paramiko
+	sudo pip install --upgrade pip
+	sudo pip install cm_client paramiko
 
 ## Python Deployment using cm_client
 The deployment script "deploy_on_oci.py" uses cm_client against Cloudera Manger API v31.  As such it does require some customization before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
