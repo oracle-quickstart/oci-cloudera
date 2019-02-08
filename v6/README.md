@@ -63,7 +63,7 @@ This will create all the required elements in a compartment in the target OCI te
 After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.
 
 ## Deployment Caveats
-Currently this template requires Cloudera Manager (and API) to be on an edge host with an Public (Internet) IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
+Currently this template requires Cloudera Manager API to be on an edge host with a Public IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
 
 Future enhancements to this template are planned to support a completely Private (non-Internet exposed) cluster deployment.
 
