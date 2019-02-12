@@ -149,7 +149,6 @@ for user in `cat /etc/mysql/mysql.pw | gawk -F ':' '{print $1}'`; do
 	fi
 	/opt/cloudera/cm/schema/scm_prepare_database.sh mysql ${database} ${user} ${pw}
 done;
-rm -fR /etc/mysql
 ##
 ## END MYSQL
 ##

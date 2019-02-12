@@ -11,7 +11,7 @@ from cm_client.rest import ApiException
 from pprint import pprint
 import hashlib
 import re
-from paramiko import SFTPClient, SSHClient, AutoAddPolicy
+from paramiko import SFTPClient, SSHClient, AutoAddPolicy, SSHException
 import json
 import time
 import datetime
@@ -60,6 +60,7 @@ remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/p
 parcel_distribution_rate = "1024000"  # type: int
 
 # Define SSH Keyfile for access to cluster hosts - required for Cloudera Manager to deploy agents
+# This value is local to your deployment host
 # Example ssh_keyfile = '/home/opc/.ssh/id_rsa'  # type: str
 ssh_keyfile = '/Users/zsmith/.ssh/id_rsa'  # type: str
 
@@ -78,7 +79,7 @@ cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE
 # MINIMAL - NON KERBEROS
 # cluster_service_list = ['HDFS', 'YARN', 'SOLR', 'ZOOKEEPER']
 
-# Management Roles List
+# Management Roles Lis
 #  Available role types:
 #
 #  mgmt_roles_list = [ 'SERVICEMONITOR', 'ACTIVITYMONITOR', 'HOSTMONITOR', 'REPORTSMANAGER', 'EVENTSERVER'
@@ -806,29 +807,67 @@ def get_mgmt_db_passwords():
     ssh_client.set_missing_host_key_policy(AutoAddPolicy)
     ssh_client.connect(hostname=cm_server, username='root', key_filename=ssh_keyfile)
     sftp_client = ssh_client.open_sftp()
-    remote_file = sftp_client.open('/etc/cloudera-scm-server/db.mgmt.properties')
+    print('->Connecting to %s to gather Cloudera Manager DB passwords.' % cm_server)
     try:
-        for line in remote_file:
-            if 'com.cloudera.cmf.ACTIVITYMONITOR.db.password' in line:
-                amon_password = line.split('=')[1].rstrip()
+        sftp_client.stat('/etc/cloudera-scm-server/db.mgmt.properties')
+        remote_file = sftp_client.open('/etc/cloudera-scm-server/db.mgmt.properties')
+        try:
+            print('Postgres DB found - processing.')
+            for line in remote_file:
+                if 'com.cloudera.cmf.ACTIVITYMONITOR.db.password' in line:
+                    amon_password = line.split('=')[1].rstrip()
 
-            if 'com.cloudera.cmf.REPORTSMANAGER.db.password' in line:
-                rman_password = line.split('=')[1].rstrip()
+                if 'com.cloudera.cmf.REPORTSMANAGER.db.password' in line:
+                    rman_password = line.split('=')[1].rstrip()
 
-            if 'com.cloudera.cmf.NAVIGATOR.db.password' in line:
-                navigator_password = line.split('=')[1].rstrip()
+                if 'com.cloudera.cmf.NAVIGATOR.db.password' in line:
+                    navigator_password = line.split('=')[1].rstrip()
 
-            if 'com.cloudera.cmf.NAVIGATORMETASERVER.db.password' in line:
-                navigator_meta_password = line.split('=')[1].rstrip()
+                if 'com.cloudera.cmf.NAVIGATORMETASERVER.db.password' in line:
+                    navigator_meta_password = line.split('=')[1].rstrip()
 
-            if 'com.cloudera.cmf.OOZIE.db.password' in line:
-                oozie_password = line.split('=')[1].rstrip()
+                if 'com.cloudera.cmf.OOZIE.db.password' in line:
+                    oozie_password = line.split('=')[1].rstrip()
 
-            if 'com.cloudera.cmf.HIVEMETASTORESERVER.db.password' in line:
-                hive_meta_password = line.split('=')[1].rstrip()
+                if 'com.cloudera.cmf.HIVEMETASTORESERVER.db.password' in line:
+                    hive_meta_password = line.split('=')[1].rstrip()
+        finally:
+            remote_file.close()
 
-    finally:
-        remote_file.close()
+    except IOError:
+        print('Postgres DB file not found.')
+
+    try:
+        sftp_client.stat('/etc/mysql/mysql.pw')
+        remote_file = sftp_client.open('/etc/mysql/mysql.pw')
+        try:
+            print('MySQL DB found - processing.')
+            for line in remote_file:
+                if 'amon' in line:
+                    amon_password = line.split(':')[1].rstrip()
+
+                if 'rman' in line:
+                    rman_password = line.split(':')[1].rstrip()
+
+                if 'hue' in line:
+                    hue_password = line.split(':')[1].rstrip()
+
+                if 'hive' in line:
+                    hive_meta_password = line.split(':')[1].rstrip()
+
+                if 'nav' in line:
+                    navigator_password = line.split(':')[1].rstrip()
+
+                if 'navms' in line:
+                    navigator_meta_password = line.split(':')[1].rstrip()
+
+                if 'oozie' in line:
+                    oozie_password = line.split(':')[1].rstrip()
+        finally:
+            remote_file.close()
+
+    except IOError:
+        print('MySQL DB file not found.')
 
 
 def define_cms_mgmt_service():
@@ -2230,6 +2269,7 @@ if __name__ == '__main__':
     if cluster_exists == 'False':
         print('%s does not exist - creating.' % cluster_name)
         build_cloudera_cluster()
+        print('Access Cloudera Manager: http://%s:%s/cmf/' (cm_server, cm_port))
     elif cluster_exists == 'True':
         print('%s exists.' % cluster_name)
         if debug == 'True':

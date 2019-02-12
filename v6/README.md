@@ -77,9 +77,11 @@ Deployment of the module is straight forward using the following Terraform comma
 
 This will create all the required elements in a compartment in the target OCI tenancy.  This includes VCN and Security List parameters.  Security audit of these in the network.tf is suggested.
 
-After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.
+After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.  The syntax is as follows:
 
-##Destroy the Deployment
+	python scripts/deploy_on_oci.py -m <master_ip> -d <disk_count> -w <worker_shape>
+
+## Destroy the Deployment
 
 When you no longer need the deployment, you can run this command to destroy it:
 
