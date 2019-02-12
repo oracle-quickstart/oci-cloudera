@@ -57,19 +57,22 @@ EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
 rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cloudera
 wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
-yum install oracle-j2sdk* cloudera-manager-server java-1.8.0-openjdk.x86_64 postgresql-server python-pip -y
+yum install oracle-j2sdk* cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y
 pip install psycopg2==2.7.5 --ignore-installed
 yum install cloudera-manager-daemons -y
 
+install_postgres(){
 ##
 ## POSTGRES SETUP BELOW
 ##
+
+yum install postgreql-server -y
 
 # manually set EXECNAME because this file is called from another script and it $0 is "bash"
 EXECNAME="Postgresql Bootstrap"
 CURRENT_VERSION_MARKER='OCI_1'
 SLEEP_INTERVAL=5
-
+}
 ##
 ## POSTGRES FUNCTIONS 
 ##
@@ -434,7 +437,6 @@ configure_postgresql_conf()
 #########################################
 EOF
   fi
-
   cat "$CONF_FILE" >> "$TMPFILE"
 
   echo Adding configs
@@ -480,7 +482,7 @@ wait_for_db_server_to_start()
 ##
 ## MAIN POSTGRES SETUP
 ##
-
+install_postgres
 log "------- Begin Postgresql Setup  -------"
 
 echo 'LC_ALL="en_US.UTF-8"' >> /etc/locale.conf
@@ -500,14 +502,11 @@ DB_LIST_FILE=$DATA_DIR/scm.db.list
 NOW=$(date +%Y%m%d-%H%M%S)
 log "-- Configuring Postgresql --"
 configure_postgresql_conf $DATA_DIR/postgresql.conf 0
-
-# Add header to pg_hba.conf.
+#Add header to pg_hba.conf.
 echo "# Accept connections from all hosts" >> $DATA_DIR/pg_hba.conf
-
 #put this line to the top of the ident to allow all local access
 sed -i '/host.*127.*ident/i \
   host    all         all         127.0.0.1/32          md5  \ ' $DATA_DIR/pg_hba.conf
-
 #configure the postgresql server to start at boot
 /sbin/chkconfig postgresql on
 log "-- Restarting Postgresql --"
@@ -529,19 +528,14 @@ create_hive_metastore
 
 log "-- Running SCM DB Bootstrap --"
 /opt/cloudera/cm/schema/scm_prepare_database.sh postgresql scm scm "$SCM_PWD" >> "${LOG_FILE}" 2>&1
-
 log "-- Configuring Remote Connections --"
 configure_remote_connections
-
 # restart to make sure all configuration take effects
 log "-- Restarting Postgresql to refresh config --"
 systemctl restart postgresql
-
 wait_for_db_server_to_start
-
 log "-- DONE --"
 ## DISK SETUP
-
 vol_match() {
 case $i in
         1) disk="oraclevdb";;

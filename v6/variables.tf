@@ -163,3 +163,4 @@ variable "data_volume_attachment_device" {
     "28" = "/dev/oracleoci/oraclevdag"
   }
 }
+
