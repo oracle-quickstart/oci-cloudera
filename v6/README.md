@@ -58,13 +58,15 @@ In addition, further customization of the cluster deployment can be done by modi
 This does require some knowledge of Python - modify at your own risk.  These functions contain Cloudera specific tuning parameters as well as host mapping for roles.
 
 ## Cloudera Manager and Cluster Metadata Database
-You are able to customize which database you want to use for Cloudera Manager and Cluster Metadata.   In compute.tf you will see a "user_data" field:
+You are able to customize which database you want to use for Cloudera Manager and Cluster Metadata.   In compute.tf you will see a "user_data" field for the Utility instance:
 
 	user_data           = "${base64encode(file("scripts/cm_boot_mysql.sh"))}"
 
 This is set to use MySQL for the database.  If you want to use Postgres, you would change it:
 
 	user_data           = "${base64encode(file("scripts/cm_boot_postgres.sh"))}"
+
+You can customize the default root password for MySQL by editing the source script.  For the various Cloudera databases, random passwords are generated and used.  The same is true when using Postgres.
 
 ## Deployment Syntax
 Deployment of the module is straight forward using the following Terraform commands
