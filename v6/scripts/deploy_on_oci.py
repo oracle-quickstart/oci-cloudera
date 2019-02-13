@@ -55,6 +55,11 @@ api_version = 'v31'
 # Define Cloudera Version 6 to deploy
 cluster_version = '6.1.0'  # type: str
 
+# Define DB port number
+# For MySQL this is 3306
+# For Postgres this is 5432
+meta_db_port = '3306'
+
 # Define Remote Parcel URL & Distribution Rate if desired
 remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
 parcel_distribution_rate = "1024000"  # type: int
@@ -936,7 +941,8 @@ def setup_mgmt_rcg(mgmt_roles_list):
         rcg_name = 'mgmt-' + role + '-BASE'
         if role == "ACTIVITYMONITOR":
             display_name = 'Activity Monitor Default Group'
-            firehose_database_host = [cm_client.ApiConfig(name='firehose_database_host', value=cm_hostname + ':5432')]
+            firehose_database_host = [cm_client.ApiConfig(name='firehose_database_host', value=cm_hostname + ':' +
+                                                                                               meta_db_port)]
             firehose_database_user = [cm_client.ApiConfig(name='firehose_database_user', value='amon')]
             firehose_database_password = [cm_client.ApiConfig(name='firehose_database_password', value=amon_password)]
             firehose_database_type = [cm_client.ApiConfig(name='firehose_database_type', value='postgresql')]
@@ -983,7 +989,8 @@ def setup_mgmt_rcg(mgmt_roles_list):
 
         if role == "REPORTSMANAGER":
             display_name = 'Reports Manager Default Group'
-            headlamp_database_host = [cm_client.ApiConfig(name='headlamp_database_host', value=cm_hostname + ':5432')]
+            headlamp_database_host = [cm_client.ApiConfig(name='headlamp_database_host', value=cm_hostname + ':' +
+                                                                                               meta_db_port)]
             headlamp_database_name = [cm_client.ApiConfig(name='headlamp_database_name', value='rman')]
             headlamp_databse_password = [cm_client.ApiConfig(name='headlamp_database_password', value=rman_password)]
             headlamp_database_type = [cm_client.ApiConfig(name='headlamp_database_type', value='postgresql')]
@@ -997,7 +1004,8 @@ def setup_mgmt_rcg(mgmt_roles_list):
 
         if role == "OOZIE":
             display_name = 'Oozie Default Group'
-            oozie_database_host = [cm_client.ApiConfig(name='oozie_database_host', value=cm_hostname + ':5432')]
+            oozie_database_host = [cm_client.ApiConfig(name='oozie_database_host', value=cm_hostname + ':' +
+                                                                                         meta_db_port)]
             oozie_database_name = [cm_client.ApiConfig(name='oozie_database_name', value='oozie')]
             oozie_database_password = [cm_client.ApiConfig(name='oozie_database_password', value=oozie_password)]
             oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value='postgresql')]
@@ -1223,7 +1231,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     hive_metastore_database_password = [cm_client.ApiConfig(name='hive_metastore_database_password',
                                                                              value=hive_meta_password)]
                     hive_metastore_database_port = [cm_client.ApiConfig(name='hive_metastore_database_port',
-                                                                        value='5432')]
+                                                                        value=meta_db_port)]
                     hive_metastore_database_type = [cm_client.ApiConfig(name='hive_metastore_database_type',
                                                                         value='postgresql')]
                     hive_meta_config = [ hive_metastore_database_host, hive_metastore_database_name,
