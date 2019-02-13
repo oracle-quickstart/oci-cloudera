@@ -60,6 +60,11 @@ cluster_version = '6.1.0'  # type: str
 # For Postgres this is 5432
 meta_db_port = '3306'
 
+if meta_db_port == '3306':
+    meta_db_type = 'mysql'
+elif meta_db_port == '5432':
+    meta_db_type = 'postgresql'
+
 # Define Remote Parcel URL & Distribution Rate if desired
 remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
 parcel_distribution_rate = "1024000"  # type: int
@@ -84,7 +89,7 @@ cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE
 # MINIMAL - NON KERBEROS
 # cluster_service_list = ['HDFS', 'YARN', 'SOLR', 'ZOOKEEPER']
 
-# Management Roles Lis
+# Management Roles List
 #  Available role types:
 #
 #  mgmt_roles_list = [ 'SERVICEMONITOR', 'ACTIVITYMONITOR', 'HOSTMONITOR', 'REPORTSMANAGER', 'EVENTSERVER'
@@ -803,7 +808,6 @@ def update_service_config(service_name, api_config_items):
 def get_mgmt_db_passwords():
     """
     Scrape flat file on CMS host to get DB passwords
-    This will need to be updated for MySQL/Oracle deployments, currently uses PostgreSQL
     :return:
     """
     global amon_password, rman_password, navigator_password, navigator_meta_password, oozie_password, hive_meta_password
@@ -945,7 +949,7 @@ def setup_mgmt_rcg(mgmt_roles_list):
                                                                                                meta_db_port)]
             firehose_database_user = [cm_client.ApiConfig(name='firehose_database_user', value='amon')]
             firehose_database_password = [cm_client.ApiConfig(name='firehose_database_password', value=amon_password)]
-            firehose_database_type = [cm_client.ApiConfig(name='firehose_database_type', value='postgresql')]
+            firehose_database_type = [cm_client.ApiConfig(name='firehose_database_type', value=meta_db_type)]
             firehose_database_name = [cm_client.ApiConfig(name='firehose_database_name', value='amon')]
             mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-firehose')]
             firehose_heapsize = [cm_client.ApiConfig(name='firehose_heapsize', value='268435456')]
@@ -993,7 +997,7 @@ def setup_mgmt_rcg(mgmt_roles_list):
                                                                                                meta_db_port)]
             headlamp_database_name = [cm_client.ApiConfig(name='headlamp_database_name', value='rman')]
             headlamp_databse_password = [cm_client.ApiConfig(name='headlamp_database_password', value=rman_password)]
-            headlamp_database_type = [cm_client.ApiConfig(name='headlamp_database_type', value='postgresql')]
+            headlamp_database_type = [cm_client.ApiConfig(name='headlamp_database_type', value=meta_db_type)]
             headlamp_database_user = [cm_client.ApiConfig(name='headlamp_database_user', value='rman')]
             headlamp_scratch_dir = [cm_client.ApiConfig(name='headlamp_scrtch_dir',
                                                         value=LOG_DIR + '/lib/cloudera-scm-headlamp')]
@@ -1008,7 +1012,7 @@ def setup_mgmt_rcg(mgmt_roles_list):
                                                                                          meta_db_port)]
             oozie_database_name = [cm_client.ApiConfig(name='oozie_database_name', value='oozie')]
             oozie_database_password = [cm_client.ApiConfig(name='oozie_database_password', value=oozie_password)]
-            oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value='postgresql')]
+            oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value=meta_db_type)]
             oozie_database_user = [cm_client.ApiConfig(name='oozie_database_user', value='oozie')]
             oozie_log_dir = [cm_client.ApiConfig(name='oozie_log_dir', value=LOG_DIR + '/oozie')]
             role_config_list = [oozie_database_host, oozie_database_name, oozie_database_password,
@@ -1233,7 +1237,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     hive_metastore_database_port = [cm_client.ApiConfig(name='hive_metastore_database_port',
                                                                         value=meta_db_port)]
                     hive_metastore_database_type = [cm_client.ApiConfig(name='hive_metastore_database_type',
-                                                                        value='postgresql')]
+                                                                        value=meta_db_type)]
                     hive_meta_config = [ hive_metastore_database_host, hive_metastore_database_name,
                                          hive_metastore_database_password, hive_metastore_database_port,
                                          hive_metastore_database_type, hive_metastore_database_user]
@@ -1322,7 +1326,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     oozie_database_host = [cm_client.ApiConfig(name='oozie_database_host', value=cm_hostname)]
                     oozie_database_password = [cm_client.ApiConfig(name='oozie_database_password',
                                                                    value=oozie_password)]
-                    oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value='postgresql')]
+                    oozie_database_type = [cm_client.ApiConfig(name='oozie_database_type', value=meta_db_type)]
                     oozie_database_user = [cm_client.ApiConfig(name='oozie_database_user', value='oozie')]
                     oozie_config = [oozie_database_host, oozie_database_password, oozie_database_type,
                                     oozie_database_user]
