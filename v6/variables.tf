@@ -40,10 +40,10 @@ variable "worker_node_count" {
 # Size of each Block Volume used for HDFS /data/
 # Minimum recommended size is 700GB per Volume to achieve max IOPS/MBps
 # Note that total HDFS capacity per worker is limited by this size.  Until Terraform v0.12 is released, 
-# this value will likely be static.  Here is a total capacity per worker list for reference:
-# 700GB Volume Size = 22.4TB
-# 1000GB Volume Size = 32 TB
-# 2000GB Volume Size = 64 TB
+# this value will likely be static.  Here is a total capacity per worker list for reference (using 30 volumes per worker):
+# 700GB Volume Size = 21 TB per worker
+# 1000GB Volume Size = 30 TB per worker
+# 2000GB Volume Size = 60 TB per worker
 
 variable "data_blocksize_in_gbs" {
   default = "700"
@@ -52,9 +52,9 @@ variable "data_blocksize_in_gbs" {
 # Desired HDFS Capacity in GB
 # This is used to calcuate number of block volumes per worker.  Adjust data_blocksize_in_gbs as appropriate
 # based on number of workers.  For example:
-# 5 workers @ 700GB Volume Size = Max HDFS Capacity 112 TB
-# 10 workers @ 1TB Volume Size = Max HDFS Capacity 320 TB
-# 10 workers @ 2TB Volume Size = Max HDFS Capacity 640 TB
+# 5 workers @ 700GB Volume Size = Max HDFS Capacity 105 TB, 35 TB Usable with 3x Replication
+# 10 workers @ 1TB Volume Size = Max HDFS Capacity 300 TB, 100 TB Usable with 3x Replication
+# 10 workers @ 2TB Volume Size = Max HDFS Capacity 600 TB, 200 TB Usable with 3x Replication
  
 variable "hdfs_usable_in_gbs" {
   default = "3000"
