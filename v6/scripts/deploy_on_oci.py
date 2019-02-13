@@ -2269,7 +2269,7 @@ if __name__ == '__main__':
     if cluster_exists == 'False':
         print('%s does not exist - creating.' % cluster_name)
         build_cloudera_cluster()
-        print('Access Cloudera Manager: http://%s:%s/cmf/' (cm_server, cm_port))
+        print('Access Cloudera Manager: http://%s:%s/cmf/' % (cm_server, cm_port))
     elif cluster_exists == 'True':
         print('%s exists.' % cluster_name)
         if debug == 'True':
