@@ -34,12 +34,12 @@ Now, you'll want a local copy of this repo.  You can make that with the commands
     ls
 
 ## Python Deployment using cm_client
-The deployment script "deploy_on_oci.py" uses cm_client against Cloudera Manger API v31.  As such it does require some customization before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
+The deployment script "deploy_on_oci.py" uses cm_client against Cloudera Manger API v31.  As such it does require some customization before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment, ssh_keyfile is required or deployment will fail:
 
 	admin_user_name
 	admin_password
 	cluster_name
-	ssh_keyfile
+	ssh_keyfile (REQUIRED)
 	cluster_service_list
 
 Also if you modify the compute.tf in any way to change hostname parameters, you will need to update these variables for pattern matching, otherwise host detection and cluster layout will fail:
