@@ -68,6 +68,8 @@ This is set to use MySQL for the database.  If you want to use Postgres, you wou
 
 You can customize the default root password for MySQL by editing the source script.  For the various Cloudera databases, random passwords are generated and used.  The same is true when using Postgres.
 
+Note that you will also need to change "meta_db_port" in deploy_on_oci.py if you choose to run Postgres.
+
 ## Deployment Syntax
 Deployment of the module is straight forward using the following Terraform commands
 
