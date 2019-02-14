@@ -115,16 +115,16 @@ variable "ssh_keypath" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 // See https://docs.us-phoenix-1.oraclecloud.com/images/
-// Oracle-provided image "CentOS-7-2019.01.14-0"
-// Kernel Version: 3.10.0-957.1.3.el7.x86_64
+// Oracle-provided image "Oracle-Linux-7.6-2019.01.17-0"
+// Kernel Version: 4.14.35-1844.1.3.el7uek.x86_64 
 variable "InstanceImageOCID" {
   type = "map"
   default = {
-    ca-toronto-1 = "ocid1.image.oc1.ca-toronto-1.aaaaaaaa5lcszaeld2nl2zo7g3plaxwufz43sftcmuxeimql7kgcczupvn7a"
-    eu-frankfurt-1 = "ocid1.image.oc1.eu-frankfurt-1.aaaaaaaay5zmocfjtqjwsdr2vhwcopc32rcz764lsc76crhv2blbyr6azlqq"
-    uk-london-1 = "ocid1.image.oc1.uk-london-1.aaaaaaaaz72xqji2opx4dtfmhtlmckna7wg4xr4a2aagh2uywbswhe2vrrja"
-    us-ashburn-1 = "ocid1.image.oc1.iad.aaaaaaaaqghm4ftzm2jpwwlcau6hd56josqwm6yvxefvsn25lgmjlchaiuxa"
-    us-phoenix-1 = "ocid1.image.oc1.phx.aaaaaaaac5s4dvvtwglae24mbxvfp4fh3ug6ywmlvime2dw62qrjxw3b6fmq"
+    ca-toronto-1 = "ocid1.image.oc1.ca-toronto-1.aaaaaaaafozx4cw5fgcnptx6ukgdjjfzvjb2365chtzprratabynb573wria"
+    eu-frankfurt-1 = "ocid1.image.oc1.eu-frankfurt-1.aaaaaaaagbrvhganmn7awcr7plaaf5vhabmzhx763z5afiitswjwmzh7upna"
+    uk-london-1  = "ocid1.image.oc1.uk-london-1.aaaaaaaajwtut4l7fo3cvyraate6erdkyf2wdk5vpk6fp6ycng3dv2y3ymvq"
+    us-ashburn-1 = "ocid1.image.oc1.iad.aaaaaaaawufnve5jxze4xf7orejupw5iq3pms6cuadzjc7klojix6vmk42va"
+    us-phoenix-1 = "ocid1.image.oc1.phx.aaaaaaaadjnj3da72bztpxinmqpih62c2woscbp6l3wjn36by2cvmdhjub6a"
   }
 }
 
