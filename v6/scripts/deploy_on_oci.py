@@ -208,15 +208,13 @@ def parse_ssh_key():
     :return:
     """
     global ssh_key
-    if not ssh_keyfile:
-        with ssh_keyfile as k:
-            print('->Error ssh keyfile does not exist - verify file/path exists: {}\n'.format(k))
-            sys.exit()
-
-    if ssh_keyfile:
+    try:
         with open(ssh_keyfile) as k:
             ssh_key = k.read()
         print('->SSH Keyfile Found: %s' % ssh_keyfile)
+    except:    
+        print('->Error ssh keyfile does not exist - verify file/path exists: %s \n' % ssh_keyfile)
+        sys.exit()
 
 
 def build_api_endpoints(user_name, password):
@@ -709,17 +707,17 @@ def dda_parcel(parcel_product):
         if parcel.product == parcel_product:
             parcel_version = parcel.version
 
-    print("Starting Parcel Download for %s - %s\n" % (parcel_product, parcel_version))
+    print("Starting Parcel Download for %s - %s" % (parcel_product, parcel_version))
     parcel_api.start_download_command(cluster_name, parcel_product, parcel_version)
     target_stage = 'DOWNLOADED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
-    print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
-    print("Starting Distribution for %s - %s\n" % (parcel_product, parcel_version))
+    print("%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
+    print("Starting Distribution for %s - %s" % (parcel_product, parcel_version))
     parcel_api.start_distribution_command(cluster_name, parcel_product, parcel_version)
     target_stage = 'DISTRIBUTED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
-    print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
-    print("Activating Parcel %s\n" % parcel_product)
+    print("%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
+    print("Activating Parcel %s" % parcel_product)
     parcel_api.activate_command(cluster_name, parcel_product, parcel_version)
 
 
@@ -896,7 +894,7 @@ def setup_cms():
     :return:
     """
     try:
-        print('->Setting up %s \n' % mgmt_api_packet.display_name)
+        print('->Setting up %s' % mgmt_api_packet.display_name)
         api_response = mgmt_service_api.setup_cms(body=mgmt_api_packet)
         if debug == 'True':
             pprint(api_response)
@@ -923,7 +921,7 @@ def update_mgmt_rcg(rcg_name, role, display_name, rcg_config):
 
     :return:
     """
-    print('-->Updating RCG: %s\n' % rcg_name)
+    print('-->Updating RCG: %s' % rcg_name)
     body = cm_client.ApiRoleConfigGroup(name=rcg_name, role_type=role, display_name=display_name,
                                                config=rcg_config)
 
@@ -1051,7 +1049,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'FLUME':
             for rcg in role_config_group_list:
                 if rcg == 'FLUME-AGENT-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'AGENT'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
                     pass
@@ -1059,19 +1057,19 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'HBASE':
             for rcg in role_config_group_list:
                 if rcg == 'HBASE-HBASETHRIFTSERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HBASETHRIFTSERVER'
                     pass
 
                 if rcg == 'HBASE-MASTER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'MASTER'
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
                     create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 2)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
 
                 if rcg == 'HBASE-REGIONSERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'REGIONSERVER'
                     n = 0
                     for host_id in worker_host_ids:
@@ -1079,11 +1077,11 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         n = n + 1
 
                 if rcg == 'HBASE-HBASERESTSERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     pass
 
                 if rcg == 'HBASE-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
                     create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 2)
@@ -1092,7 +1090,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'HDFS':
             for rcg in role_config_group_list:
                 if rcg == 'HDFS-NAMENODE-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'NAMENODE'  # type: str
                     dfs_name_dir = [cm_client.ApiConfig(name='dfs_name_dir_list', value='/data/dfs/nn')]
                     dfs_namenode_handler_count = [cm_client.ApiConfig(name='dfs_namenode_handler_count', value='70')]
@@ -1109,7 +1107,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HDFS-DATANODE-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'DATANODE'  # type: str
                     dfs_replication = [cm_client.ApiConfig(name='dfs_replication',
                                                            value=get_parameter_value(worker_shape, 'dfs_replication'))]
@@ -1141,7 +1139,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         n = n + 1
 
                 if rcg == 'HDFS-SECONDARYNAMENODE-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'SECONDARYNAMENODE'  # type: str
                     fs_checkpoint_dir = [cm_client.ApiConfig(name='fs_checkpoint_dir_list', value='/data/dfs/snn')]
                     secondary_namenode_java_heapsize = [cm_client.ApiConfig(name='secondary_namenode_java_heapsize',
@@ -1155,7 +1153,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HDFS-FAILOVERCONTROLLER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'FAILOVERCONTROLLER'
                     failover_controller_log_dir = [cm_client.ApiConfig(name='failover_controller_log_dir',
                                                                        value=LOG_DIR + '/hadoop-hdfs')]
@@ -1163,30 +1161,30 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'HDFS-HTTPFS-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HTTPFS'
                     httpfs_log_dir = [cm_client.ApiConfig(name='httpfs_log_dir', value=LOG_DIR + '/hadoop-httpfs')]
                     push_rcg_config(httpfs_log_dir)
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HDFS-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     dfs_client_use_trash = [cm_client.ApiConfig(name='dfs_client_use_trash', value='true')]
                     push_rcg_config(dfs_client_use_trash)
 
                 if rcg == 'HDFS-BALANCER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'BALANCER'  # type: str
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HDFS-NFSGATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'NFSGATEWAY'
                     pass
 
                 if rcg == 'HDFS-JOURNALNODE-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'JOURNALNODE'
                     dfs_journalnode_edits_dir = [cm_client.ApiConfig(name='dfs_journalnode_edits_dir',
                                                                      value='/data/dfs/jn')]
@@ -1199,7 +1197,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'HIVE':
             for rcg in role_config_group_list:
                 if rcg == 'HIVE-HIVESERVER2-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HIVESERVER2'
                     hiveserver2_spark_driver_memory = [cm_client.ApiConfig(name='hiveserver2_spark_driver_memory',
                                                                            value='11596411699')]
@@ -1222,7 +1220,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HIVE-HIVEMETASTORE-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HIVEMETASTORE'
                     hive_metastore_server_max_message_size = \
                         [cm_client.ApiConfig(name='hive_metastore_server_max_message_size', value='858993459')]
@@ -1247,12 +1245,12 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'HIVE-WEBHCAT-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'WEBHCAT'
                     pass
 
                 if rcg == 'HIVE-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     n = 0
                     for host_id in worker_host_ids:
@@ -1264,24 +1262,24 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'HUE':
             for rcg in role_config_group_list:
                 if rcg == 'HUE-HUE_LOAD_BALANCER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HUE_LOAD_BALANCER'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'HUE-KT_RENEWER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'KT_RENEWER'
                     pass
 
                 if rcg == 'HUE-HUE_SERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HUE_SERVER'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
         if service == 'IMPALA':
             for rcg in role_config_group_list:
                 if rcg == 'IMPALA-IMPALAD-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'IMPALAD'
                     n = 0
                     for host_id in worker_host_ids:
@@ -1289,24 +1287,24 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         n = n + 1
 
                 if rcg == 'IMPALA-STATESTORE-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'STATESTORE'
                     create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 1)
 
                 if rcg == 'IMPALA-CATALOGSERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'CATALOGSERVER'
                     create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 1)
 
         if service == 'KAFKA':
             for rcg in role_config_group_list:
                 if rcg == 'KAFKA-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'KAFKA-KAFKA_BROKER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'KAFKA_BROKER'
                     n = 0
                     for host_id in worker_host_ids:
@@ -1314,14 +1312,14 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         n = n + 1
 
                 if rcg == 'KAFKA-KAFKA_MIRROR_MAKER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'KAFKA_MIRROR_MAKER'
                     pass
 
         if service == 'OOZIE':
             for rcg in role_config_group_list:
                 if rcg == 'OOZIE-OOZIE_SERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'OOZIE_SERVER'
                     oozie_database_host = [cm_client.ApiConfig(name='oozie_database_host', value=cm_hostname)]
                     oozie_database_password = [cm_client.ApiConfig(name='oozie_database_password',
@@ -1337,36 +1335,36 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'SOLR':
             for rcg in role_config_group_list:
                 if rcg == 'SOLR-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'SOLR-SOLR_SERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'SOLR_SERVER'
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
         if service == 'SPARK':
             for rcg in role_config_group_list:
                 if rcg == 'SPARK-HISTORYSERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'HISTORYSERVER'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'SPARK-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     pass
 
 
         if service == 'SPARK_ON_YARN':
             for rcg in role_config_group_list:
                 if rcg == 'SPARK_ON_YARN-SPARK_YARN_HISTORY_SERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'SPARK_YARN_HISTORY_SERVER'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'SPARK_ON_YARN-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     n = 0
                     for host_id in worker_host_ids:
@@ -1378,14 +1376,14 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'SQOOP_CLIENT':
             for rcg in role_config_group_list:
                 if rcg == 'SQOOP_CLIENT-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
         if service == 'YARN':
             for rcg in role_config_group_list:
                 if rcg == 'YARN-GATEWAY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'  # type: str
                     mapred_submit_replication = [cm_client.ApiConfig(name='mapred_submit_replication', value='3')]
                     mapreduce_map_java_opts = \
@@ -1408,7 +1406,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'YARN-NODEMANAGER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'NODEMANAGER'  # type: str
                     yarn_nodemanager_heartbeat_interval_ms = \
                         [cm_client.ApiConfig(name='yarn_nodemanager_heartbeat_interval_ms', value='100')]
@@ -1440,7 +1438,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         n = n + 1
 
                 if rcg == 'YARN-RESOURCEMANAGER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'RESOURCEMANAGER'  # type: str
                     resource_manager_java_heapsize = [cm_client.ApiConfig(name='resource_manager_java_heapsize',
                                                                           value='2000000000')]
@@ -1460,7 +1458,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'YARN-JOBHISTORY-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'JOBHISTORY'  # type: str
                     mr2_jobhistory_java_heapsize = [cm_client.ApiConfig(name='mr2_jobhistory_java_heapsize',
                                                                         value='1000000000')]
@@ -1474,7 +1472,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
         if service == 'ZOOKEEPER':
             for rcg in role_config_group_list:
                 if rcg == 'ZOOKEEPER-SERVER-BASE':
-                    print('-->Updating RCG: %s\n' % rcg)
+                    print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'SERVER'  # type: str
                     maxclientcnxns = [cm_client.ApiConfig(name='maxClientCnxns', value='1024')]
                     datalogdir = [cm_client.ApiConfig(name='dataLogDir', value=LOG_DIR + '/zookeeper')]
@@ -1624,7 +1622,7 @@ def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
     role_api_packet = [cm_client.ApiRole(name=role_name, type=rcg_roletype, host_ref=host_ref,
                                          role_config_group_ref=role_config_group_ref, service_ref=service_ref)]
     body = cm_client.ApiRoleList(role_api_packet)
-    print('->Creating Role %s for %s\n' % (role_name, hostname))
+    print('->Creating Role %s for %s' % (role_name, hostname))
 
     try:
         api_response = roles_api.create_roles(cluster_name, service, body=body)
@@ -2285,8 +2283,11 @@ if __name__ == '__main__':
     elif cluster_exists == 'True':
         print('%s exists.' % cluster_name)
         if debug == 'True':
+            print('->Host List Follows')
             list_hosts()
             pprint(cluster_host_list)
+            print('->Full Deployment Follows')
+            get_deployment_full()
         #delete_cluster()
     else:
         print('Cluster Check returned null: %s' % cluster_exists)
