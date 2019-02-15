@@ -225,5 +225,57 @@ for i in `seq 1 ${#iqn[@]}`; do
 	done;
 done;
 fi
+# Kerberos Workstation Setup
+EXECNAME="KERBEROS"
+log "-> INSTALL"
+yum install krb5-workstation
+
+KERBEROS_PASSWORD="SOMEPASSWORD"
+OPC_USER_PASSWORD="somepassword"
+kdc_server="cdh-utility-1"
+kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
+realm="hadoop.com"
+REALM="HADOOP.COM"
+log "-> CONFIG"
+rm -f /etc/krb5.conf
+cat > /etc/krb5.conf << EOF
+# Configuration snippets may be placed in this directory as well
+includedir /etc/krb5.conf.d/
+
+[libdefaults]
+ default_realm = ${REALM}
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ rdns = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d  
+ forwardable = true
+ udp_preference_limit = 1000000
+ default_tkt_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
+ default_tgs_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
+ permitted_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
+
+[realms]
+    ${REALM} = {
+        kdc = ${kdc_fqdn}:88
+        admin_server = ${kdc_fqdn}:749
+        default_domain = ${realm}
+    }
+
+[domain_realm]
+    .${realm} = ${REALM}
+     ${realm} = ${REALM}
+
+[kdc]
+    profile = /var/kerberos/krb5kdc/kdc.conf
+
+[logging]
+    kdc = FILE:/var/log/krb5kdc.log
+    admin_server = FILE:/var/log/kadmin.log
+    default = FILE:/var/log/krb5lib.log
+EOF
+log "-> Principal & ticket"
+echo -e "${KERBEROS_PASSWORD}\naddprinc -randkey host/client.${REALM}\nktadd host/kdc.${REALM}" | kadmin -p root/admin
+
 EXECNAME="END"
 log "->DONE"

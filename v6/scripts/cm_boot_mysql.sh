@@ -61,8 +61,8 @@ KERBEROS_PASSWORD="SOMEPASSWORD"
 OPC_USER_PASSWORD="somepassword"
 kdc_server=$(hostname)
 kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
-realm=`echo $kdc_fqdn |  cut -d '.' -f 3-5`
-REALM=`echo $realm | tr [:lower:] [:upper:]`
+realm="hadoop.com"
+REALM="HADOOP.COM"
 log "-> CONFIG"
 rm -f /etc/krb5.conf
 cat > /etc/krb5.conf << EOF
