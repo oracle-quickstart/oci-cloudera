@@ -9,7 +9,7 @@ log() {
 
 EXECNAME="TUNING"
 
-log "->START"
+log "-> START"
 ## Modify resolv.conf to ensure DNS lookups work
 rm -f /etc/resolv.conf
 echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
@@ -52,9 +52,9 @@ systemctl disable firewalld
 cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
 cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
 
-## Setup Kerberos
-
-#!/bin/bash
+## KERBEROS INSTALL
+EXECNAME="KERBEROS"
+log "-> INSTALL"
 
 yum -y install krb5-server krb5-libs
 KERBEROS_PASSWORD="SOMEPASSWORD"
@@ -63,13 +63,14 @@ kdc_server=$(hostname)
 kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
 realm=`echo $kdc_fqdn |  cut -d '.' -f 3-5`
 REALM=`echo $realm | tr [:lower:] [:upper:]`
+log "-> CONFIG"
 rm -f /etc/krb5.conf
 cat > /etc/krb5.conf << EOF
 # Configuration snippets may be placed in this directory as well
 includedir /etc/krb5.conf.d/
 
 [libdefaults]
- default_realm = ${realm}
+ default_realm = ${REALM}
  dns_lookup_realm = false
  dns_lookup_kdc = false
  rdns = false
@@ -91,6 +92,9 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
+
+[kdc]
+    profile = /var/kerberos/krb5kdc/kdc.conf
 
 [logging]
     kdc = FILE:/var/log/krb5kdc.log
@@ -127,10 +131,14 @@ cat > /var/kerberos/krb5kdc/kadm5.acl << EOF
 */admin@${REALM}    *
 EOF
 
-kdb5_util create -r ${realm} -s -P ${KERBEROS_PASSWORD}
+kdb5_util create -r ${REALM} -s -P ${KERBEROS_PASSWORD}
 
-echo -e "addprinc root/admin\n${KERBEROS_PASSWORD}\n${KERBEROS_PASSWORD}\naddprinc opc\n${OPC_USER_PASSWORD}\n${USER_PASSWORD}\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/admin\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/changepw\nexit\n" | kadmin.local -r ${realm} -m ${KERBEROS_PASSWORD}  
-
+echo -e "addprinc root/admin\n${KERBEROS_PASSWORD}\n${KERBEROS_PASSWORD}\naddprinc opc\n${OPC_USER_PASSWORD}\n${OPC_USER_PASSWORD}\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/admin\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/changepw\nexit\n" | kadmin.local -r ${REALM}
+log "-> START"
+systemctl start krb5kdc.service
+systemctl start kadmin.service
+systemctl enable krb5kdc.service
+systemctl enable kadmin.service
 
 ## INSTALL CLOUDERA MANAGER
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
