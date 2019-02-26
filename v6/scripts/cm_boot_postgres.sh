@@ -152,7 +152,11 @@ rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cl
 wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
 yum install oracle-j2sdk* cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y
 pip install psycopg2==2.7.5 --ignore-installed
-yum install cloudera-manager-daemons -y
+yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y
+
+# AUTO-TLS Enable
+export JAVA_HOME=/usr/java/jdk1.8.0_141-cloudera 
+/opt/cloudera/cm-agent/bin/certmanager setup --configure-services
 
 install_postgres(){
 ##

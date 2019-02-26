@@ -827,12 +827,12 @@ def dda_parcel(parcel_product):
     parcel_api.start_download_command(cluster_name, parcel_product, parcel_version)
     target_stage = 'DOWNLOADED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
-    print("%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
+    print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
     print("Starting Distribution for %s - %s" % (parcel_product, parcel_version))
     parcel_api.start_distribution_command(cluster_name, parcel_product, parcel_version)
     target_stage = 'DISTRIBUTED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
-    print("%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
+    print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
     print("Activating Parcel %s" % parcel_product)
     parcel_api.activate_command(cluster_name, parcel_product, parcel_version)
 
@@ -2500,9 +2500,12 @@ def build_cloudera_cluster():
         print('Exception calling ClustersResourceApi -> first_run {}\n'.format(e))
     active_command = 'First Run on ' + cluster_name
     wait_for_active_cluster_commands(active_command)
-    print('---> CLUSTER SETUP COMPLETE <---')
-    deployment_seconds = time.time() - start_time
-    print('SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_seconds)))
+    if secure_cluster == 'True':
+        pass
+    else:
+        print('---> CLUSTER SETUP COMPLETE <---')
+        deployment_seconds = time.time() - start_time
+        print('SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_seconds)))
 
 
 def enable_kerberos():
@@ -2543,9 +2546,6 @@ def enable_kerberos():
     quorum_auth_enable_sasl = [cm_client.ApiConfig(name='quorum_auth_enable_sasl', value='true')]
     update_service_config(service_name='ZOOKEEPER', api_config_items=enableSecurity)
     update_service_config(service_name='ZOOKEEPER', api_config_items=quorum_auth_enable_sasl)
-    # print('-->Generate Kerberos Credentials')
-    # generate_kerberos_credentials()
-    # wait_for_active_mgmt_commands('Generating Missing Kerberos Credentials')
     print('-->Stop Cluster Services')
     cluster_action('stop_command')
     wait_for_active_cluster_service_commands('Stopping Cluster Services')
@@ -2556,9 +2556,6 @@ def enable_kerberos():
     print('-->Deploy Cluster Kerberos Configuration')
     cluster_action('deploy_cluster_client_config')
     wait_for_active_cluster_service_commands('Deploying Cluster Kerberos Client Config')
-    # print('-->Generate Kerberos Credentials')
-    # generate_kerberos_credentials()
-    # wait_for_active_mgmt_commands('Generating Missing Kerberos Credentials')
     print('-->Start Cluster Services')
     cluster_action('start_command')
     wait_for_active_cluster_service_commands('Starting Cluster Services')
@@ -2569,6 +2566,9 @@ def enable_kerberos():
     if debug == 'True':
         print('->Listing Kerberos Principals')
         get_kerberos_principals()
+    print('---> SECURE CLUSTER SETUP COMPLETE <---')
+    deployment_seconds = time.time() - start_time
+    print('SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_seconds)))
 
 
 #
