@@ -14,7 +14,7 @@ With the introduction of local KDC for secure cluster, this requires some setup 
   * kdc_server - This is the hostname where KDC is deployed (defaults to Cloudera Manager host)
   * realm - This is set to hadoop.com by default.
   * REALM - This is set to HADOOP.COM by default.
-* cm_boot_mysql.sh - 
+* cm_boot_mysql.sh 
   * KERBEROS_PASSWORD - This is used for the root/admin account.
   * SCM_USER_PASSWORD - By default the cloudera-scm user is given admin control of the KDC.  This is required for Cloudera Manager to setup and manage principals, and the password here is used by that account.
   * kdc_server - Defaults to local hostname.

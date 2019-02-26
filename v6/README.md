@@ -57,6 +57,12 @@ In addition, further customization of the cluster deployment can be done by modi
 
 This does require some knowledge of Python - modify at your own risk.  These functions contain Cloudera specific tuning parameters as well as host mapping for roles.
 
+## Kerberos Secure Cluster by Default
+
+This automation now defaults to using a local KDC deployed on the Cloudera Manager instance for secure cluster operation.  Please read the scripts [README](../blob/master/scripts/README.md) for information regarding how to set these parameters prior to deployment.
+
+Also - for cluster management, you will need to manually create at a minimum the HDFS Superuser Principal as [detailed here](https://www.cloudera.com/documentation/enterprise/latest/topics/cm_sg_using_cm_sec_config.html#create-hdfs-superuser) after deployment.
+
 ## Cloudera Manager and Cluster Metadata Database
 You are able to customize which database you want to use for Cloudera Manager and Cluster Metadata.   In compute.tf you will see a "user_data" field for the Utility instance:
 
@@ -81,7 +87,11 @@ This will create all the required elements in a compartment in the target OCI te
 
 After Terraform is finished deploying, the output will show the Python syntax to trigger cluster deployment.  This command can be run immediately following deployment, as it has built-in checks to wait until Cloudera Manager API is up and responding before it executes deployment.  The syntax is as follows:
 
-	python scripts/deploy_on_oci.py -m <master_ip> -d <disk_count> -w <worker_shape>
+	python scripts/deploy_on_oci.py -B -m <master_ip> -d <disk_count> -w <worker_shape>
+
+It is also possible to destroy an existing cluster with this script using Cloudera Manager
+
+	python scripts/deploy_on_oci.py -D -m <master_ip>
 
 ## Destroy the Deployment
 
