@@ -33,21 +33,32 @@ license_file = 'None'
 host_fqdn_list = []
 
 #
-# Custom Global Parameters - Customize below here until Functions section
+# Custom Global Parameters - Customize below here
 #
 
 # Enable Debug Output set this to 'True' for detailed output during execution
 debug = 'False'  # type: str
 
-# Define new admin username and password
+# Define new admin username and password for Cloudera Manager
+# This replaces the default (insecure) admin/admin account
 admin_user_name = 'cdhadmin'  # type: str
 admin_password = 'somepassword'  # type: str
 
 # Define cluster name
 cluster_name = 'TestCluster'  # type: str
-# This converts the cluster name into API friendly format, do not modify
-api_cluster_name = cm_client.ApiClusterRef(cluster_name, cluster_name)  # type: str
-# Set port number for Cloudera Manager - used to build API endpoints and check if Manger is up/listening
+
+# Set this to 'True' (default) to enable secure cluster (Kerberos) functionality
+# Set this to 'False" to deploy an insecure cluster
+secure_cluster = 'True'
+
+# If above is 'True', these values are required.
+# They should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
+realm = 'HADOOP.COM'
+kdc_admin = 'cloudera-scm@HADOOP.COM'
+kdc_password = 'somepassword'
+
+# Set port number for Cloudera Manager - used to build API endpoints and check if CM is up/listening
+# Only modify if you customized the Cloudera Manager deployment to use a non-standard port
 cm_port = '7180'
 # Set API version to use with Cloudera Manager
 api_version = 'v31'
@@ -55,15 +66,15 @@ api_version = 'v31'
 # Define Cloudera Version 6 to deploy
 cluster_version = '6.1.0'  # type: str
 
-# Define DB port number
+# Define DB port number for Cluster Metadata
+# This should match the CloudInit boot file you chose in Terraform
 # For MySQL this is 3306
 # For Postgres this is 5432
 meta_db_port = '3306'
 
-if meta_db_port == '3306':
-    meta_db_type = 'mysql'
-elif meta_db_port == '5432':
-    meta_db_type = 'postgresql'
+# Data Tiering - set this to 'True' if you wish to use Heterogenous storage in your cluster.
+# This enables mixing local storage and Block Volumes to achieve higher HDFS capacity
+data_tiering = 'False'
 
 # Define Remote Parcel URL & Distribution Rate if desired
 remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
@@ -71,8 +82,7 @@ parcel_distribution_rate = "1024000"  # type: int
 
 # Define SSH Keyfile for access to cluster hosts - required for Cloudera Manager to deploy agents
 # This value is local to your deployment host
-# Example ssh_keyfile = '/home/opc/.ssh/id_rsa'  # type: str
-ssh_keyfile = '/Users/zsmith/.ssh/id_rsa'  # type: str
+ssh_keyfile = '/home/opc/.ssh/id_rsa'  # type: str
 
 # Cluster Services List
 # Modify this list to pick which services to install
@@ -81,11 +91,9 @@ ssh_keyfile = '/Users/zsmith/.ssh/id_rsa'  # type: str
 #                         'HUE', 'FLUME', 'SPARK_ON_YARN', 'THALES_KMS', 'HDFS', 'OOZIE', 'ISILON', 'SQOOP_CLIENT',
 #                         'KS_INDEXER', 'ZOOKEEPER', 'YARN', 'KMS', 'KEYTRUSTEE', 'KEYTRUSTEE_SERVER', 'KAFKA', 'IMPALA',
 #                         'AWS_S3']
-
 # MAXIMAL - NON KERBEROS
 cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE', 'SQOOP_CLIENT', 'ZOOKEEPER',
                         'YARN', 'KAFKA', 'IMPALA']
-
 # MINIMAL - NON KERBEROS
 # cluster_service_list = ['HDFS', 'YARN', 'SOLR', 'ZOOKEEPER']
 
@@ -102,8 +110,8 @@ mgmt_roles_list = ['ACTIVITYMONITOR', 'ALERTPUBLISHER', 'EVENTSERVER', 'HOSTMONI
 # Cluster Host Mapping
 # Define these variables to match when building host lists to use for role and
 # service mapping.  For example, if your worker nodes have "cdh-worker" in the hostname, set that here.
-# If you want your Cloudera Manager on a specific host, set he host identifier here.
-# This is used in "cluster_host_id_map" and "remote_host_detection" (if used)
+# If you want your Cloudera Manager on a specific host, set the host identifier here.
+# This is used in "cluster_host_id_map" and "remote_host_detection"
 #
 # Worker Host Prefix
 worker_hosts_contain = 'cdh-worker'
@@ -116,12 +124,24 @@ secondary_namenode_host_contains = 'cdh-master-2'
 # Explicit hostname of the Cloudera Manager Host
 cloudera_manager_host_contains = 'cdh-utility-1'
 
-# Specify Log directory on cluster hosts
+# Specify Log directory on cluster hosts - this is a separate block volume by default in Terraform
 LOG_DIR = '/var/log/cloudera'
 
 #
-# End Global Parameters
+# End Custom Global Parameters
 #
+
+#
+# Some additional variables are needed - you should not modify these
+#
+
+# This converts the cluster name into API friendly format
+api_cluster_name = cm_client.ApiClusterRef(cluster_name, cluster_name)  # type: str
+# Sets a configuration parameter based on Meta DB port - used for RCGs
+if meta_db_port == '3306':
+    meta_db_type = 'mysql'
+elif meta_db_port == '5432':
+    meta_db_type = 'postgresql'
 
 #
 # OCI Shape Specific Tunings - Modify at your own discretion
@@ -229,7 +249,6 @@ def build_api_endpoints(user_name, password):
     api_host = 'http://' + cm_server
     global api_url, api_client
     api_url = api_host + ':' + cm_port + '/api/' + api_version
-    api_success = '0'
     if debug == 'True':
         print("->API URL: " + api_url)
     api_client = cm_client.ApiClient(api_url)
@@ -270,6 +289,8 @@ def wait_for_active_cluster_commands(active_command):
         try:
             api_response = cloudera_manager_api.list_active_commands(view=view)
             if not api_response.items:
+                if debug == 'True':
+                    pprint(api_response)
                 done = '1'
                 sys.stdout.write(']\n')
                 break
@@ -279,7 +300,34 @@ def wait_for_active_cluster_commands(active_command):
                 wait_status = wait_status + '*'
         except ApiException as e:
             print('Exception waiting for active commands: {}'.format(e))
-    print('\n')
+
+
+def wait_for_active_cluster_service_commands(active_command):
+    """
+    Wait until Cloudera Cluster finishes running active_command
+    :param active_command: Descriptive of what should be running - this just waits if any task is detected running
+    :return:
+    """
+    view = 'summary'
+    wait_status = '[*'
+    done = '0'
+
+    while done == '0':
+        sys.stdout.write('\r%s - Waiting: %s' % (active_command, wait_status))
+        try:
+            api_response = clusters_api.list_active_commands(cluster_name, view=view)
+            if not api_response.items:
+                if debug == 'True':
+                    pprint(api_response)
+                done = '1'
+                sys.stdout.write(']\n')
+                break
+            else:
+                sys.stdout.flush()
+                time.sleep(10)
+                wait_status = wait_status + '*'
+        except ApiException as e:
+            print('Exception waiting for active commands: {}'.format(e))
 
 
 def wait_for_active_mgmt_commands(active_command):
@@ -449,7 +497,8 @@ def remote_host_detection():
     :return:
     """
     print('->Building Host FQDN List dynamically using SSH')
-    global host_fqdn_list, host_ip_list, output
+    global host_fqdn_list, host_ip_list, output, kdc_fqdn
+    kdc_fqdn = 'None'
     host_fqdn_list = []
     host_ip_list = []
     ssh_client = SSHClient()
@@ -466,6 +515,9 @@ def remote_host_detection():
             print('Host Detection output for Cloudera Manager - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
 
         if stdout.channel.recv_exit_status() == 0:
+            if kdc_fqdn == 'None':
+                kdc_fqdn = fqdn[0]
+
             host_fqdn_list.append(fqdn[0])
             host_ip_list.append(fqdn[3])
 
@@ -593,13 +645,45 @@ def build_disk_lists():
     dfs_data_dir_list = ''
     global yarn_data_dir_list
     yarn_data_dir_list = ''
-    for x in range(0, int(disk_count)):
-        if x is 0:
-            dfs_data_dir_list += "/data%d/dfs/dn" % x
-            yarn_data_dir_list += "/data%d/yarn/nm" % x
-        else:
-            dfs_data_dir_list += ",/data%d/dfs/dn" % x
+    if data_tiering == 'False':
+        for x in range(0, int(disk_count)):
+            if x is 0:
+                dfs_data_dir_list += "/data%d/dfs/dn" % x
+                yarn_data_dir_list += "/data%d/yarn/nm" % x
+            else:
+                dfs_data_dir_list += ",/data%d/dfs/dn" % x
+                yarn_data_dir_list += ",/data%d/yarn/nm" % x
+
+    elif data_tiering == 'True':
+        global local_disks
+        if worker_shape == 'BM.DenseIO2.52':
+            local_disks = 8
+
+        if worker_shape == 'VM.DenseIO2.24':
+            local_disks = 4
+
+        if worker_shape == 'VM.DenseIO2.16':
+            local_disks = 2
+
+        if worker_shape == 'VM.DenseIO2.8':
+            local_disks = 1
+
+        if worker_shape == 'BM.HPC2.36':
+            local_disks = 1
+
+        total_disk_count = disk_count + local_disks
+        for x in range(0, int(total_disk_count)):
+            if x is 0:
+                dfs_data_dir_list += "[DISK]/data%d/dfs/dn" % x
+            elif x < local_disks:
+                dfs_data_dir_list += ",[DISK]/data%d/dfs/dn" % x
+            else:
+                dfs_data_dir_list += ",[ARCHIVE]/data%d/dfs/dn" % x
             yarn_data_dir_list += ",/data%d/yarn/nm" % x
+
+    else:
+        print('Invalid Data Tiering flag - expected True or False: %s\n' % data_tiering)
+        sys.exit()
 
 
 def add_hosts_to_cluster(cluster_host_list):
@@ -608,6 +692,8 @@ def add_hosts_to_cluster(cluster_host_list):
     :param cluster_host_list: List of hosts to add to the cluster
     :return:
     """
+    global host_install_failure, api_failure_message
+    host_install_failure = 'False'
     body = cm_client.ApiHostRefList(cluster_host_list)
 
     try:
@@ -616,6 +702,21 @@ def add_hosts_to_cluster(cluster_host_list):
             pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClustersResourceApi->add_hosts: {}\n'.format(e))
+        host_install_failure = 'True'
+
+
+def remove_all_hosts_from_cluster():
+    """
+    Remove all hosts from Cluster
+    Used when SCM Agent fails install
+    :return:
+    """
+    try:
+        api_response = clusters_api.remove_all_hosts(cluster_name)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClustersResourceApi->remove_all_hosts {}'.format(e))
 
 
 def list_hosts():
@@ -636,12 +737,26 @@ def list_hosts():
 
 def install_hosts():
     """
-    Perform Installation on a set of hosts
+    Perform SCM Agent Installation on a set of hosts
     :return:
     """
-
     body = cm_client.ApiHostInstallArguments(host_names=host_fqdn_list, user_name='root', private_key=ssh_key,
                                              parallel_install_count='20')
+
+    try:
+        api_response = cloudera_manager_api.host_install_command(body=body)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception when calling ClouderaManagerResourceApi->host_install: {}\n'.format(e))
+
+
+def install_host(host_fqdn):
+    """
+    Perform SCM Agent Installation on a specific host
+    :return:
+    """
+    body = cm_client.ApiHostInstallArguments(host_names=host_fqdn, user_name='root', private_key=ssh_key)
 
     try:
         api_response = cloudera_manager_api.host_install_command(body=body)
@@ -700,6 +815,7 @@ def dda_parcel(parcel_product):
                                                         parcel.state.total_progress))
             time.sleep(5)
             sys.stdout.flush()
+
 
     sys.stdout.write('\n')
     parcels = parcels_api.read_parcels(cluster_name, view='FULL')
@@ -1115,7 +1231,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                                            value='impala,hbase,mapred,spark')]
                     dfs_data_dir = [cm_client.ApiConfig(name='dfs_data_dir_list', value=dfs_data_dir_list)]
                     datanode_java_heapsize = [cm_client.ApiConfig(name='datanode_java_heapsize', value='351272960')]
-                    dfs_datanode_data_dir_perm = [cm_client.ApiConfig(name='dfs_datanode_data_dir_perm', value='755')]
+                    dfs_datanode_data_dir_perm = [cm_client.ApiConfig(name='dfs_datanode_data_dir_perm', value='700')]
                     dfs_datanode_du_reserved = [cm_client.ApiConfig(name='dfs_datanode_du_reserved',
                                                                     value='3508717158')]
                     dfs_datanode_failed_volumes_tolerated = [cm_client.ApiConfig(
@@ -1394,13 +1510,10 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                              value=get_parameter_value(worker_shape, 'mapreduce_reduce_java_opts'))]
                     io_file_buffer_size = [cm_client.ApiConfig(name='io_file_buffer_size', value='131072')]
                     io_sort_mb = [cm_client.ApiConfig(name='io_sort_mb', value='1024')]
-                    yarn_app_mapreduce_am_mb = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_mb',
-                                                                             value='4096')]
                     yarn_app_mapreduce_am_max_heap = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_max_heap',
                                                                           value='1073741824')]
                     gw_config_list = [mapred_submit_replication, mapreduce_map_java_opts, mapreduce_reduce_java_opts,
-                                      io_file_buffer_size, io_sort_mb, yarn_app_mapreduce_am_max_heap,
-                                      yarn_app_mapreduce_am_mb]
+                                      io_file_buffer_size, io_sort_mb, yarn_app_mapreduce_am_max_heap]
                     for config in gw_config_list:
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
@@ -1748,6 +1861,40 @@ def cluster_action(action, *kwargs):
                 pprint(api_response)
         except ApiException as e:
             print('Exception running ServicesResourceApi->first_run {}\n'.format(e))
+
+    if action == 'start_command':
+        try:
+            api_response = clusters_api.start_command(cluster_name)
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception running ClustersResourceApi->start_command {}\n'.format(e))
+
+    if action == 'stop_command':
+        try:
+            api_response = clusters_api.stop_command(cluster_name)
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception running ClustersResourceApi->stop_command {}\n'.format(e))
+
+    if action == 'deploy_cluster_client_config':
+        try:
+            list_hosts()
+            api_response = clusters_api.deploy_cluster_client_config(cluster_name, body=cluster_host_list)
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception running ClustersResourceApi->deploy_cluster_client_config {}\n'.format(e))
+
+    if action == 'deploy_client_config':
+        try:
+            api_response = clusters_api.deploy_client_config(cluster_name)
+            if debug == 'True':
+                pprint(api_response)
+        except ApiException as e:
+            print('Exception running ClustersResourceApi->deploy_client_config {}\n'.format(e))
+
 
 
 def build_api_role_list(role):
@@ -2112,33 +2259,144 @@ def check_if_cluster_exists(cluster_name):
                     print('Cluster %s not found in cluster list' % cluster_name)
 
 
+def configure_for_kerberos():
+    """
+    Configure the cluster to use Kerberos for Authentication
+    :return: 
+    """
+    datanode_tranceiver_port = 1004
+    datanode_web_port = 1006
+    body = cm_client.ApiConfigureForKerberosArguments(datanode_tranceiver_port, datanode_web_port)
+
+    try:
+        api_response = clusters_api.configure_for_kerberos(cluster_name, body=body)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClustersResourceApi->configure_for_kerberos: {}\n'.format(e))
+
+
+def import_admin_credentials():
+    """
+    Imports the KDC Account Manager credentials needed by Cloudera Manager to create kerberos principals needed by
+    CDH services.
+    :return:
+    """
+
+    try:
+        api_response = cloudera_manager_api.import_admin_credentials(password=kdc_password, username=kdc_admin)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClouderaManagerResourceApi->import_admin_credentials: {}\n'.format(e))
+
+
+def get_mgmt_config():
+    """
+    Get Cloudera Manager Config dump
+    :return:
+    """
+    view = 'summary'
+
+    try:
+        api_response = cloudera_manager_api.get_config(view=view)
+        print(api_response)
+    except ApiException as e:
+        print('%s' % e)
+
+
+def get_kerberos_principals():
+    """
+    List Kerberos Principals for the cluster
+    :return:
+    """
+    try:
+        api_response = cloudera_manager_api.get_kerberos_principals(missing_only='false')
+        pprint(api_response)
+    except ApiException as e:
+        print('%s' % e)
+
+
+def config_mgmt_for_kerberos():
+    """
+    Setup Cloudera Manager Kerberos Configuration
+    :return:
+    """
+    KDC_ADMIN_HOST = cm_client.ApiConfig(name='KDC_ADMIN_HOST', value=cloudera_manager_host_contains)
+    KDC_ADMIN_PASSWORD = cm_client.ApiConfig(name='KDC_ADMIN_PASSWORD', value=kdc_password)
+    KDC_ADMIN_USER = cm_client.ApiConfig(name='KDC_ADMIN_USER', value=kdc_admin)
+    KDC_HOST = cm_client.ApiConfig(name='KDC_HOST', value=cloudera_manager_host_contains)
+    MAX_RENEW_LIFE = cm_client.ApiConfig(name='MAX_RENEW_LIFE', value='604800')
+    KRB_DNS_LOOKUP_KDC = cm_client.ApiConfig(name='KRB_DNS_LOOKUP_KDC', value='true')
+    KRB_MANAGE_KRB5_CONF = cm_client.ApiConfig(name='KRB_MANAGE_KRB5_CONF', value='true')
+    kerberos_cm_configs = cm_client.ApiConfigList([KDC_ADMIN_HOST, KDC_ADMIN_PASSWORD, KDC_ADMIN_USER, KDC_HOST,
+                                                   MAX_RENEW_LIFE, KRB_DNS_LOOKUP_KDC, KRB_MANAGE_KRB5_CONF])
+    updated_cm_configs = cloudera_manager_api.update_config(body=kerberos_cm_configs)
+    if debug == 'True':
+        pprint(updated_cm_configs)
+
+
+def generate_kerberos_credentials():
+    """
+    Generate missing Kerberos credentials.
+    This command will affect all services that have been configured to use Kerberos,
+    and haven't had their credentials generated yet.
+    :return:
+    """
+    try:
+        api_response = cloudera_manager_api.generate_credentials_command()
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ClouderaManagerResourceApi->generate_credentials_command: {}'.format(e))
+
+
 #
 # END SECONDARY FUNCTIONS
 #
 
 def options_parser(args=None):
     """
-    Parse command line options passed to the script
+    Parse command line options passed to the script, execute some actions here for now
     :return:
     """
     global objects
-    parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH v6 Cluster on '
+    parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH %s Cluster on '
                                                                                  'OCI using cm_client with Cloudera '
-                                                                                 'Manager API')
-
+                                                                                 'Manager API %s' % (cluster_version,
+                                                                                                     api_version))
+    parser.add_argument('-D', '--DELETE', action='store_true',
+                        help='Delete Cluster %s' % cluster_name)
+    parser.add_argument('-B', '--BUILD', action='store_true',
+                        help='Build Cluster %s' % cluster_name)
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
-                      help='Cloudera Manager IP to connect to using cm_client')
+                      help='Cloudera Manager IP to connect API using cm_client')
     parser.add_argument('-i', '--input_host_list', metavar='host.fqdn', nargs='+',
                       help='List of Cluster Hosts (FQDN) to deploy')
-    parser.add_argument('-d', '--disk_count', metavar='disk_count', required='True',
+    parser.add_argument('-d', '--disk_count', metavar='disk_count',
                       help='Number of disks attached to Worker Instances, used to calculate DFS configuration')
     parser.add_argument('-l', '--license_file', metavar='license_file',
                       help='Cloudera Manager License File Name')
-    parser.add_argument('-w', '--worker_shape', metavar='worker_shape', required='True',
-                      help='Shape of Worker Instances in the Cluster')
-
+    parser.add_argument('-w', '--worker_shape', metavar='worker_shape',
+                      help='OCI Shape of Worker Instances in the Cluster')
     options = parser.parse_args(args)
-    return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape)
+    if options.cm_server and options.DELETE:
+        pass
+    elif options.cm_server and not options.BUILD:
+        print('Cluster action Build is required at a minimum.')
+        parser.print_help()
+        exit(-1)
+    elif options.cm_server and options.BUILD:
+        if options.cm_server and not options.disk_count:
+            print('Disk Count is required.')
+            parser.print_help()
+            exit(-1)
+        if options.cm_server and not options.worker_shape:
+            print('Worker Shape is required.')
+            parser.print_help()
+            exit(-1)
+    return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
+            options.BUILD, options.DELETE)
 
 
 #
@@ -2146,6 +2404,10 @@ def options_parser(args=None):
 #
 
 def build_cloudera_cluster():
+    """
+    Deploy and Configure a Cloudera EDH Cluster
+    :return:
+    """
     parse_ssh_key()
     build_disk_lists()
     try:
@@ -2177,14 +2439,23 @@ def build_cloudera_cluster():
 
     build_cluster_host_list(host_fqdn_list)
     read_cluster()
-    install_hosts()
-    active_command = 'Host Agents Installing'
-    wait_for_active_cluster_commands(active_command)
-    print('->Host Installation Complete')
-    add_hosts_to_cluster(cluster_host_list)
-    active_command = 'Hosts Adding to Cluster ' + cluster_name
-    wait_for_active_cluster_commands(active_command)
-    print('->Hosts added to Cluster %s' % cluster_name)
+    ## Failure mode when SCM Agent fails - so we need to loop here
+    install_success = 'False'
+    while install_success == 'False':
+        install_hosts()
+        active_command = 'Host Agents Installing'
+        wait_for_active_cluster_commands(active_command)
+        print('->Host Installation Complete')
+        add_hosts_to_cluster(cluster_host_list)
+        active_command = 'Hosts Adding to Cluster ' + cluster_name
+        wait_for_active_cluster_commands(active_command)
+        if host_install_failure == 'True':
+            print('->Host SCM Agent Install Failure Detected, trying again')
+            remove_all_hosts_from_cluster()
+        else:
+            print('->Hosts added to Cluster %s' % cluster_name)
+            install_success = 'True'
+
     print('->Updating Parcel Remote Repo: %s' % remote_parcel_url)
     update_parcel_repo(remote_parcel_url, parcel_distribution_rate)
     print('->Parcel Setup Running')
@@ -2215,7 +2486,6 @@ def build_cloudera_cluster():
     setup_mgmt_rcg(mgmt_roles_list)
     print('->Restart MGMT Service')
     mgmt_service('restart_command')
-    wait_for_active_mgmt_commands('MGMT Service Restart')
     print('->Restart MGMT Roles')
     mgmt_role_commands(action='restart_command')
     # TODO - Need to refactor here if license is provided
@@ -2235,67 +2505,144 @@ def build_cloudera_cluster():
     print('SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_seconds)))
 
 
+def enable_kerberos():
+    """
+    Steps to enable Keberos on the cluster
+    :return:
+    """
+    config_mgmt_for_kerberos()
+    wait_for_active_mgmt_commands('Deploying MGMT Kerberos Configuration')
+    print('-->Import KDC Admin Credentials')
+    import_admin_credentials()
+    wait_for_active_cluster_commands('Importing KDC Account Management Credentials')
+    # Set Service Configurations
+    # SOLR
+    solr_security_authentication = [cm_client.ApiConfig(name='solr_security_authentication', value='kerberos')]
+    update_service_config(service_name='SOLR', api_config_items=solr_security_authentication)
+    # HBASE
+    hbase_security_authentication = [cm_client.ApiConfig(name='hbase_security_authentication', value='kerberos')]
+    hbase_security_authorization = [cm_client.ApiConfig(name='hbase_security_authorization', value='true')]
+    hbase_thriftserver_security_authentication = [cm_client.ApiConfig(name='hbase_thriftserver_security_authentication',
+                                                                      value='auth-conf')]
+    update_service_config(service_name='HBASE', api_config_items=hbase_security_authentication)
+    update_service_config(service_name='HBASE', api_config_items=hbase_security_authorization)
+    update_service_config(service_name='HBASE', api_config_items=hbase_thriftserver_security_authentication)
+    # HDFS
+    hadoop_security_authentication = [cm_client.ApiConfig(name='hadoop_security_authentication', value='kerberos')]
+    hadoop_security_authorization = [cm_client.ApiConfig(name='hadoop_security_authorization', value='true')]
+    dfs_encrypt_data_transfer_algorithm = [cm_client.ApiConfig(name='dfs_encrypt_data_transfer_algorithm',
+                                                               value='AES/CTR/NoPadding')]
+    update_service_config(service_name='HDFS', api_config_items=hadoop_security_authentication)
+    update_service_config(service_name='HDFS', api_config_items=hadoop_security_authorization)
+    update_service_config(service_name='HDFS', api_config_items=dfs_encrypt_data_transfer_algorithm)
+    # KAFKA
+    kerberos_auth_enable = [cm_client.ApiConfig(name='kerberos.auth.enable', value='true')]
+    update_service_config(service_name='KAFKA', api_config_items=kerberos_auth_enable)
+    # ZOOKEEPER
+    enableSecurity = [cm_client.ApiConfig(name='enableSecurity', value='true')]
+    quorum_auth_enable_sasl = [cm_client.ApiConfig(name='quorum_auth_enable_sasl', value='true')]
+    update_service_config(service_name='ZOOKEEPER', api_config_items=enableSecurity)
+    update_service_config(service_name='ZOOKEEPER', api_config_items=quorum_auth_enable_sasl)
+    # print('-->Generate Kerberos Credentials')
+    # generate_kerberos_credentials()
+    # wait_for_active_mgmt_commands('Generating Missing Kerberos Credentials')
+    print('-->Stop Cluster Services')
+    cluster_action('stop_command')
+    wait_for_active_cluster_service_commands('Stopping Cluster Services')
+    mgmt_service('stop_command')
+    print('-->Configure Cluster for Kerberos')
+    configure_for_kerberos()
+    wait_for_active_cluster_service_commands('Configuring for Kerberos')
+    print('-->Deploy Cluster Kerberos Configuration')
+    cluster_action('deploy_cluster_client_config')
+    wait_for_active_cluster_service_commands('Deploying Cluster Kerberos Client Config')
+    # print('-->Generate Kerberos Credentials')
+    # generate_kerberos_credentials()
+    # wait_for_active_mgmt_commands('Generating Missing Kerberos Credentials')
+    print('-->Start Cluster Services')
+    cluster_action('start_command')
+    wait_for_active_cluster_service_commands('Starting Cluster Services')
+    mgmt_service('start_command')
+    print('-->Deploy Client Configuration')
+    cluster_action('deploy_client_config')
+    wait_for_active_cluster_commands('Deploy Cluster Client Config')
+    if debug == 'True':
+        print('->Listing Kerberos Principals')
+        get_kerberos_principals()
+
 
 #
 # MAIN EXECUTION
 #
 
 if __name__ == '__main__':
-    cm_server, host_fqdn_list, disk_count, license_file, worker_shape = options_parser(sys.argv[1:])
+    cm_server, host_fqdn_list, disk_count, license_file, worker_shape, BUILD, DELETE = options_parser(sys.argv[1:])
+    if DELETE == True:
+        print('Delete %s selected' % cluster_name)
+        print('Are you absolutely sure you want to DELETE %s?' % cluster_name)
+        response = raw_input('Type YES to proceed: ')
+        type(response)
+        if response == 'YES':
+            build_api_endpoints(admin_user_name, admin_password)
+            print('-->Stop Cluster Services')
+            cluster_action('stop_command')
+            wait_for_active_cluster_service_commands('Stopping Cluster Services')
+            delete_cluster()
+            print('%s Delete issued' % cluster_name)
+            exit(0)
+        else:
+            print('%s response - exiting' % response)
+            exit(1)
     if debug == 'True':
         print('cm_server = %s' % cm_server)
         print('input_host_list = %s' % host_fqdn_list)
         print('disk_count = %s' % disk_count)
         print('license_file = %s' % license_file)
         print('worker_shape = %s' % worker_shape)
-
-    user_name = 'admin'
-    password = 'admin'
-    print('->Building API Endpoints')
-    build_api_endpoints(user_name, password)
-    print('->Looking for Cloudera Manager Server: %s:%s' % (cm_server, cm_port))
-    ready = 1
-    active_command = 'Cloudera Manager Startup Detection'
-    wait_status = '[*'
-    while ready == 1:
-        sys.stdout.write('\r%s - Waiting for Response: %s' % (active_command, wait_status))
-        check_ip_port(cm_server, int(cm_port))
-        if success == 'True':
-            check_cm_version()
-            if cm_version == 'Null':
-                build_api_endpoints(admin_user_name, admin_password)
+    if BUILD == True:
+        user_name = 'admin'
+        password = 'admin'
+        print('->Building API Endpoints')
+        build_api_endpoints(user_name, password)
+        print('->Looking for Cloudera Manager Server: %s:%s' % (cm_server, cm_port))
+        ready = 1
+        active_command = 'Cloudera Manager Startup Detection'
+        wait_status = '[*'
+        while ready == 1:
+            sys.stdout.write('\r%s - Waiting for Response: %s' % (active_command, wait_status))
+            check_ip_port(cm_server, int(cm_port))
+            if success == 'True':
                 check_cm_version()
+                if cm_version == 'Null':
+                    build_api_endpoints(admin_user_name, admin_password)
+                    check_cm_version()
 
-            sys.stdout.write(']\n')
-            print('Cloudera Manager Detected: %s' % cm_version)
-            ready = 0
+                sys.stdout.write(']\n')
+                print('Cloudera Manager Detected: %s' % cm_version)
+                ready = 0
+            else:
+                sys.stdout.flush()
+                time.sleep(30)
+                wait_status = wait_status + '*'
+
+        check_if_cluster_exists(cluster_name)
+        if cluster_exists == 'False':
+            print('%s does not exist - creating.' % cluster_name)
+            build_cloudera_cluster()
+            if secure_cluster == 'True':
+                print('->Enable Kerberos')
+                enable_kerberos()
+
+            print('Access Cloudera Manager: http://%s:%s/cmf/' % (cm_server, cm_port))
+        elif cluster_exists == 'True':
+            print('%s exists.' % cluster_name)
+            if debug == 'True':
+                print('->Host List Follows')
+                list_hosts()
+                pprint(cluster_host_list)
+                print('->Full Deployment Follows')
+                get_deployment_full()
         else:
-            sys.stdout.flush()
-            time.sleep(30)
-            wait_status = wait_status + '*'
-
-    #debug = 'True'
-    check_if_cluster_exists(cluster_name)
-    if cluster_exists == 'False':
-        print('%s does not exist - creating.' % cluster_name)
-        build_cloudera_cluster()
-        print('Access Cloudera Manager: http://%s:%s/cmf/' % (cm_server, cm_port))
-    elif cluster_exists == 'True':
-        print('%s exists.' % cluster_name)
-        if debug == 'True':
-            print('->Host List Follows')
-            list_hosts()
-            pprint(cluster_host_list)
-            print('->Full Deployment Follows')
-            get_deployment_full()
-        #delete_cluster()
+            print('Cluster Check returned null: %s' % cluster_exists)
     else:
-        print('Cluster Check returned null: %s' % cluster_exists)
-
-
-
-
-
-
-
-
+        print('No cluster action selected...')

@@ -10,6 +10,10 @@ log() {
 EXECNAME="TUNING"
 
 log "->START"
+# Disable SELinux
+sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+setenforce 0
+
 ## Modify resolv.conf to ensure DNS lookups work
 rm -f /etc/resolv.conf
 echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf

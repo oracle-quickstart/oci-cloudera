@@ -13,14 +13,68 @@ log "->TUNING START"
 # HOST TUNINGS
 # 
 
+# Disable SELinux
+sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+setenforce 0
+
 ## Modify resolv.conf to ensure DNS lookups work
 rm -f /etc/resolv.conf
 echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
 echo "nameserver 169.254.169.254" >> /etc/resolv.conf
 
-## Install Java
-yum install java-1.8.0-openjdk.x86_64 -y
+EXECNAME="JAVA - KERBEROS"
+log "->INSTALL"
+## Install Java & Kerberos client
+yum install java-1.8.0-openjdk.x86_64 krb5-workstation -y
 
+EXECNAME="KERBEROS"
+log "->krb5.conf"
+## Configure krb5.conf
+kdc_server='cdh-utility-1'
+kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
+realm="hadoop.com"
+REALM="HADOOP.COM"
+log "-> CONFIG"
+rm -f /etc/krb5.conf
+cat > /etc/krb5.conf << EOF
+# Configuration snippets may be placed in this directory as well
+includedir /etc/krb5.conf.d/
+
+[libdefaults]
+ default_realm = ${REALM}
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ rdns = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d  
+ forwardable = true
+ udp_preference_limit = 1000000
+ default_tkt_enctypes = rc4-hmac 
+ default_tgs_enctypes = rc4-hmac
+ permitted_enctypes = rc4-hmac
+
+[realms]
+    ${REALM} = {
+        kdc = ${kdc_fqdn}:88
+        admin_server = ${kdc_fqdn}:749
+        default_domain = ${realm}
+    }
+
+[domain_realm]
+    .${realm} = ${REALM}
+     ${realm} = ${REALM}
+
+[kdc]
+    profile = /var/kerberos/krb5kdc/kdc.conf
+
+[logging]
+    kdc = FILE:/var/log/krb5kdc.log
+    admin_server = FILE:/var/log/kadmin.log
+    default = FILE:/var/log/krb5lib.log
+EOF
+
+EXECNAME="TUNING"
+log "->OS"
 ## Disable Transparent Huge Pages
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
@@ -44,6 +98,7 @@ echo net.ipv4.tcp_low_latency=1 >> /etc/sysctl.conf
 ## Tune File System options
 sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
 
+log "->SSH"
 ## Enable root login via SSH key
 cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
 cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
@@ -55,26 +110,29 @@ hbase -       nofile  32768
 hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 
+log "->FirewallD"
 systemctl stop firewalld
 systemctl disable firewalld
 
 ## Post Tuning Execution Below
-
+EXECNAME="MYSQL Connector"
 ## MySQL Connector Install
+log "->INSTALL"
 wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.tar.gz
 tar zxvf mysql-connector-java-5.1.46.tar.gz
 mkdir -p /usr/share/java/
 cd mysql-connector-java-5.1.46
 cp mysql-connector-java-5.1.46-bin.jar /usr/share/java/mysql-connector-java.jar
 
+EXECNAME="SLEEP"
+log "->START"
+sleep 300
+# Sleep for 5 minutes to allow block volume attachments time to finish
+log "->DONE"
+
 #
 # DISK SETUP
 #
-
-EXECNAME="SLEEP"
-## SLEEP HERE - GIVE TIME FOR BLOCK VOLUMES TO ATTACH
-log "->SLEEP"
-sleep 180 
 
 vol_match() {
 case $i in
@@ -225,57 +283,5 @@ for i in `seq 1 ${#iqn[@]}`; do
 	done;
 done;
 fi
-# Kerberos Workstation Setup
-EXECNAME="KERBEROS"
-log "-> INSTALL"
-yum install krb5-workstation
-
-KERBEROS_PASSWORD="SOMEPASSWORD"
-OPC_USER_PASSWORD="somepassword"
-kdc_server="cdh-utility-1"
-kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
-realm="hadoop.com"
-REALM="HADOOP.COM"
-log "-> CONFIG"
-rm -f /etc/krb5.conf
-cat > /etc/krb5.conf << EOF
-# Configuration snippets may be placed in this directory as well
-includedir /etc/krb5.conf.d/
-
-[libdefaults]
- default_realm = ${REALM}
- dns_lookup_realm = false
- dns_lookup_kdc = false
- rdns = false
- ticket_lifetime = 24h
- renew_lifetime = 7d  
- forwardable = true
- udp_preference_limit = 1000000
- default_tkt_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
- default_tgs_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
- permitted_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
-
-[realms]
-    ${REALM} = {
-        kdc = ${kdc_fqdn}:88
-        admin_server = ${kdc_fqdn}:749
-        default_domain = ${realm}
-    }
-
-[domain_realm]
-    .${realm} = ${REALM}
-     ${realm} = ${REALM}
-
-[kdc]
-    profile = /var/kerberos/krb5kdc/kdc.conf
-
-[logging]
-    kdc = FILE:/var/log/krb5kdc.log
-    admin_server = FILE:/var/log/kadmin.log
-    default = FILE:/var/log/krb5lib.log
-EOF
-log "-> Principal & ticket"
-echo -e "${KERBEROS_PASSWORD}\naddprinc -randkey host/client.${REALM}\nktadd host/kdc.${REALM}" | kadmin -p root/admin
-
 EXECNAME="END"
 log "->DONE"

@@ -10,6 +10,10 @@ log() {
 EXECNAME="TUNING"
 
 log "-> START"
+# Disable SELinux
+sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+setenforce 0
+
 ## Modify resolv.conf to ensure DNS lookups work
 rm -f /etc/resolv.conf
 echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
@@ -56,9 +60,9 @@ cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
 EXECNAME="KERBEROS"
 log "-> INSTALL"
 
-yum -y install krb5-server krb5-libs
+yum -y install krb5-server krb5-libs krb5-workstation
 KERBEROS_PASSWORD="SOMEPASSWORD"
-OPC_USER_PASSWORD="somepassword"
+SCM_USER_PASSWORD="somepassword"
 kdc_server=$(hostname)
 kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
 realm="hadoop.com"
@@ -78,9 +82,9 @@ includedir /etc/krb5.conf.d/
  renew_lifetime = 7d  
  forwardable = true
  udp_preference_limit = 1000000
- default_tkt_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
- default_tgs_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
- permitted_enctypes = des-cbc-md5 des-cbc-crc des3-cbc-sha1
+ default_tkt_enctypes = rc4-hmac 
+ default_tgs_enctypes = rc4-hmac
+ permitted_enctypes = rc4-hmac
 
 [realms]
     ${REALM} = {
@@ -121,7 +125,7 @@ default_realm = ${REALM}
         max_life = 10h 0m 0s
         max_renewable_life = 7d 0h 0m 0s
         master_key_type = des3-hmac-sha1
-        supported_enctypes = arcfour-hmac:normal des3-hmac-sha1:normal des-cbc-crc:normal des:normal des:v4 des:norealm des:onlyrealm des:afs3
+        supported_enctypes = rc4-hmac:normal 
         default_principal_flags = +preauth
     }
 EOF
@@ -129,11 +133,12 @@ EOF
 rm -f /var/kerberos/krb5kdc/kadm5.acl
 cat > /var/kerberos/krb5kdc/kadm5.acl << EOF
 */admin@${REALM}    *
+cloudera-scm@${REALM}	*
 EOF
 
 kdb5_util create -r ${REALM} -s -P ${KERBEROS_PASSWORD}
 
-echo -e "addprinc root/admin\n${KERBEROS_PASSWORD}\n${KERBEROS_PASSWORD}\naddprinc opc\n${OPC_USER_PASSWORD}\n${OPC_USER_PASSWORD}\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/admin\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/changepw\nexit\n" | kadmin.local -r ${REALM}
+echo -e "addprinc root/admin\n${KERBEROS_PASSWORD}\n${KERBEROS_PASSWORD}\naddprinc cloudera-scm\n${SCM_USER_PASSWORD}\n${SCM_USER_PASSWORD}\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/admin\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/changepw\nexit\n" | kadmin.local -r ${REALM}
 log "-> START"
 systemctl start krb5kdc.service
 systemctl start kadmin.service
@@ -147,7 +152,11 @@ rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cl
 wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
 yum install oracle-j2sdk* cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y
 pip install psycopg2==2.7.5 --ignore-installed
-yum install cloudera-manager-daemons -y
+yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y
+cm_host=`host cdh-utility-1 | gawk '{print $1}'`
+cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
+sed -e "s/\(server_host=\).*/\1${cm_host}/" -i /etc/cloudera-scm-agent/config.ini
+systemctl start cloudera-scm-agent
 
 create_random_password()
 {

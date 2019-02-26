@@ -5,6 +5,7 @@ resource "oci_core_instance" "Utility" {
   hostname_label      = "CDH-Utility-1"
   shape               = "${var.master_instance_shape}"
   subnet_id           = "${oci_core_subnet.public.*.id[var.availability_domain - 1]}"
+  fault_domain	      = "FAULT-DOMAIN-3"
 
   source_details {
     source_type             = "image"
@@ -30,6 +31,7 @@ resource "oci_core_instance" "Master" {
   hostname_label      = "CDH-Master-${format("%01d", count.index+1)}"
   shape               = "${var.master_instance_shape}"
   subnet_id           = "${oci_core_subnet.private.*.id[var.availability_domain - 1]}"
+  fault_domain	      = "FAULT-DOMAIN-${(count.index%3)+1}"
 
   source_details {
     source_type             = "image"
@@ -79,6 +81,7 @@ resource "oci_core_instance" "Worker" {
   hostname_label      = "CDH-Worker-${format("%01d", count.index+1)}"
   shape               = "${var.worker_instance_shape}"
   subnet_id           = "${oci_core_subnet.private.*.id[var.availability_domain - 1]}"
+  fault_domain        = "FAULT-DOMAIN-${(count.index%3)+1}"
 
   source_details {
     source_type             = "image"

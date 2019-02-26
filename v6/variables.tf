@@ -49,21 +49,24 @@ variable "data_blocksize_in_gbs" {
   default = "700"
 }
 
-# Desired HDFS Capacity in GB
+# Desired HDFS Capacity in GB backed by Block Volumes
 # This is used to calcuate number of block volumes per worker.  Adjust data_blocksize_in_gbs as appropriate
 # based on number of workers.  For example:
 # 5 workers @ 700GB Volume Size = Max HDFS Capacity 105 TB, 35 TB Usable with 3x Replication
 # 10 workers @ 1TB Volume Size = Max HDFS Capacity 300 TB, 100 TB Usable with 3x Replication
 # 10 workers @ 2TB Volume Size = Max HDFS Capacity 600 TB, 200 TB Usable with 3x Replication
- 
+# If using DenseIO local storage only - set this to '0'
+# If using Heterogenous storage, this will add Block Volume capacity on top of Local storage.
+# When using Heterogenous storage - be sure to modify the deploy_on_oci.py and set data_tiering flag to 'True'
+
 variable "hdfs_usable_in_gbs" {
   default = "3000"
 }
 
 # Number of Block Volumes per Worker
 # Minimum recommended is 3 - Scale up to 32 per compute host
-# This is calculated in the template as a factor of DFS replication factor against 
-# HDFS Capacity divided by Block Volume size
+# This is calculated in the template as a combination of DFS replication factor against 
+# HDFS Capacity in GBs divided by Block Volume size
 
 variable "block_volumes_per_worker" {
    default = "3"
