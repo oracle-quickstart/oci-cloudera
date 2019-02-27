@@ -157,8 +157,7 @@ cm_host=`host cdh-utility-1 | gawk '{print $1}'`
 cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
 sed -e "s/\(server_host=\).*/\1${cm_host}/" -i /etc/cloudera-scm-agent/config.ini
 # AUTO-TLS Enable
-export JAVA_HOME=/usr/java/jdk1.8.0_141-cloudera 
-/opt/cloudera/cm-agent/bin/certmanager setup --configure-services
+sudo JAVA_HOME=/usr/java/jdk1.8.0_141 /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
 systemctl start cloudera-scm-agent
 
 create_random_password()

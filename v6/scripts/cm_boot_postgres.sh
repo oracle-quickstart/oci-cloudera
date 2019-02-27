@@ -155,8 +155,7 @@ pip install psycopg2==2.7.5 --ignore-installed
 yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y
 
 # AUTO-TLS Enable
-export JAVA_HOME=/usr/java/jdk1.8.0_141-cloudera 
-/opt/cloudera/cm-agent/bin/certmanager setup --configure-services
+JAVA_HOME=/usr/java/jdk1.8.0_141 /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
 
 install_postgres(){
 ##
