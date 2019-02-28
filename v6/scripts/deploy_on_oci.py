@@ -835,6 +835,8 @@ def dda_parcel(parcel_product):
     print("\n%s parcel %s version %s on cluster %s" % (target_stage, parcel_product, parcel_version, cluster_name))
     print("Activating Parcel %s" % parcel_product)
     parcel_api.activate_command(cluster_name, parcel_product, parcel_version)
+    target_stage = 'ACTIVATED'
+    monitor_parcel(parcel_product, parcel_version, target_stage)
 
 
 def get_parcel_status(parcel_product):
@@ -848,6 +850,18 @@ def get_parcel_status(parcel_product):
     for x in range(0, len(parcel.items)):
         if parcel.items[x].name == parcel_product:
             print(parcels.items[x])
+
+
+def read_parcels():
+    """
+    List all parcels the cluster has access to
+    :return:
+    """
+    try:
+        api_response = parcels_api.read_parcels(cluster_name, view='FULL')
+        pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ParcelResourceApi->read_parcels {}'.format(e))
 
 
 def delete_parcel(parcel_product, parcel_version):

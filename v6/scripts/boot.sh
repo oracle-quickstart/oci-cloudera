@@ -241,7 +241,7 @@ nvcount="0"
 bvcount="0"
 ## Execute - will format all devices except sda for use as data disks in HDFS
 dcount=0
-for disk in `ls /dev/ | grep nvme`; do
+for disk in `ls /dev/ | grep nvme | grep n1`; do
 	log "-->Processing /dev/$disk"
   	mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/$disk
     	data_mount
