@@ -31,6 +31,10 @@ cm_server = 'None'
 input_host_list = 'None'
 license_file = 'None'
 host_fqdn_list = []
+# Data Tiering - Enabled when using Heterogenous storage in your cluster, automatically turns on if using DenseIO shapes
+# and a Block Volume count greater than 0.  Defaults to 'False"
+data_tiering = 'False'
+nvme_disks = 0
 
 #
 # Custom Global Parameters - Customize below here
@@ -71,10 +75,6 @@ cluster_version = '6.1.0'  # type: str
 # For MySQL this is 3306
 # For Postgres this is 5432
 meta_db_port = '3306'
-
-# Data Tiering - set this to 'True' if you wish to use Heterogenous storage in your cluster.
-# This enables mixing local storage and Block Volumes to achieve higher HDFS capacity
-data_tiering = 'False'
 
 # Define Remote Parcel URL & Distribution Rate if desired
 remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
@@ -636,7 +636,7 @@ def build_cluster_host_list(host_fqdn_list):
         print('Cluster Host List: %s' % cluster_host_list)
 
 
-def build_disk_lists():
+def build_disk_lists(disk_count, data_tiering):
     """
     Build Disk Lists for use with HDFS and YARN
     :return:
@@ -645,7 +645,23 @@ def build_disk_lists():
     dfs_data_dir_list = ''
     global yarn_data_dir_list
     yarn_data_dir_list = ''
+    if 'DenseIO' in worker_shape:
+        if int(disk_count) >= 1:
+            data_tiering = 'True'
+        if worker_shape == 'BM.DenseIO2.52':
+            nvme_disks = 8
+        if worker_shape == 'VM.DenseIO2.24':
+            nvme_disks = 4
+        if worker_shape == 'VM.DenseIO2.16':
+            nvme_disks = 2
+        if worker_shape == 'VM.DenseIO2.8':
+            nvme_disks = 1
+        if worker_shape == 'BM.HPC2.36':
+            nvme_disks = 1
+
     if data_tiering == 'False':
+        if nvme_disks >= 1:
+            disk_count = nvme_disks
         for x in range(0, int(disk_count)):
             if x is 0:
                 dfs_data_dir_list += "/data%d/dfs/dn" % x
@@ -654,36 +670,17 @@ def build_disk_lists():
                 dfs_data_dir_list += ",/data%d/dfs/dn" % x
                 yarn_data_dir_list += ",/data%d/yarn/nm" % x
 
-    elif data_tiering == 'True':
-        global local_disks
-        if worker_shape == 'BM.DenseIO2.52':
-            local_disks = 8
-
-        if worker_shape == 'VM.DenseIO2.24':
-            local_disks = 4
-
-        if worker_shape == 'VM.DenseIO2.16':
-            local_disks = 2
-
-        if worker_shape == 'VM.DenseIO2.8':
-            local_disks = 1
-
-        if worker_shape == 'BM.HPC2.36':
-            local_disks = 1
-
-        total_disk_count = disk_count + local_disks
+    if data_tiering == 'True':
+        total_disk_count = int(disk_count) + nvme_disks
         for x in range(0, int(total_disk_count)):
             if x is 0:
                 dfs_data_dir_list += "[DISK]/data%d/dfs/dn" % x
-            elif x < local_disks:
+                yarn_data_dir_list += "/data%d/yarn/nm" % x
+            elif x < nvme_disks:
                 dfs_data_dir_list += ",[DISK]/data%d/dfs/dn" % x
             else:
                 dfs_data_dir_list += ",[ARCHIVE]/data%d/dfs/dn" % x
             yarn_data_dir_list += ",/data%d/yarn/nm" % x
-
-    else:
-        print('Invalid Data Tiering flag - expected True or False: %s\n' % data_tiering)
-        sys.exit()
 
 
 def add_hosts_to_cluster(cluster_host_list):
@@ -2423,7 +2420,7 @@ def build_cloudera_cluster():
     :return:
     """
     parse_ssh_key()
-    build_disk_lists()
+    build_disk_lists(disk_count, data_tiering)
     try:
         api_response = users_api.read_user2(admin_user_name)
         if api_response.auth_roles:
