@@ -523,7 +523,11 @@ def remote_host_detection():
 
     except:
         pass
-    print('\t%d found' % len(host_fqdn_list))
+    if len(host_fqdn_list) < 1:
+        print('\tCloudera Manager host not found!')
+        sys.exit()
+    else:
+        print('\t%d found' % len(host_fqdn_list))
     # Master Host Detection
     x = 1
     print('->Lookup Master Hosts FQDN')
@@ -541,7 +545,11 @@ def remote_host_detection():
                 host_ip_list.append(fqdn[3])
 
             else:
-                print('\t%d found' % (x - 1))
+                if (x-1) < 2:
+                    print('\t%d Master hosts found, minimum 2 required!' % (x-1))
+                    sys.exit()
+                else:
+                    print('\t%d found' % (x - 1))
                 x = 0
 
         except:
@@ -571,7 +579,11 @@ def remote_host_detection():
                 host_ip_list.append(fqdn[3])
 
             else:
-                print('\t%d found' % (x - 1))
+                if (x-1) < 3:
+                    print('\t%d Workers found, minimum 3 required!' % (x-1))
+                    sys.exit()
+                else:
+                    print('\t%d found' % (x - 1))
                 x = 0
 
         except:
@@ -1172,7 +1184,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
     for service in cluster_service_list:
         build_role_config_group_list(service)
         message = 'Cluster Build Update'
-        print('->Updating ' + service + ' Configuration\n')
+        print('->Updating ' + service + ' Configuration')
         if service == 'FLUME':
             for rcg in role_config_group_list:
                 if rcg == 'FLUME-AGENT-BASE':
@@ -1746,7 +1758,7 @@ def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
     role_api_packet = [cm_client.ApiRole(name=role_name, type=rcg_roletype, host_ref=host_ref,
                                          role_config_group_ref=role_config_group_ref, service_ref=service_ref)]
     body = cm_client.ApiRoleList(role_api_packet)
-    print('->Creating Role %s for %s' % (role_name, hostname))
+    print('--->Creating Role %s for %s' % (role_name, hostname))
 
     try:
         api_response = roles_api.create_roles(cluster_name, service, body=body)
@@ -2362,6 +2374,25 @@ def generate_kerberos_credentials():
         print('Exception calling ClouderaManagerResourceApi->generate_credentials_command: {}'.format(e))
 
 
+def hdfs_enable_ha():
+    """
+    Enable high availability (HA) for an HDFS NameNode.
+
+    The command will set up the given "active" and "stand-by" NameNodes as an HA pair. Both nodes need to already exist.
+
+    If there is a SecondaryNameNode associated with either given NameNode instance, it will be deleted.
+
+    Note that while the shared edits path may be different for both nodes,
+    they need to point to the same underlying storage
+
+    As part of enabling HA, any services that depend on the HDFS service being modified will be stopped.
+    The command arguments provide options to re-start these services and to re-deploy the client configurations for
+    services of the cluster after HA has been enabled.
+    :return:
+    """
+
+
+
 #
 # END SECONDARY FUNCTIONS
 #
@@ -2443,6 +2474,9 @@ def build_cloudera_cluster():
     if input_host_list == 'None':
         print('->No input host list found, running remote detection via SSH')
         remote_host_detection()
+        if len(host_fqdn_list) < 6:
+            print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
+            sys.exit()
 
     else:
         print('->Input host list found: %s' % input_host_list)
