@@ -648,7 +648,7 @@ def build_cluster_host_list(host_fqdn_list):
         print('Cluster Host List: %s' % cluster_host_list)
 
 
-def build_disk_lists(disk_count, data_tiering):
+def build_disk_lists(disk_count, data_tiering, nvme_disks):
     """
     Build Disk Lists for use with HDFS and YARN
     :return:
@@ -2374,23 +2374,24 @@ def generate_kerberos_credentials():
         print('Exception calling ClouderaManagerResourceApi->generate_credentials_command: {}'.format(e))
 
 
-def hdfs_enable_ha():
+def update_license():
     """
-    Enable high availability (HA) for an HDFS NameNode.
-
-    The command will set up the given "active" and "stand-by" NameNodes as an HA pair. Both nodes need to already exist.
-
-    If there is a SecondaryNameNode associated with either given NameNode instance, it will be deleted.
-
-    Note that while the shared edits path may be different for both nodes,
-    they need to point to the same underlying storage
-
-    As part of enabling HA, any services that depend on the HDFS service being modified will be stopped.
-    The command arguments provide options to re-start these services and to re-deploy the client configurations for
-    services of the cluster after HA has been enabled.
+    Update Cloudera Manager License
     :return:
     """
-
+    try:
+        with open(license_file) as l:
+            body = l.read()
+            try:
+                api_response = cloudera_manager_api.update_license(body=body)
+                if debug == 'True':
+                    pprint(api_response)
+            except ApiException as e:
+                print('Exception calling Cloudera Manager Resource API -> update_license {}'.format(e))
+    except:
+        print('License file %s not found!' % license_file)
+        print('Using Trial License instead...')
+        begin_trial()
 
 
 #
@@ -2437,6 +2438,16 @@ def options_parser(args=None):
             print('Worker Shape is required.')
             parser.print_help()
             exit(-1)
+    if options.license_file:
+        try:
+            with open(options.license_file) as l:
+                license = l.read()
+                if debug == 'True':
+                    print('License File Info:\n%s' % license)
+        except:
+            print('Cannot open license file, verify file exists and full path used: %s' % options.license_file)
+            sys.exit()
+
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
             options.BUILD, options.DELETE)
 
@@ -2451,7 +2462,7 @@ def build_cloudera_cluster():
     :return:
     """
     parse_ssh_key()
-    build_disk_lists(disk_count, data_tiering)
+    build_disk_lists(disk_count, data_tiering, nvme_disks)
     try:
         api_response = users_api.read_user2(admin_user_name)
         if api_response.auth_roles:
@@ -2534,8 +2545,11 @@ def build_cloudera_cluster():
     print('->Restart MGMT Roles')
     mgmt_role_commands(action='restart_command')
     # TODO - Need to refactor here if license is provided
-    print('->Activating Trial License')
-    begin_trial()
+    if license_file == 'None':
+        print('->Activating Trial License')
+        begin_trial()
+    else:
+        update_license()
     print('->Executing first_run on Cluster - %s' % cluster_name)
     try:
         api_response = clusters_api.first_run(cluster_name)
