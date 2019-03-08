@@ -1191,7 +1191,6 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'AGENT'
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
-                    pass
 
         if service == 'HBASE':
             for rcg in role_config_group_list:
@@ -1243,7 +1242,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                       namenode_java_heapsize, namenode_log_dir, dfs_namenode_servicerpc_address]
                     for config in nn_config_list:
                         push_rcg_config(config)
-                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
+                    create_role(rcg, rcg_roletype, service, snn_host_id, nn_hostname, 1)
 
                 if rcg == 'HDFS-DATANODE-BASE':
                     print('-->Updating RCG: %s' % rcg)
@@ -1331,7 +1330,6 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 1)
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 2)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 3)
-                    pass
 
         if service == 'HIVE':
             for rcg in role_config_group_list:
@@ -2394,6 +2392,21 @@ def update_license():
         begin_trial()
 
 
+def hdfs_enable_nn_ha(nn_hostname, snn_hostname, snn_host_id):
+    """
+    Enable High Availability (HA) with Automatic Failover for an HDFS NameNode.
+    :return:
+    """
+    body = cm_client.ApiEnableNnHaArguments(active_nn_name=nn_hostname, standby_nn_name=snn_hostname,
+                                            standby_nn_host_id=snn_host_id)
+    try:
+        api_response = services_api.hdfs_enable_nn_ha_command(cluster_name, 'HDFS', body=body)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ServicesResourceApi -> hdfs_enable_ha_command {}'.format(e))
+
+
 #
 # END SECONDARY FUNCTIONS
 #
@@ -2701,6 +2714,7 @@ if __name__ == '__main__':
                 pprint(cluster_host_list)
                 print('->Full Deployment Follows')
                 get_deployment_full()
+                
         else:
             print('Cluster Check returned null: %s' % cluster_exists)
     else:
