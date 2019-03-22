@@ -62,7 +62,7 @@ This does require some knowledge of Python - modify at your own risk.  These fun
 
 ## Kerberos Secure Cluster by Default
 
-This automation now defaults to using a local KDC deployed on the Cloudera Manager instance for secure cluster operation.  Please read the scripts [README](../v6/scripts/README.md) for information regarding how to set these parameters prior to deployment.
+This automation now defaults to using a local KDC deployed on the Cloudera Manager instance for secure cluster operation.  Please read the scripts [README](../scripts/README.md) for information regarding how to set these parameters prior to deployment.
 
 Also - for cluster management, you will need to manually create at a minimum the HDFS Superuser Principal as [detailed here](https://www.cloudera.com/documentation/enterprise/latest/topics/cm_sg_using_cm_sec_config.html#create-hdfs-superuser) after deployment.
 
