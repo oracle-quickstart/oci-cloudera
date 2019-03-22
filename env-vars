@@ -1,0 +1,27 @@
+### Authentication details
+export TF_VAR_tenancy_ocid=""
+export TF_VAR_user_ocid=""
+export TF_VAR_fingerprint=""
+export TF_VAR_private_key_path="/home/opc/.ssh/oci_api_key.pem"
+
+### Region
+export TF_VAR_region="us-phoenix-1"
+
+### Compartment
+export TF_VAR_compartment_ocid=""
+
+### Public/private keys used on the instance
+export TF_VAR_ssh_public_key=$(cat /home/opc/.ssh/id_rsa.pub)
+export TF_VAR_ssh_private_key=$(cat /home/opc/.ssh/id_rsa)
+
+## AD
+export TF_VAR_availability_domain="2"
+
+## Customize the shape to be used for bastion Host
+export TF_VAR_bastion_instance_shape="VM.Standard2.8"
+## Customize the shape to be used for master Hosts
+export TF_VAR_master_instance_shape="VM.Standard2.8"
+## Customize the shape to be used for worker Hosts
+export TF_VAR_worker_instance_shape="BM.DenseIO2.52"
+## Set the number of worker Nodes - this allows dynamic scaling for workers
+export TF_VAR_worker_node_count="5"
