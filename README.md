@@ -32,7 +32,7 @@ On Mac, installation can be peformed using the following commands:
 Now, you'll want a local copy of this repo.  You can make that with the commands:
 
     git clone https://github.com/oci-quickstart/oci-cloudera.git
-    cd oci-cloudera/v6
+    cd oci-cloudera
     ls
 
 ## Python Deployment using cm_client
