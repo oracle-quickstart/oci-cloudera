@@ -1,5 +1,5 @@
 # oci-cloudera
-This module deploys a cluster of arbitrary size using Cloudera Enterprise Data Hub v6 and Cloudera Manager v6.1.
+This module deploys a cluster of arbitrary size on [Oracle Cloud Infrastructure](https://cloud.oracle.com/en_US/iaas) using Cloudera Enterprise Data Hub v6 and Cloudera Manager v6.1.
 
 Future development will include support for EDH v5 clusters.  In the meantime, use the [1.0.0 release](https://github.com/oci-quickstart/oci-cloudera/releases/tag/1.0.0) for v5 deployments.
 
