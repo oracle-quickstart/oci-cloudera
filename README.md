@@ -6,6 +6,7 @@ Future development will include support for EDH v5 clusters.  In the meantime, u
 |             | Worker Nodes   | Bastion Instance | Utility and Master Instances |
 |-------------|----------------|------------------|------------------------------|
 | Recommended | BM.DenseIO2.52 | VM.Standard2.4   | VM.Standard2.16              |
+| Minimum     | VM.Standard2.8 | VM.Standard2.1   | VM.Standard2.8               |
 
 Host types can be customized in the env-vars file referenced below.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See "variables.tf" for more information in-line.
 
