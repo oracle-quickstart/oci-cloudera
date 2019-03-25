@@ -106,8 +106,3 @@ When you no longer need the deployment, you can run this command to destroy it:
 Currently this module requires Cloudera Manager API to be on an edge host with a Public IP address.   This is used to trigger cluster deployment, as well as SSH into the Cloudera Manger host to perform dynamic host discovery to map for Cluster topology.   
 
 Future enhancements to this module are planned to support a completely Private (non-Internet exposed) cluster deployment.
-
-
-
-
-
