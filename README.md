@@ -82,6 +82,7 @@ Note that you will also need to change "meta_db_port" in deploy_on_oci.py if you
 ## Deployment Syntax
 Deployment of the module is straight forward using the following Terraform commands
 
+	source env-vars
 	terraform init
 	terraform plan
 	terraform apply
