@@ -8,7 +8,7 @@ Future development will include support for EDH v5 clusters.  In the meantime, u
 | Recommended | BM.DenseIO2.52 | VM.Standard2.4   | VM.Standard2.16              |
 | Minimum     | VM.Standard2.8 | VM.Standard2.1   | VM.Standard2.8               |
 
-Host types can be customized in the env-vars file referenced below.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See "variables.tf" for more information in-line.
+Host types can be customized in this template.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See "variables.tf" for more information in-line.
 
 ## Prerequisites
 First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oci-quickstart/oci-prerequisites).
@@ -82,7 +82,6 @@ Note that you will also need to change "meta_db_port" in deploy_on_oci.py if you
 ## Deployment Syntax
 Deployment of the module is straight forward using the following Terraform commands
 
-	source env-vars
 	terraform init
 	terraform plan
 	terraform apply
