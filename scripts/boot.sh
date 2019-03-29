@@ -124,12 +124,6 @@ mkdir -p /usr/share/java/
 cd mysql-connector-java-5.1.46
 cp mysql-connector-java-5.1.46-bin.jar /usr/share/java/mysql-connector-java.jar
 
-EXECNAME="SLEEP"
-log "->START"
-sleep 300
-# Sleep for 5 minutes to allow block volume attachments time to finish
-log "->DONE"
-
 #
 # DISK SETUP
 #
@@ -187,30 +181,66 @@ iscsi_target_only(){
 
 ## Look for all ISCSI devices in sequence, finish on first failure
 EXECNAME="ISCSI"
-done="0"
-log "-- Detecting Block Volumes --"
-for i in `seq 2 33`; do
-	if [ $done = "0" ]; then
-		iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
-		iscsi_chk=`echo -e $?`
-		if [ $iscsi_chk = "0" ]; then
-			# IQN list is important set up this array with discovered IQNs
-			iqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'` 
-			log "-> Discovered volume $((i-1)) - IQN: ${iqn[${i}]}"
-			continue
-		else
-			log "--> Discovery Complete - ${#iqn[@]} volumes found"
-			done="1"
+log "- Begin Block Volume Detection Loop -"
+detection_flag="0"
+while [ "$detection_flag" = "0" ]; do
+	detection_done="0"
+	log "-- Detecting Block Volumes --"
+	for i in `seq 2 33`; do
+		if [ $detection_done = "0" ]; then
+			iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+			iscsi_chk=`echo -e $?`
+			if [ $iscsi_chk = "0" ]; then
+				# IQN list is important set up this array with discovered IQNs
+				iqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'` 
+				log "-> Discovered volume $((i-1)) - IQN: ${iqn[${i}]}"
+				continue
+			else
+				volume_count="${#iqn[@]}"
+				log "--> Discovery Complete - ${#iqn[@]} volumes found"
+				detection_done="1"
+			fi
 		fi
+	done;
+	## Now let's do this again after a 30 second sleep to ensure consistency in case this ran in the middle of volume attachments
+	sleep 30
+	sanity_detection_done="0"
+	sanity_volume_count="0"
+	for i in `seq 2 33`; do
+                if [ $sanity_detection_done = "0" ]; then
+                        iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+                        iscsi_chk=`echo -e $?`
+                        if [ $iscsi_chk = "0" ]; then
+                                # IQN list is important set up this array with discovered IQNs
+                                siqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'`
+                                continue
+                        else
+                                sanity_volume_count="${#siqn[@]}"
+                                log "--> Sanity Discovery Complete - ${#siqn[@]} volumes found"
+                                sanity_detection_done="1"
+                        fi
+                fi
+        done;
+	if [ "$volume_count" = "0" ]; then 
+		log "-- $volume_count Block Volumes detected, sleeping 30 then retry --"
+		sleep 30
+		continue
+	elif [ "$volume_count" != "$sanity_volume_count" ]; then
+		log "-- Sanity Check Failed - $sanity_volume_count Volumes found, $volume_count on first run.  Re-running --"
+		sleep 15
+		continue
+	elif [ "$volume_count" = "$sanity_volume_count" ]; then 
+		log "-- Setup for ${#iqn[@]} Block Volumes --"
+		for i in `seq 1 ${#iqn[@]}`; do
+			n=$((i+1))
+			iscsi_setup
+		done;
+		detection_flag="1"
+	else
+		log "-- Repeating Detection --"
+		continue
 	fi
 done;
-if [ ${#iqn[@]} -gt 0 ]; then 
-	log "-- Setup for ${#iqn[@]} Block Volumes --"
-	for i in `seq 1 ${#iqn[@]}`; do
-		n=$((i+1))
-		iscsi_setup
-	done;
-fi
 
 EXECNAME="boot.sh - DISK PROVISIONING"
 #
@@ -256,23 +286,31 @@ for i in `seq 1 ${#iqn[@]}`; do
 		vol_match
 		log "-->Checking /dev/oracleoci/$disk"
 		if [ -h /dev/oracleoci/$disk ]; then
-			mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
-			if [ $disk = "oraclevdb" ]; then
+			case $disk in
+				oraclevdb)
+				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
                 		log "--->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
 	                	mkdir -p /var/log/cloudera
 	        	        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
         	        	UUID=`lsblk -no UUID /dev/oracleoci/$disk`
 	        	        echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-			elif [ $disk = "oraclevdc" ]; then
+				mkdir -p /var/log/cloudera/cloudera-scm-agent
+				ln -s /var/log/cloudera/cloudera-scm-agent /var/log/cloudera-scm-agent
+				;;
+				oraclevdc)
+				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
 				log "--->Mounting /dev/oracleoci/$disk to /opt/cloudera"
 				mkdir -p /opt/cloudera
 				mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
 				UUID=`lsblk -no UUID /dev/oracleoci/$disk`
 				echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-			else
+				;;
+				*)
+				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
 				block_data_mount
                 		dcount=$((dcount+1))
-		  	fi
+				;;
+			esac
 			/sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
 			dsetup="1"
 		else

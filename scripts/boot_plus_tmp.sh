@@ -182,8 +182,8 @@ iscsi_target_only(){
 ## Look for all ISCSI devices in sequence, finish on first failure
 EXECNAME="ISCSI"
 log "- Begin Block Volume Detection Loop -"
-volume_count="0"
-while [ "$volume_count" -lt 2 ]; do
+detection_flag="0"
+while [ "$detection_flag" = "0" ]; do
 	detection_done="0"
 	log "-- Detecting Block Volumes --"
 	for i in `seq 2 33`; do
@@ -202,18 +202,43 @@ while [ "$volume_count" -lt 2 ]; do
 			fi
 		fi
 	done;
-	if [ "$volume_count" = 0 ]; then 
-		log "-- Sleeping 60 then retry detection --"
-		sleep 60
-	elif [ "$volume_count" = 1]; then 
-		log "-- Sleeping 60 then retry detection --"
-		sleep 60
-	else
+	## Now let's do this again after a 30 second sleep to ensure consistency in case this ran in the middle of volume attachments
+	sleep 30
+	sanity_detection_done="0"
+	sanity_volume_count="0"
+	for i in `seq 2 33`; do
+                if [ $sanity_detection_done = "0" ]; then
+                        iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+                        iscsi_chk=`echo -e $?`
+                        if [ $iscsi_chk = "0" ]; then
+                                # IQN list is important set up this array with discovered IQNs
+                                siqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'`
+                                continue
+                        else
+                                sanity_volume_count="${#siqn[@]}"
+                                log "--> Sanity Discovery Complete - ${#siqn[@]} volumes found"
+                                sanity_detection_done="1"
+                        fi
+                fi
+        done;
+	if [ "$volume_count" = "0" ]; then 
+		log "-- $volume_count Block Volumes detected, sleeping 30 then retry --"
+		sleep 30
+		continue
+	elif [ "$volume_count" != "$sanity_volume_count" ]; then
+		log "-- Sanity Check Failed - $sanity_volume_count Volumes found, $volume_count on first run.  Re-running --"
+		sleep 15
+		continue
+	elif [ "$volume_count" = "$sanity_volume_count" ]; then 
 		log "-- Setup for ${#iqn[@]} Block Volumes --"
 		for i in `seq 1 ${#iqn[@]}`; do
 			n=$((i+1))
 			iscsi_setup
 		done;
+		detection_flag="1"
+	else
+		log "-- Repeating Detection --"
+		continue
 	fi
 done;
 
