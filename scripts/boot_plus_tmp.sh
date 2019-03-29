@@ -22,9 +22,59 @@ rm -f /etc/resolv.conf
 echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
 echo "nameserver 169.254.169.254" >> /etc/resolv.conf
 
+EXECNAME="JAVA - KERBEROS"
+log "->INSTALL"
 ## Install Java & Kerberos client
 yum install java-1.8.0-openjdk.x86_64 krb5-workstation -y
 
+EXECNAME="KERBEROS"
+log "->krb5.conf"
+## Configure krb5.conf
+kdc_server='cdh-utility-1'
+kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
+realm="hadoop.com"
+REALM="HADOOP.COM"
+log "-> CONFIG"
+rm -f /etc/krb5.conf
+cat > /etc/krb5.conf << EOF
+# Configuration snippets may be placed in this directory as well
+includedir /etc/krb5.conf.d/
+
+[libdefaults]
+ default_realm = ${REALM}
+ dns_lookup_realm = false
+ dns_lookup_kdc = false
+ rdns = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d  
+ forwardable = true
+ udp_preference_limit = 1000000
+ default_tkt_enctypes = rc4-hmac 
+ default_tgs_enctypes = rc4-hmac
+ permitted_enctypes = rc4-hmac
+
+[realms]
+    ${REALM} = {
+        kdc = ${kdc_fqdn}:88
+        admin_server = ${kdc_fqdn}:749
+        default_domain = ${realm}
+    }
+
+[domain_realm]
+    .${realm} = ${REALM}
+     ${realm} = ${REALM}
+
+[kdc]
+    profile = /var/kerberos/krb5kdc/kdc.conf
+
+[logging]
+    kdc = FILE:/var/log/krb5kdc.log
+    admin_server = FILE:/var/log/kadmin.log
+    default = FILE:/var/log/krb5lib.log
+EOF
+
+EXECNAME="TUNING"
+log "->OS"
 ## Disable Transparent Huge Pages
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
@@ -48,6 +98,7 @@ echo net.ipv4.tcp_low_latency=1 >> /etc/sysctl.conf
 ## Tune File System options
 sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
 
+log "->SSH"
 ## Enable root login via SSH key
 cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
 cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
@@ -59,35 +110,23 @@ hbase -       nofile  32768
 hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 
+log "->FirewallD"
 systemctl stop firewalld
 systemctl disable firewalld
 
 ## Post Tuning Execution Below
-
+EXECNAME="MYSQL Connector"
 ## MySQL Connector Install
+log "->INSTALL"
 wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.tar.gz
 tar zxvf mysql-connector-java-5.1.46.tar.gz
 mkdir -p /usr/share/java/
 cd mysql-connector-java-5.1.46
 cp mysql-connector-java-5.1.46-bin.jar /usr/share/java/mysql-connector-java.jar
 
-# Cloudera Agent Setup
-rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cloudera
-wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
-yum install oracle-j2sdk1.8.x86_64 cloudera-manager-agent cloudera-manager-daemons -y
-cm_host=`host cdh-utility-1 | gawk '{print $1}'`
-cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
-sed -e "s/\(server_host=\).*/\1${cm_host}/" -i /etc/cloudera-scm-agent/config.ini
-systemctl start cloudera-scm-agent
-
 #
 # DISK SETUP
 #
-
-EXECNAME="SLEEP"
-## SLEEP HERE - GIVE TIME FOR BLOCK VOLUMES TO ATTACH
-log "->SLEEP"
-sleep 180 
 
 vol_match() {
 case $i in
@@ -142,30 +181,41 @@ iscsi_target_only(){
 
 ## Look for all ISCSI devices in sequence, finish on first failure
 EXECNAME="ISCSI"
-done="0"
-log "-- Detecting Block Volumes --"
-for i in `seq 2 33`; do
-	if [ $done = "0" ]; then
-		iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
-		iscsi_chk=`echo -e $?`
-		if [ $iscsi_chk = "0" ]; then
-			# IQN list is important set up this array with discovered IQNs
-			iqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'` 
-			log "-> Discovered volume $((i-1)) - IQN: ${iqn[${i}]}"
-			continue
-		else
-			log "--> Discovery Complete - ${#iqn[@]} volumes found"
-			done="1"
+log "- Begin Block Volume Detection Loop -"
+volume_count="0"
+while [ "$volume_count" -lt 2 ]; do
+	detection_done="0"
+	log "-- Detecting Block Volumes --"
+	for i in `seq 2 33`; do
+		if [ $detection_done = "0" ]; then
+			iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
+			iscsi_chk=`echo -e $?`
+			if [ $iscsi_chk = "0" ]; then
+				# IQN list is important set up this array with discovered IQNs
+				iqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'` 
+				log "-> Discovered volume $((i-1)) - IQN: ${iqn[${i}]}"
+				continue
+			else
+				volume_count="${#iqn[@]}"
+				log "--> Discovery Complete - ${#iqn[@]} volumes found"
+				detection_done="1"
+			fi
 		fi
+	done;
+	if [ "$volume_count" = 0 ]; then 
+		log "-- Sleeping 60 then retry detection --"
+		sleep 60
+	elif [ "$volume_count" = 1]; then 
+		log "-- Sleeping 60 then retry detection --"
+		sleep 60
+	else
+		log "-- Setup for ${#iqn[@]} Block Volumes --"
+		for i in `seq 1 ${#iqn[@]}`; do
+			n=$((i+1))
+			iscsi_setup
+		done;
 	fi
 done;
-if [ ${#iqn[@]} -gt 0 ]; then 
-	log "-- Setup for ${#iqn[@]} Block Volumes --"
-	for i in `seq 1 ${#iqn[@]}`; do
-		n=$((i+1))
-		iscsi_setup
-	done;
-fi
 
 EXECNAME="boot.sh - DISK PROVISIONING"
 #
@@ -196,12 +246,25 @@ nvcount="0"
 bvcount="0"
 ## Execute - will format all devices except sda for use as data disks in HDFS
 dcount=0
-for disk in `ls /dev/ | grep nvme`; do
+for disk in `ls /dev/ | grep nvme | grep n1`; do
 	log "-->Processing /dev/$disk"
   	mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/$disk
     	data_mount
 	dcount=$((dcount+1))
 done;
+
+raid_disk_setup() {
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk /dev/oracleoci/$disk
+n
+p
+1
+
+
+t
+fd
+w
+EOF
+}
 
 if [ ${#iqn[@]} -gt 0 ]; then 
 for i in `seq 1 ${#iqn[@]}`; do
@@ -211,23 +274,44 @@ for i in `seq 1 ${#iqn[@]}`; do
 		vol_match
 		log "-->Checking /dev/oracleoci/$disk"
 		if [ -h /dev/oracleoci/$disk ]; then
-			mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
-			if [ $disk = "oraclevdb" ]; then
+			case $disk in
+				oraclevdb)
+				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
                 		log "--->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
 	                	mkdir -p /var/log/cloudera
 	        	        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
         	        	UUID=`lsblk -no UUID /dev/oracleoci/$disk`
 	        	        echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-			elif [ $disk = "oraclevdc" ]; then
+				mkdir -p /var/log/cloudera/cloudera-scm-agent
+				ln -s /var/log/cloudera/cloudera-scm-agent /var/log/cloudera-scm-agent
+				;;
+				oraclevdc)
+				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
 				log "--->Mounting /dev/oracleoci/$disk to /opt/cloudera"
 				mkdir -p /opt/cloudera
 				mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
 				UUID=`lsblk -no UUID /dev/oracleoci/$disk`
 				echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-			else
+				;;
+				oraclevdd|oraclevde|oraclevdf)
+				raid_disk_setup
+				;;
+				oraclevdg)
+				raid_disk_setup
+				mdadm -C /dev/md0 -l raid0 -n 4 /dev/oracleoci/oraclevd[d-g]1
+				mkfs.ext4 /dev/md0
+				mkdir -p /mnt/tmp
+				mount /dev/md0 /mnt/tmp
+				mount -B /tmp /mnt/tmp
+				echo "/dev/md0                /mnt/tmp              ext4    defaults,_netdev,noatime,discard,barrier=0         0 0" | tee -a /etc/fstab
+				mdadm -E -s -v >> /etc/mdadm.conf
+				;;
+				*)
+				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
 				block_data_mount
                 		dcount=$((dcount+1))
-		  	fi
+				;;
+			esac
 			/sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
 			dsetup="1"
 		else
@@ -238,57 +322,5 @@ for i in `seq 1 ${#iqn[@]}`; do
 	done;
 done;
 fi
-# Kerberos Workstation Setup
-EXECNAME="KERBEROS"
-log "-> INSTALL"
-yum install krb5-workstation
-
-KERBEROS_PASSWORD="SOMEPASSWORD"
-OPC_USER_PASSWORD="somepassword"
-kdc_server="cdh-utility-1"
-kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
-realm="hadoop.com"
-REALM="HADOOP.COM"
-log "-> CONFIG"
-rm -f /etc/krb5.conf
-cat > /etc/krb5.conf << EOF
-# Configuration snippets may be placed in this directory as well
-includedir /etc/krb5.conf.d/
-
-[libdefaults]
- default_realm = ${REALM}
- dns_lookup_realm = false
- dns_lookup_kdc = false
- rdns = false
- ticket_lifetime = 24h
- renew_lifetime = 7d  
- forwardable = true
- udp_preference_limit = 1000000
- default_tkt_enctypes = rc4-hmac 
- default_tgs_enctypes = rc4-hmac
- permitted_enctypes = rc4-hmac
-
-[realms]
-    ${REALM} = {
-        kdc = ${kdc_fqdn}:88
-        admin_server = ${kdc_fqdn}:749
-        default_domain = ${realm}
-    }
-
-[domain_realm]
-    .${realm} = ${REALM}
-     ${realm} = ${REALM}
-
-[kdc]
-    profile = /var/kerberos/krb5kdc/kdc.conf
-
-[logging]
-    kdc = FILE:/var/log/krb5kdc.log
-    admin_server = FILE:/var/log/kadmin.log
-    default = FILE:/var/log/krb5lib.log
-EOF
-log "-> Principal & ticket"
-echo -e "${KERBEROS_PASSWORD}\naddprinc -randkey host/client.${REALM}\nktadd host/kdc.${REALM}" | kadmin -p root/admin
-
 EXECNAME="END"
 log "->DONE"
