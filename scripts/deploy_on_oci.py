@@ -130,9 +130,28 @@ cloudera_manager_host_contains = 'cdh-utility-1'
 # Specify Log directory on cluster hosts - this is a separate block volume by default in Terraform
 LOG_DIR = '/var/log/cloudera'
 
+# S3 Compatibility for OCI Object Storage - Set this to 'True' to enable
+s3_compat_enable = 'False'
+
+# Set the following parameters for S3 Compatibility Access to OCI Object Storage
+s3a_secret_key = 'None'
+s3a_access_key = 'None'
+# The s3a endpoint is in the following format:
+#   https://<tenancy_name>.compat.objectstorage.<home_region>.oraclecloud.com
+s3a_endpoint = 'None'
+
 #
 # End Custom Global Parameters
 #
+
+# Do not modify this
+
+s3a_endpoint_config = '<property><name>fs.s3a.endpoint</name><value>' + s3a_endpoint + '</value></property>'
+s3a_secret_key_config = '<property><name>fs.s3a.secret.key</name><value>' + s3a_secret_key +'</value></property>'
+s3a_access_key_config = '<property><name>fs.s3a.access.key</name><value>' + s3a_access_key +'</value></property>'
+s3a_path_config =  '<property><name>fs.s3a.path.style.access</name><value>true</value></property>'
+s3a_paging_config = '<property><name>fs.s3a.paging.maximum</name><value>1000</value></property>'
+s3a_config = s3a_endpoint_config + s3a_access_key_config + s3a_secret_key_config + s3a_path_config + s3a_paging_config
 
 #
 # Some additional variables are needed - you should not modify these
@@ -259,7 +278,7 @@ def build_api_endpoints(user_name, password):
         cluster_services_api, auth_roles_api, roles_config_api, all_hosts_api, \
         roles_api, mgmt_service_api, services_api, \
         mgmt_role_commands_api, mgmt_role_config_groups_api, \
-        mgmt_roles_api
+        mgmt_roles_api, external_accounts_api
     clusters_api = cm_client.ClustersResourceApi(api_client)
     users_api = cm_client.UsersResourceApi(api_client)
     cloudera_manager_api = cm_client.ClouderaManagerResourceApi(api_client)
@@ -275,6 +294,7 @@ def build_api_endpoints(user_name, password):
     mgmt_role_commands_api = cm_client.MgmtRoleCommandsResourceApi(api_client)
     mgmt_role_config_groups_api = cm_client.MgmtRoleConfigGroupsResourceApi(api_client)
     mgmt_roles_api = cm_client.MgmtRolesResourceApi(api_client)
+    external_accounts_api = cm_client.ExternalAccountsResourceApi(api_client)
 
 
 def wait_for_active_cluster_commands(active_command):
@@ -1294,8 +1314,8 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     rcg_roletype = 'DATANODE'  # type: str
                     dfs_replication = [cm_client.ApiConfig(name='dfs_replication',
                                                            value=get_parameter_value(worker_shape, 'dfs_replication'))]
-                    dfs_block_local = [cm_client.ApiConfig(name='dfs_block_local_path_acess_user',
-                                                           value='impala,hbase,mapred,spark')]
+
+                    core_site_safety_valve = [cm_client.ApiConfig(name='core_site_safety_valve', value=s3a_config)]
                     dfs_data_dir = [cm_client.ApiConfig(name='dfs_data_dir_list', value=dfs_data_dir_list)]
                     datanode_java_heapsize = [cm_client.ApiConfig(name='datanode_java_heapsize', value='351272960')]
                     dfs_datanode_data_dir_perm = [cm_client.ApiConfig(name='dfs_datanode_data_dir_perm', value='700')]
@@ -1314,6 +1334,8 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     for config in dn_config_list:
                         push_rcg_config(config)
                     update_service_config(service_name=service, api_config_items=dfs_replication)
+                    if s3_compat_enable == 'True':
+                        update_service_config(service_name=service, api_config_items=core_site_safety_valve)
                     n = 0
                     if debug == 'True':
                         print('->DEBUG - Number of Workers: ' + str(len(worker_host_ids)))
@@ -2458,6 +2480,32 @@ def hdfs_enable_nn_ha(snn_host_id):
         print('Exception calling ServicesResourceApi -> hdfs_enable_ha_command {}'.format(e))
 
 
+def create_object_account():
+    """
+    This will use ExternalAccountsResourceApi to setup S3 compatability account info
+    :return:
+    """
+    body = cm_client.ApiExternalAccount()
+
+    try:
+        api_response = external_accounts_api.create_account(body=body)
+        if debug == 'True':
+            pprint(api_response)
+    except ApiException as e:
+        print('Exception calling ExternalAccountsResourceApi -> create_account {}'.format(e))
+
+
+def read_account():
+    display_name = 'OCI'
+    view = 'summary'
+
+    try:
+        api_response = external_accounts_api.read_account_by_display_name(display_name, view=view)
+        pprint(api_response)
+    except ApiException as e:
+        print('%s' % e)
+
+
 #
 # END SECONDARY FUNCTIONS
 #
@@ -2787,8 +2835,7 @@ if __name__ == '__main__':
                 pprint(cluster_host_list)
                 print('->Full Deployment Follows')
                 get_deployment_full()
-            end_trial()
-            update_license()
+
         else:
             print('Cluster Check returned null: %s' % cluster_exists)
     else:

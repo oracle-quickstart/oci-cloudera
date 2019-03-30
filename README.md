@@ -79,6 +79,16 @@ You can customize the default root password for MySQL by editing the source scri
 
 Note that you will also need to change "meta_db_port" in deploy_on_oci.py if you choose to run Postgres.
 
+## Object Storage Integration
+As of the 2.1.0 release, included with this template is a means to deploy clusters with configuration to allow use of OCI Object Storage using S3 Compatability.  In order to implement, an S3 Access and Secret key must be set up in the OCI Tenancy first.  This process is detailed [here](https://docs.cloud.oracle.com/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2).  Once that is in place, modify the deploy_on_oci.py script, and set the following values:
+
+	s3_compat_enable = 'False'
+	s3a_secret_key = 'None'
+	s3a_access_key = 'None'
+	s3a_endpoint = 'None'	
+
+The first should be set to 'True', then replace 'None" with each of the required values.   This configuration will then be pushed as part of the cluster deployment.
+
 ## Deployment Syntax
 Deployment of the module is straight forward using the following Terraform commands
 
