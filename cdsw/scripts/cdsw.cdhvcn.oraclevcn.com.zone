@@ -1,0 +1,17 @@
+; Authoritave data for cdsw.cdhvcn.oraclevcn.com
+;
+$TTL 3600
+@ IN SOA cdsw.cdhvcn.oraclevcn.com root.cdsw.cdhvcn.oraclevcn.com (
+                                        SNUM      ; serial
+                                        3600            ; refresh
+                                        300             ; retry
+                                        3600            ; expire
+                                        300 )           ; minimum
+$ORIGIN         cdhvcn.oraclevcn.com.
+cdsw            IN      A       CDSW_IP
+$ORIGIN         cdsw.cdhvcn.oraclevcn.com.
+ns1                             IN      A       NAMED_IP
+ns2                             IN      A       NAMED_IP
+cdsw.cdhvcn.oraclevcn.com.      IN      NS      ns1.cdsw.cdhvcn.oraclevcn.com
+cdsw.cdhvcn.oraclevcn.com.      IN      NS      ns2.cdsw.cdhvcn.oraclevcn.com
+*       IN A CDSW_IP

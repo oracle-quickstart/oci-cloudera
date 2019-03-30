@@ -1,0 +1,14 @@
+$TTL 3600
+@       IN      SOA     ns1.cdsw.cdhvcn.oraclevcn.com.  admin.cdsw.cdhvcn.oraclevcn.com. (
+                                        SNUM      ; serial
+                                        3600            ; refresh
+                                        300             ; retry
+                                        3600            ; expire
+                                        300 )           ; minimum
+; name servers
+        IN      NS      ns1.cdsw.cdhvcn.oraclevcn.com.
+        IN      NS      ns2.cdsw.cdhvcn.oraclevcn.com.
+; PTR records
+N4.4     IN      PTR     ns1.cdsw.cdhvcn.oracelvcn.com.  ; NAMED_IP
+N4.4     IN      PTR     ns2.cdsw.cdhvcn.oraclevcn.com.  ; NAMED_IP
+C4.2     IN      PTR     cdsw.cdhvcn.oraclevcn.com. ; CDSW_IP
