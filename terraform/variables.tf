@@ -149,7 +149,7 @@ variable "oci_service_gateway" {
   default = {
     ca-toronto-1 = "all-yyz-services-in-oracle-services-network"
     eu-frankfurt-1 = "all-fra-services-in-oracle-services-network"
-    uk-london-1 = "all-lhr-services-in-oracle-servces-network"
+    uk-london-1 = "all-lhr-services-in-oracle-services-network"
     us-ashburn-1 = "all-iad-services-in-oracle-services-network"
     us-phoenix-1 = "all-phx-services-in-oracle-services-network"
   }
