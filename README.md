@@ -1,5 +1,5 @@
-# oci-cloudera
-This module deploys a cluster of arbitrary size on [Oracle Cloud Infrastructure](https://cloud.oracle.com/en_US/iaas) using [Cloudera Enterprise Data Hub](https://www.cloudera.com/products/enterprise-data-hub.html) v6 and Cloudera Manager v6.1.
+# oci-quickstart-cloudera
+These is a Terraform module that deploys [Cloudera Enterprise Data Hub](https://www.cloudera.com/products/enterprise-data-hub.html) on [Oracle Cloud Infrastructure (OCI)](https://cloud.oracle.com/en_US/cloud-infrastructure).  It is developed jointly by Oracle and Cloudera.
 
 Future development will include support for EDH v5 clusters.  In the meantime, use the [1.0.0 release](https://github.com/oci-quickstart/oci-cloudera/releases/tag/1.0.0) for v5 deployments.
 
@@ -11,9 +11,9 @@ Future development will include support for EDH v5 clusters.  In the meantime, u
 Host types can be customized in this template.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See "variables.tf" for more information in-line.
 
 ## Prerequisites
-First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oci-quickstart/oci-prerequisites).
+First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oracle/oci-quickstart-prerequisites).
 
-### Additional Python Dependencies
+## Additional Python Dependencies
 This module depends on Python, Paramiko, PIP, and cm_client.   These should be installed on the host you are using to deploy the Terraform module.  
 
 On EL7 hosts, installation can be performed using the following commands:
@@ -32,8 +32,8 @@ On Mac, installation can be peformed using the following commands:
 ### Clone the Module
 Now, you'll want a local copy of this repo.  You can make that with the commands:
 
-    git clone https://github.com/oci-quickstart/oci-cloudera.git
-    cd oci-cloudera
+    git clone https://github.com/oracle/oci-quickstart-cloudera.git
+    cd oci-quickstart-cloudera
     ls
 
 ## Python Deployment using cm_client
