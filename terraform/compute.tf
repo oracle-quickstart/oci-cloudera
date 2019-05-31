@@ -63,8 +63,7 @@ module "worker" {
         worker_instance_shape = "${var.worker_instance_shape}"
 	log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
 	cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
-	replication_factor = "${var.replication_factor}"
-	hdfs_usable_in_gbs = "${var.hdfs_usable_in_gbs}"
+	block_volumes_per_worker = "${var.block_volumes_per_worker}"
 	data_blocksize_in_gbs = "${var.data_blocksize_in_gbs}"
         user_data = "${base64encode(file("../scripts/boot.sh"))}"
 }
