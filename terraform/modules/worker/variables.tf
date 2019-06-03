@@ -12,6 +12,7 @@ variable "ssh_private_key" {}
 variable "instances" {}
 variable "subnet_id" {}
 variable "user_data" {}
+variable "image_ocid" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
@@ -89,7 +90,6 @@ variable "ssh_keypath" {
 # Constants
 # You probably don't need to change these.
 # ---------------------------------------------------------------------------------------------------------------------
-
 
 // Volume Mapping - used to map Worker Block Volumes consistently to the OS
 variable "data_volume_attachment_device" {

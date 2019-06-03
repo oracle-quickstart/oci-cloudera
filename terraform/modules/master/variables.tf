@@ -12,6 +12,7 @@ variable "ssh_private_key" {}
 variable "instances" {}
 variable "subnet_id" {}
 variable "user_data" {}
+variable "image_ocid" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
@@ -65,18 +66,3 @@ variable "ssh_keypath" {
 # Constants
 # You probably don't need to change these.
 # ---------------------------------------------------------------------------------------------------------------------
-
-// See https://docs.us-phoenix-1.oraclecloud.com/images/
-// Oracle-provided image "Oracle-Linux-7.6-2019.03.22-1"
-// Kernel Version: 4.14.35-1844.3.2.el7uek.x86_64
-variable "InstanceImageOCID" {
-  type = "map"
-  default = {
-    ca-toronto-1 = "ocid1.image.oc1.ca-toronto-1.aaaaaaaaqopv4wgbh54jrqoa4bjpkng2y2npzoe2jaj5pdne37ljdxbbbdka"
-    eu-frankfurt-1 = "ocid1.image.oc1.eu-frankfurt-1.aaaaaaaa2n5z4nmkqjf27btkbdibflwvximz5i3rsz57c3gowckozrdshnua"
-    uk-london-1 = "ocid1.image.oc1.uk-london-1.aaaaaaaaaxnnrqke453ur5katouvfn2i6oweuwpixx6mm5e4nqtci7oztx5a"
-    us-ashburn-1 = "ocid1.image.oc1.iad.aaaaaaaavxqdkuyamlnrdo3q7qa7q3tsd6vnyrxjy3nmdbpv7fs7um53zh5q"
-    us-phoenix-1 = "ocid1.image.oc1.phx.aaaaaaaapxvrtwbpgy3lchk2usn462ekarljwg4zou2acmundxlkzdty4bjq"
-  }
-}
-

@@ -9,7 +9,7 @@ resource "oci_core_instance" "Utility" {
 
   source_details {
     source_type             = "image"
-    source_id               = "${var.InstanceImageOCID[var.region]}"
+    source_id               = "${var.image_ocid}"
   }
 
   metadata {
