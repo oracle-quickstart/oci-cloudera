@@ -76,39 +76,48 @@ resource "oci_core_security_list" "PublicSubnet" {
   }]
 
   ingress_security_rules = [{
-    {tcp_options = {
+    tcp_options {
       "max" = 7180
       "min" = 7180
     }
+
     protocol = "6"
     source   = "0.0.0.0/0"
-  },
-    {tcp_options = {
+  }]
+
+  ingress_security_rules = [{
+    tcp_options {
       "max" = 18088
       "min" = 18088
     }
+
     protocol = "6"
     source   = "0.0.0.0/0"
-  },
-    {tcp_options = {
+  }]
+
+  ingress_security_rules = [{
+    tcp_options {
       "max" = 19888
       "min" = 19888
     }
+
     protocol = "6"
     source   = "0.0.0.0/0"
-  },
+  }]
 
-    {tcp_options = {
+  ingress_security_rules = [{
+    tcp_options {
       "max" = 22
       "min" = 22
     }
+
     protocol = "6"
     source   = "0.0.0.0/0"
-  },
-  {
+  }]
+
+  ingress_security_rules = [{
     protocol = "6"
     source   = "${var.VPC-CIDR}"
-  }
   }]
 }
 
@@ -120,8 +129,9 @@ resource "oci_core_security_list" "PrivateSubnet" {
   egress_security_rules = [{
     destination = "0.0.0.0/0"
     protocol    = "6"
-  },
-  {
+  }]
+
+  egress_security_rules = [{
     protocol    = "6"
     destination = "${var.VPC-CIDR}"
   }]
@@ -143,7 +153,7 @@ resource "oci_core_security_list" "BastionSubnet" {
   }]
 
   ingress_security_rules = [{
-    tcp_options = {
+    tcp_options {
       "max" = 22
       "min" = 22
     }
