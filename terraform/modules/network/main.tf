@@ -21,13 +21,10 @@ resource "oci_core_nat_gateway" "nat_gateway" {
   display_name   = "nat_gateway"
 }
 
-data "oci_core_services" "cloudera_services" {
-}
-
 resource "oci_core_service_gateway" "cloudera_service_gateway" {
     compartment_id = "${var.compartment_ocid}"
     services {
-        service_id = "${data.oci_core_services.cloudera_services.services.1.id}"
+      service_id = "${lookup(data.oci_core_services.all_svcs_moniker.services[0], "id")}"
     }
     vcn_id = "${oci_core_vcn.cloudera_vcn.id}"
     display_name = "Cloudera Service Gateway"

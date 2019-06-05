@@ -1,5 +1,5 @@
 module "network" { 
-	source				= "modules/network"
+	source			= "modules/network"
 	tenancy_ocid		= "${var.tenancy_ocid}"
 	compartment_ocid 	= "${var.compartment_ocid}"
 	availability_domain	= "${var.availability_domain}"

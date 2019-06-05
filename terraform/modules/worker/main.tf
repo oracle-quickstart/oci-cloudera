@@ -10,7 +10,7 @@ resource "oci_core_instance" "Worker" {
 
   source_details {
     source_type             = "image"
-    source_id               = "${var.InstanceImageOCID[var.region]}"
+    source_id               = "${var.image_ocid}"
   }
 
   metadata {
@@ -62,19 +62,19 @@ resource "oci_core_volume_attachment" "WorkerClouderaAttachment" {
 
 # Data Volumes for HDFS
 resource "oci_core_volume" "WorkerDataVolume" {
-  count               = "${var.instances * (ceil(((var.hdfs_usable_in_gbs*var.replication_factor)/var.data_blocksize_in_gbs)/var.instances))}"
+  count               = "${(var.instances * var.block_volumes_per_worker)}"
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
-  display_name        = "Cloudera Worker ${format("%01d", (count.index / (ceil(((var.hdfs_usable_in_gbs*var.replication_factor)/var.data_blocksize_in_gbs)/var.instances)))+1)} HDFS Data ${format("%01d", (count.index%((ceil(((var.hdfs_usable_in_gbs*var.replication_factor)/var.data_blocksize_in_gbs))/var.instances)))+1)}"
+  display_name        = "Cloudera Worker ${format("%01d", (count.index / var.block_volumes_per_worker)+1)} HDFS Data ${format("%01d", (count.index%(var.block_volumes_per_worker))+1)}"
   size_in_gbs         = "${var.data_blocksize_in_gbs}"
 }
 
 resource "oci_core_volume_attachment" "WorkerDataAttachment" {
-  count           = "${var.instances * (ceil(((var.hdfs_usable_in_gbs*var.replication_factor)/var.data_blocksize_in_gbs)/var.instances))}"
+  count               = "${(var.instances * var.block_volumes_per_worker)}"
   attachment_type = "iscsi"
   compartment_id  = "${var.compartment_ocid}"
-  instance_id     = "${oci_core_instance.Worker.*.id[count.index / (ceil(((var.hdfs_usable_in_gbs*var.replication_factor)/var.data_blocksize_in_gbs)/var.instances))]}"
+  instance_id     = "${oci_core_instance.Worker.*.id[count.index/var.block_volumes_per_worker]}"
   volume_id       = "${oci_core_volume.WorkerDataVolume.*.id[count.index]}"
-  device 	  = "${var.data_volume_attachment_device_object[count.index%(ceil(((var.hdfs_usable_in_gbs*var.replication_factor)/var.data_blocksize_in_gbs)/var.instances))]}"
+  device = "${var.data_volume_attachment_device[count.index%(var.block_volumes_per_worker)]}"
 }
 

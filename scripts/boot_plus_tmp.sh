@@ -318,18 +318,8 @@ for i in `seq 1 ${#iqn[@]}`; do
 				UUID=`lsblk -no UUID /dev/oracleoci/$disk`
 				echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
 				;;
-				oraclevdd|oraclevde|oraclevdf)
+				oraclevdd|oraclevde|oraclevdf|oraclevdg)
 				raid_disk_setup
-				;;
-				oraclevdg)
-				raid_disk_setup
-				mdadm -C /dev/md0 -l raid0 -n 4 /dev/oracleoci/oraclevd[d-g]1
-				mkfs.ext4 /dev/md0
-				mkdir -p /mnt/tmp
-				mount /dev/md0 /mnt/tmp
-				mount -B /tmp /mnt/tmp
-				echo "/dev/md0                /mnt/tmp              ext4    defaults,_netdev,noatime,discard,barrier=0         0 0" | tee -a /etc/fstab
-				mdadm -E -s -v >> /etc/mdadm.conf
 				;;
 				*)
 				mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
@@ -347,5 +337,16 @@ for i in `seq 1 ${#iqn[@]}`; do
 	done;
 done;
 fi
+EXECNAME="TMP"
+log "->Setup LVM"
+vgcreate RAID0 /dev/oracleoci/oraclevd[d-g]1
+lvcreate -i 2 -I 64 -l 100%FREE -n tmp RAID0
+mkfs.ext4 /dev/RAID0/tmp
+mkdir -p /mnt/tmp
+chmod 1777 /mnt/tmp
+mount /dev/RAID0/tmp /mnt/tmp
+mount -B /tmp /mnt/tmp
+chmod 1777 /tmp
+echo "/dev/RAID0/tmp                /tmp              ext4    defaults,_netdev,noatime,discard,barrier=0         0 0" | tee -a /etc/fstab
 EXECNAME="END"
 log "->DONE"
