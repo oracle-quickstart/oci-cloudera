@@ -553,7 +553,7 @@ def remote_host_detection():
     host_fqdn_list = []
     host_ip_list = []
     ssh_client = SSHClient()
-    ssh_client.set_missing_host_key_policy(AutoAddPolicy)
+    ssh_client.set_missing_host_key_policy(AutoAddPolicy())
     ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
     # Cloudera Manager FQDN lookup
     print('->Lookup Cloudera Manager FQDN')
@@ -653,7 +653,7 @@ def remote_worker_shape_detection():
     :return:
     """
     ssh_client = SSHClient()
-    ssh_client.set_missing_host_key_policy(AutoAddPolicy)
+    ssh_client.set_missing_host_key_policy(AutoAddPolicy())
     ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
     ssh_command = "ssh -oStrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@" + worker_hosts_contain + "-1" + \
                   " '/usr/bin/curl -s http://169.254.169.254/opc/v1/instance/'"
@@ -1002,7 +1002,7 @@ def get_mgmt_db_passwords():
     global amon_password, rman_password, navigator_password, navigator_meta_password, oozie_password, hive_meta_password
     parse_ssh_key()
     ssh_client = SSHClient()
-    ssh_client.set_missing_host_key_policy(AutoAddPolicy)
+    ssh_client.set_missing_host_key_policy(AutoAddPolicy())
     ssh_client.connect(hostname=cm_server, username='root', key_filename=ssh_keyfile)
     sftp_client = ssh_client.open_sftp()
     print('->Connecting to %s to gather Cloudera Manager DB passwords.' % cm_server)
