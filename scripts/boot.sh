@@ -1,35 +1,21 @@
 #!/bin/bash
-
 LOG_FILE="/var/log/cloudera-OCI-initialize.log"
-
-## logs everything to the $LOG_FILE
-log() {
-  echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}"
-}
-
+log() { echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" }
+cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
+cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
+cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
+cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
+cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 EXECNAME="TUNING"
 log "->TUNING START"
-#
-# HOST TUNINGS
-# 
-
-# Disable SELinux
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 setenforce 0
-
-## Modify resolv.conf to ensure DNS lookups work
-rm -f /etc/resolv.conf
-echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
-echo "nameserver 169.254.169.254" >> /etc/resolv.conf
-
 EXECNAME="JAVA - KERBEROS"
 log "->INSTALL"
-## Install Java & Kerberos client
-yum install java-1.8.0-openjdk.x86_64 krb5-workstation -y
-
+yum install java-1.8.0-openjdk.x86_64 -y >> $LOG_FILE
+yum install krb5-workstation -y >> $LOG_FILE
 EXECNAME="KERBEROS"
 log "->krb5.conf"
-## Configure krb5.conf
 kdc_server='cdh-utility-1'
 kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
 realm="hadoop.com"
@@ -72,18 +58,12 @@ includedir /etc/krb5.conf.d/
     admin_server = FILE:/var/log/kadmin.log
     default = FILE:/var/log/krb5lib.log
 EOF
-
 EXECNAME="TUNING"
 log "->OS"
-## Disable Transparent Huge Pages
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
-
-## Set vm.swappiness to 1
 echo vm.swappiness=0 | tee -a /etc/sysctl.conf
 echo 0 | tee /proc/sys/vm/swappiness
-
-## Tune system network performance
 echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
 echo net.ipv4.tcp_sack=1 >> /etc/sysctl.conf
 echo net.core.rmem_max=4194304 >> /etc/sysctl.conf
@@ -94,40 +74,31 @@ echo net.core.optmem_max=4194304 >> /etc/sysctl.conf
 echo net.ipv4.tcp_rmem="4096 87380 4194304" >> /etc/sysctl.conf
 echo net.ipv4.tcp_wmem="4096 65536 4194304" >> /etc/sysctl.conf
 echo net.ipv4.tcp_low_latency=1 >> /etc/sysctl.conf
-
-## Tune File System options
 sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
-
-log "->SSH"
-## Enable root login via SSH key
-cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
-cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
-
-## Set Limits
 echo "hdfs  -       nofile  32768
 hdfs  -       nproc   2048
 hbase -       nofile  32768
 hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
-
 log "->FirewallD"
 systemctl stop firewalld
 systemctl disable firewalld
-
-## Post Tuning Execution Below
 EXECNAME="MYSQL Connector"
-## MySQL Connector Install
 log "->INSTALL"
 wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.tar.gz
 tar zxvf mysql-connector-java-5.1.46.tar.gz
 mkdir -p /usr/share/java/
 cd mysql-connector-java-5.1.46
 cp mysql-connector-java-5.1.46-bin.jar /usr/share/java/mysql-connector-java.jar
-
-#
-# DISK SETUP
-#
-
+EXECNAME="Cloudera Agent Install"
+rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
+wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+yum install cloudera-manager-agent -y >> $LOG_FILE
+export JDK=`ls /usr/lib/jvm | head -n 1`
+sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
+cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
+sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.ini
+systemctl start cloudera-scm-agent
 vol_match() {
 case $i in
 	1) disk="oraclevdb";;
@@ -163,7 +134,6 @@ case $i in
 	31) disk="oraclevdag";;
 esac
 }
-
 iscsi_setup() {
         log "-> ISCSI Volume Setup - Volume ${i} : IQN ${iqn[$n]}"
         iscsiadm -m node -o new -T ${iqn[$n]} -p 169.254.2.${n}:3260
@@ -173,15 +143,12 @@ iscsi_setup() {
         iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l
         log "--> Volume ${iqn[$n]} done"
 }
-
 iscsi_target_only(){
 	log "-->Logging into Volume ${iqn[$n]}"
 	su - opc -c "sudo iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l"
 }
-
-## Look for all ISCSI devices in sequence, finish on first failure
-EXECNAME="ISCSI"
-log "- Begin Block Volume Detection Loop -"
+EXECNAME="DISK DETECTION"
+log "->Begin Block Volume Detection Loop"
 detection_flag="0"
 while [ "$detection_flag" = "0" ]; do
 	detection_done="0"
@@ -191,7 +158,6 @@ while [ "$detection_flag" = "0" ]; do
 			iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
 			iscsi_chk=`echo -e $?`
 			if [ $iscsi_chk = "0" ]; then
-				# IQN list is important set up this array with discovered IQNs
 				iqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'` 
 				log "-> Discovered volume $((i-1)) - IQN: ${iqn[${i}]}"
 				continue
@@ -202,7 +168,7 @@ while [ "$detection_flag" = "0" ]; do
 			fi
 		fi
 	done;
-	## Now let's do this again after a 30 second sleep to ensure consistency in case this ran in the middle of volume attachments
+	log "->Sanity check, loop again"
 	sleep 30
 	sanity_detection_done="0"
 	sanity_volume_count="0"
@@ -211,7 +177,6 @@ while [ "$detection_flag" = "0" ]; do
                         iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
                         iscsi_chk=`echo -e $?`
                         if [ $iscsi_chk = "0" ]; then
-                                # IQN list is important set up this array with discovered IQNs
                                 siqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'`
                                 continue
                         else
@@ -242,12 +207,7 @@ while [ "$detection_flag" = "0" ]; do
 	fi
 done;
 
-EXECNAME="boot.sh - DISK PROVISIONING"
-#
-# Disk Setup uses drives /dev/sdb and /dev/sdc for statically mapped Cloudera partitions (logs, parcels)
-# If customizing your Terraform Templates - be sure to pay attention here to ensure proper mounts are presented
-#
-## Primary Disk Mounting Function
+EXECNAME="DISK PROVISIONING"
 data_mount () {
   log "-->Mounting /dev/$disk to /data$dcount"
   mkdir -p /data$dcount
@@ -263,13 +223,8 @@ block_data_mount () {
   UUID=`lsblk -no UUID /dev/oracleoci/$disk`
   echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
 }
-
 EXECNAME="DISK SETUP"
-## Check for x>0 devices
 log "->Checking for disks..."
-nvcount="0"
-bvcount="0"
-## Execute - will format all devices except sda for use as data disks in HDFS
 dcount=0
 for disk in `ls /dev/ | grep nvme | grep n1`; do
 	log "-->Processing /dev/$disk"
@@ -277,7 +232,6 @@ for disk in `ls /dev/ | grep nvme | grep n1`; do
     	data_mount
 	dcount=$((dcount+1))
 done;
-
 if [ ${#iqn[@]} -gt 0 ]; then 
 for i in `seq 1 ${#iqn[@]}`; do
 	n=$((i+1))

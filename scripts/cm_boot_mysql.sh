@@ -1,33 +1,18 @@
 #!/bin/bash
-
 LOG_FILE="/var/log/cloudera-OCI-initialize.log"
-
-# logs everything to the $LOG_FILE
-log() {
-  echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}"
-}
-
+log() { echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" }
+cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
+cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
+cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
+cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 EXECNAME="TUNING"
-
 log "-> START"
-# Disable SELinux
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 setenforce 0
-
-## Modify resolv.conf to ensure DNS lookups work
-rm -f /etc/resolv.conf
-echo "search public1.cdhvcn.oraclevcn.com public2.cdhvcn.oraclevcn.com public3.cdhvcn.oraclevcn.com private1.cdhvcn.oraclevcn.com private2.cdhvcn.oraclevcn.com private3.cdhvcn.oraclevcn.com bastion1.cdhvcn.oraclevcn.com bastion2.cdhvcn.oraclevcn.com bastion3.cdhvcn.oraclevcn.com" > /etc/resolv.conf
-echo "nameserver 169.254.169.254" >> /etc/resolv.conf
-
-## Disable Transparent Huge Pages
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
-
-## Set vm.swappiness to 1
 echo vm.swappiness=0 | tee -a /etc/sysctl.conf
 echo 0 | tee /proc/sys/vm/swappiness
-
-## Tune system network performance
 echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
 echo net.ipv4.tcp_sack=1 >> /etc/sysctl.conf
 echo net.core.rmem_max=4194304 >> /etc/sysctl.conf
@@ -38,29 +23,17 @@ echo net.core.optmem_max=4194304 >> /etc/sysctl.conf
 echo net.ipv4.tcp_rmem="4096 87380 4194304" >> /etc/sysctl.conf
 echo net.ipv4.tcp_wmem="4096 65536 4194304" >> /etc/sysctl.conf
 echo net.ipv4.tcp_low_latency=1 >> /etc/sysctl.conf
-
-## Tune File System options
 sed -i "s/defaults        1 1/defaults,noatime        0 0/" /etc/fstab
-
-## Set Limits
 echo "hdfs  -       nofile  32768
 hdfs  -       nproc   2048
 hbase -       nofile  32768
 hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
-
 systemctl stop firewalld
 systemctl disable firewalld
-
-## Enable root login via SSH key
-cp /root/.ssh/authorized_keys /root/.ssh/authorized_keys.bak
-cp /home/opc/.ssh/authorized_keys /root/.ssh/authorized_keys
-
-## KERBEROS INSTALL
 EXECNAME="KERBEROS"
 log "-> INSTALL"
-
-yum -y install krb5-server krb5-libs krb5-workstation
+yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
 KERBEROS_PASSWORD="SOMEPASSWORD"
 SCM_USER_PASSWORD="somepassword"
 kdc_server=$(hostname)
@@ -105,8 +78,6 @@ includedir /etc/krb5.conf.d/
     admin_server = FILE:/var/log/kadmin.log
     default = FILE:/var/log/krb5lib.log
 EOF
-
-
 rm -f /var/kerberos/krb5kdc/kdc.conf
 cat > /var/kerberos/krb5kdc/kdc.conf << EOF
 default_realm = ${REALM}
@@ -129,45 +100,35 @@ default_realm = ${REALM}
         default_principal_flags = +preauth
     }
 EOF
-
 rm -f /var/kerberos/krb5kdc/kadm5.acl
 cat > /var/kerberos/krb5kdc/kadm5.acl << EOF
 */admin@${REALM}    *
 cloudera-scm@${REALM}	*
 EOF
-
-kdb5_util create -r ${REALM} -s -P ${KERBEROS_PASSWORD}
-
+kdb5_util create -r ${REALM} -s -P ${KERBEROS_PASSWORD} >> $LOG_FILE
 echo -e "addprinc root/admin\n${KERBEROS_PASSWORD}\n${KERBEROS_PASSWORD}\naddprinc cloudera-scm\n${SCM_USER_PASSWORD}\n${SCM_USER_PASSWORD}\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/admin\nktadd -k /var/kerberos/krb5kdc/kadm5.keytab kadmin/changepw\nexit\n" | kadmin.local -r ${REALM}
 log "-> START"
-systemctl start krb5kdc.service
-systemctl start kadmin.service
-systemctl enable krb5kdc.service
-systemctl enable kadmin.service
-
-## INSTALL CLOUDERA MANAGER
+systemctl start krb5kdc.service >> $LOG_FILE
+systemctl start kadmin.service >> $LOG_FILE
+systemctl enable krb5kdc.service >> $LOG_FILE
+systemctl enable kadmin.service >> $LOG_FILE
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
-rpm --import https://archive.cloudera.com/cdh6/6.1.0/redhat7/yum//RPM-GPG-KEY-cloudera
-wget http://archive.cloudera.com/cm6/6.1.0/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
-yum install oracle-j2sdk* cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y
-pip install psycopg2==2.7.5 --ignore-installed
-yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y
-cm_host=`host cdh-utility-1 | gawk '{print $1}'`
+rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
+wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+yum install cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y >> $LOG_FILE
+pip install psycopg2==2.7.5 --ignore-installed >> $LOG_FILE
+yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y >> $LOG_FILE
 cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
-sed -e "s/\(server_host=\).*/\1${cm_host}/" -i /etc/cloudera-scm-agent/config.ini
-# AUTO-TLS Enable
-sudo JAVA_HOME=/usr/java/jdk1.8.0_141 /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
+sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.ini
+#export JDK=`ls /usr/lib/jvm | head -n 1`
+#sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
 systemctl start cloudera-scm-agent
 
 create_random_password()
 {
   perl -le 'print map { ("a".."z", "A".."Z", 0..9)[rand 62] } 1..10'
 }
-
-##
-## MAIN MYSQL INSTALL
-## 
 EXECNAME="MySQL DB"
 log "->Install"
 wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
@@ -248,10 +209,6 @@ for user in `cat /etc/mysql/mysql.pw | gawk -F ':' '{print $1}'`; do
 	fi
 	/opt/cloudera/cm/schema/scm_prepare_database.sh mysql ${database} ${user} ${pw}
 done;
-##
-## END MYSQL
-##
-## DISK SETUP
 vol_match() {
 case $i in
         1) disk="oraclevdb";;
@@ -287,8 +244,6 @@ case $i in
         31) disk="oraclevdag";;
 esac
 }
-
-
 iscsi_setup() {
         log "-> ISCSI Volume Setup - Volume $i : IQN ${iqn[$n]}"
         iscsiadm -m node -o new -T ${iqn[$n]} -p 169.254.2.${n}:3260
@@ -298,13 +253,10 @@ iscsi_setup() {
         iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l
         log "--> Volume ${iqn[$n]} done"
 }
-
 iscsi_target_only(){
         log "-->Logging into Volume ${iqn[$n]}"
         iscsiadm -m node -T ${iqn[$n]} -p 169.254.2.${n}:3260 -l
 }
-
-## Look for all ISCSI devices in sequence, finish on first failure
 EXECNAME="ISCSI"
 done="0"
 log "-- Detecting Block Volumes --"
@@ -329,13 +281,7 @@ if [ ${#iqn[@]} -gt 0 ]; then
 		iscsi_setup
 	done;
 fi
-
 EXECNAME="DISK PROVISIONING"
-#
-# Disk Setup uses drives /dev/sdb and /dev/sdc for statically mapped Cloudera partitions (logs, parcels)
-# If customizing your Terraform Templates - be sure to pay attention here to ensure proper mounts are presented
-#
-## Primary Disk Mounting Function
 data_mount () {
   log "-->Mounting /dev/$disk to /data$dcount"
   mkdir -p /data$dcount
@@ -343,7 +289,6 @@ data_mount () {
   UUID=`lsblk -no UUID /dev/$disk`
   echo "UUID=$UUID   /data$dcount    ext4   defaults,noatime,discard,barrier=0 0 1" | tee -a /etc/fstab
 }
-
 block_data_mount () {
   log "-->Mounting /dev/oracleoci/$disk to /data$dcount"
   mkdir -p /data$dcount
@@ -351,12 +296,7 @@ block_data_mount () {
   UUID=`lsblk -no UUID /dev/oracleoci/$disk`
   echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
 }
-
-## Check for x>0 devices
 log "->Checking for disks..."
-nvcount="0"
-bvcount="0"
-## Execute - will format all devices except sda for use as data disks in HDFS
 dcount=0
 for disk in `cat /proc/partitions | grep nv`; do
         log "-->Processing /dev/$disk"
@@ -407,12 +347,9 @@ for i in `seq 1 ${#iqn[@]}`; do
         done;
 done;
 fi
-## START CLOUDERA MANAGER
-log "------- Starting Cloudera Manager -------"
+EXECNAME="Clouera Manager"
+log "->Starting Cloudera Manager"
 chown -R cloudera-scm:cloudera-scm /etc/cloudera-scm-server
-#chown -R cloudera-scm:cloudera-scm /opt/cloudera
-#chown -R cloudera-scm:cloudera-scm /var/log/cloudera
 systemctl start cloudera-scm-server
-
 EXECNAME="END"
 log "->DONE"
