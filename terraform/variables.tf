@@ -134,8 +134,8 @@ variable "InstanceImageOCID" {
 variable "oci_service_gateway" {
   type = "map"
   default = {
-    ap-seoul-1 = "all-seo-services-in-oracle-services-network"
-    ap-tokyo-1 = "all-hnd-services-in-oracle-serviecs-network"
+    ap-seoul-1 = "all-icn-services-in-oracle-services-network"
+    ap-tokyo-1 = "all-nrt-services-in-oracle-serviecs-network"
     ca-toronto-1 = "all-yyz-services-in-oracle-services-network"
     eu-frankfurt-1 = "all-fra-services-in-oracle-services-network"
     uk-london-1 = "all-lhr-services-in-oracle-services-network"
