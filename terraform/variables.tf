@@ -14,6 +14,7 @@ variable "fingerprint" {}
 variable "region" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
+variable "cm_install" { default = "" }
 variable "deploy_on_oci" { default = "" }
 variable "cloudera_manager" { default = "10.0.0.2"}
 variable "AD" { default="2" }

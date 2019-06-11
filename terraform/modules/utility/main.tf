@@ -24,6 +24,7 @@ resource "oci_core_instance" "Utility" {
   }
 
   extended_metadata {
+    cm_install = "${var.cm_install}"
     deploy_on_oci = "${var.deploy_on_oci}"
   }
 
