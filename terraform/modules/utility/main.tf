@@ -23,6 +23,10 @@ resource "oci_core_instance" "Utility" {
     availability_domain = "${var.AD}"
   }
 
+  extended_metadata {
+    deploy_on_oci = "${var.deploy_on_oci}"
+  }
+
   timeouts {
     create = "30m"
   }

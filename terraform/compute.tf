@@ -35,7 +35,7 @@ module "utility" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
         user_data = "${base64encode(file("../scripts/cm_boot_mysql.sh"))}"
-	extended_metadata = "${base64encode(gzip(file("../scripts/deploy_on_oci.py")))}"
+	deploy_on_oci = "${base64encode(gzip(file("../scripts/deploy_on_oci.py")))}"
         cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"

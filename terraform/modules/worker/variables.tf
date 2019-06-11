@@ -15,6 +15,8 @@ variable "user_data" {}
 variable "image_ocid" {}
 variable "cm_version" {}
 variable "cdh_version" {}
+variable "cloudera_manager" {}
+variable "block_volume_count" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

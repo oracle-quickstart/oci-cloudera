@@ -17,6 +17,9 @@ variable "cm_version" {}
 variable "cdh_version" {}
 variable "worker_shape" {}
 variable "block_volume_count" {}
+variable "AD" {}
+variable "cloudera_manager" {}
+variable "deploy_on_oci" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

@@ -383,7 +383,7 @@ for w in `seq 1 $num_workers`; do
 		worker_fqdn_list=`echo "${worker_fqdn_list},${worker_fqdn[$w]}"`
 	fi
 done;
-echo "curl -L http://169.254.169.254/opc/v1/instance/metadata/extended_metadata | base64 -d " >> $LOG_FILE
+echo "curl -L http://169.254.169.254/opc/v1/instance/metadata/deploy_on_oci | base64 -d " >> $LOG_FILE
 echo "python deploy_on_oci.py -B -S -m ${cm_ip} -i ${worker_fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}" >> $LOG_FILE
 EXECNAME="END"
 log "->DONE"
