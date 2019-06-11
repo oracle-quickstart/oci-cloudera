@@ -14,10 +14,10 @@ variable "fingerprint" {}
 variable "region" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
-variable "extended_metdata" {}
-variable "cloudera_manager" {}
-variable "AD" {}
-variable "block_volume_count" {}
+variable "deploy_on_oci" { default = "" }
+variable "cloudera_manager" { default = "10.0.0.2"}
+variable "AD" { default="2" }
+variable "block_volume_count" { default = "3"}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
