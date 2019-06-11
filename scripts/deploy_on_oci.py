@@ -11,13 +11,12 @@ from cm_client.rest import ApiException
 from pprint import pprint
 import hashlib
 import re
-from paramiko import SFTPClient, SSHClient, AutoAddPolicy, SSHException
 import json
 import time
 import datetime
 import argparse
 import socket
-
+import os
 
 start_time = time.time()
 
@@ -31,16 +30,15 @@ cm_server = 'None'
 input_host_list = 'None'
 license_file = 'None'
 host_fqdn_list = []
-# Data Tiering - Enabled when using Heterogenous storage in your cluster, automatically turns on if using DenseIO shapes
-# and a Block Volume count greater than 0.  Defaults to 'False"
 data_tiering = 'False'
 nvme_disks = 0
+cluster_version = '6.2.0'  # type: str
 
 #
 # Custom Global Parameters - Customize below here
 #
 
-# Enable Debug Output set this to 'True' for detailed output during execution
+# Enable Debug Output set this to 'True' for detailed API output during execution
 debug = 'False'  # type: str
 
 # Define new admin username and password for Cloudera Manager
@@ -52,13 +50,13 @@ admin_password = 'somepassword'  # type: str
 cluster_name = 'TestCluster'  # type: str
 
 # Set this to 'True' (default) to enable secure cluster (Kerberos) functionality
-# Set this to 'False" to deploy an insecure cluster
+# Set this to 'False" to deploy an insecure cluster - This is automatically off for SIMPLE deployment
 secure_cluster = 'True'
 
 # Set this to 'False' if you do not want HDFS HA - useful for Development or if you want to save some setup time
+# This is automatically off for SIMPLE deployment
 hdfs_ha = 'True'
 
-# If above is 'True', these values are required.
 # They should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
 realm = 'HADOOP.COM'
 kdc_admin = 'cloudera-scm@HADOOP.COM'
@@ -70,9 +68,6 @@ cm_port = '7180'
 # Set API version to use with Cloudera Manager
 api_version = 'v31'
 
-# Define Cloudera Version 6 to deploy
-cluster_version = '6.1.0'  # type: str
-
 # Define DB port number for Cluster Metadata
 # This should match the CloudInit boot file you chose in Terraform
 # For MySQL this is 3306
@@ -83,56 +78,26 @@ meta_db_port = '3306'
 remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
 parcel_distribution_rate = "1024000"  # type: int
 
-# Define SSH Keyfile for access to cluster hosts - required for Cloudera Manager to deploy agents
-# This value is local to your deployment host
-ssh_keyfile = '/home/opc/.ssh/id_rsa'  # type: str
-
 # Cluster Services List
-# Modify this list to pick which services to install
-#
-# cluster_service_list = ['SOLR', 'ACCUMULO_C6', 'ADLS_CONNECTOR', 'LUNA_KMS', 'HBASE', 'SENTRY', 'HIVE', 'KUDU', 
-#                         'HUE', 'FLUME', 'SPARK_ON_YARN', 'THALES_KMS', 'HDFS', 'OOZIE', 'ISILON', 'SQOOP_CLIENT',
-#                         'KS_INDEXER', 'ZOOKEEPER', 'YARN', 'KMS', 'KEYTRUSTEE', 'KEYTRUSTEE_SERVER', 'KAFKA', 'IMPALA',
-#                         'AWS_S3']
-# MAXIMAL - NON KERBEROS
 cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE', 'SQOOP_CLIENT', 'ZOOKEEPER',
                         'YARN', 'KAFKA', 'IMPALA']
-# MINIMAL - NON KERBEROS
-# cluster_service_list = ['HDFS', 'YARN', 'SOLR', 'ZOOKEEPER']
-
 # Management Roles List
-#  Available role types:
-#
-#  mgmt_roles_list = [ 'SERVICEMONITOR', 'ACTIVITYMONITOR', 'HOSTMONITOR', 'REPORTSMANAGER', 'EVENTSERVER'
-#                      'ALERTPUBLISHER', 'NAVIGATOR', 'NAVIGATORMETASERVER']
-#
 # REPORTSMANAGER, NAVIGATOR, NAVIGATORMETASERVER are only available with Licensed Cloudera Manager Enterprise Edition.
 #
 mgmt_roles_list = ['ACTIVITYMONITOR', 'ALERTPUBLISHER', 'EVENTSERVER', 'HOSTMONITOR', 'SERVICEMONITOR']
 
 # Cluster Host Mapping
-# Define these variables to match when building host lists to use for role and
-# service mapping.  For example, if your worker nodes have "cdh-worker" in the hostname, set that here.
-# If you want your Cloudera Manager on a specific host, set the host identifier here.
-# This is used in "cluster_host_id_map" and "remote_host_detection"
-#
-# Worker Host Prefix
-worker_hosts_contain = 'cdh-worker'
-# Master Host Prefix
-master_hosts_contain = 'cdh-master'
-# Explicit hostname of the Master Host for NameNode
-namenode_host_contains = 'cdh-master-1'
-# Explicit hostname of the Master Host for SecondaryNameNode
-secondary_namenode_host_contains = 'cdh-master-2'
-# Explicit hostname of the Cloudera Manager Host
-cloudera_manager_host_contains = 'cdh-utility-1'
+# Used to prescriptively generate a host topology, only modify if hostnames are altered from Terraform
+worker_hosts_prefix = 'cdh-worker'
+namenode_host = 'cdh-master-1'
+secondary_namenode_host = 'cdh-master-2'
+cloudera_manager_host = 'cdh-utility-1'
 
 # Specify Log directory on cluster hosts - this is a separate block volume by default in Terraform
 LOG_DIR = '/var/log/cloudera'
 
 # S3 Compatibility for OCI Object Storage - Set this to 'True' to enable
 s3_compat_enable = 'False'
-
 # Set the following parameters for S3 Compatibility Access to OCI Object Storage
 s3a_secret_key = 'None'
 s3a_access_key = 'None'
@@ -140,23 +105,15 @@ s3a_access_key = 'None'
 #   https://<tenancy_name>.compat.objectstorage.<home_region>.oraclecloud.com
 s3a_endpoint = 'None'
 
-#
 # End Custom Global Parameters
-#
 
-# Do not modify this
-
+# Some additional variables are needed - you should not modify these
 s3a_endpoint_config = '<property><name>fs.s3a.endpoint</name><value>' + s3a_endpoint + '</value></property>'
 s3a_secret_key_config = '<property><name>fs.s3a.secret.key</name><value>' + s3a_secret_key +'</value></property>'
 s3a_access_key_config = '<property><name>fs.s3a.access.key</name><value>' + s3a_access_key +'</value></property>'
 s3a_path_config =  '<property><name>fs.s3a.path.style.access</name><value>true</value></property>'
 s3a_paging_config = '<property><name>fs.s3a.paging.maximum</name><value>1000</value></property>'
 s3a_config = s3a_endpoint_config + s3a_access_key_config + s3a_secret_key_config + s3a_path_config + s3a_paging_config
-
-#
-# Some additional variables are needed - you should not modify these
-#
-
 # This converts the cluster name into API friendly format
 api_cluster_name = cm_client.ApiClusterRef(cluster_name, cluster_name)  # type: str
 # Sets a configuration parameter based on Meta DB port - used for RCGs
@@ -164,7 +121,6 @@ if meta_db_port == '3306':
     meta_db_type = 'mysql'
 elif meta_db_port == '5432':
     meta_db_type = 'postgresql'
-
 #
 # OCI Shape Specific Tunings - Modify at your own discretion
 #
@@ -175,89 +131,36 @@ def get_parameter_value(worker_shape, parameter):
         "BM.DenseIO2.52:impalad_memory_limit": "274877906944",
         "BM.DenseIO2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.DenseIO2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "BM.DenseIO2.52:dfs_replication": "3",
-        "BM.DenseIO1.36:yarn_nodemanager_resource_cpu_vcores": "128",
-        "BM.DenseIO1.36:yarn_nodemanager_resource_memory_mb": "524288",
-        "BM.DenseIO1.36:impalad_memory_limit": "274877906944",
-        "BM.DenseIO1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-        "BM.DenseIO1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-        "BM.DenseIO1.36:dfs_replication": "3",
         "BM.Standard2.52:yarn_nodemanager_resource_cpu_vcores": "208",
         "BM.Standard2.52:yarn_nodemanager_resource_memory_mb": "786432",
         "BM.Standard2.52:impalad_memory_limit": "274877906944",
         "BM.Standard2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
         "BM.Standard2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "BM.Standard2.52:dfs_replication": "3",
-        "BM.Standard1.36:yarn_nodemanager_resource_cpu_vcores": "128",
-        "BM.Standard1.36:yarn_nodemanager_resource_memory_mb": "242688",
-        "BM.Standard1.36:impalad_memory_limit": "122857142857",
-        "BM.Standard1.36:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-        "BM.Standard1.36:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1896m -Xmx1896m",
-        "BM.Standard1.36:dfs_replication": "3",
         "VM.Standard2.24:yarn_nodemanager_resource_cpu_vcores": "80",
         "VM.Standard2.24:yarn_nodemanager_resource_memory_mb": "308224",
         "VM.Standard2.24:impalad_memory_limit": "122857142857",
         "VM.Standard2.24:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
         "VM.Standard2.24:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
-        "VM.Standard2.24:dfs_replication": "3",
         "VM.Standard2.16:yarn_nodemanager_resource_cpu_vcores": "48",
         "VM.Standard2.16:yarn_nodemanager_resource_memory_mb": "237568",
         "VM.Standard2.16:impalad_memory_limit": "42949672960",
         "VM.Standard2.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
         "VM.Standard2.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard2.16:dfs_replication": "3",
-        "VM.Standard1.16:yarn_nodemanager_resource_cpu_vcores": "48",
-        "VM.Standard1.16:yarn_nodemanager_resource_memory_mb": "95232",
-        "VM.Standard1.16:impalad_memory_limit": "42949672960",
-        "VM.Standard1.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard1.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard1.16:dfs_replication": "3",
         "VM.Standard2.8:yarn_nodemanager_resource_cpu_vcores": "16",
         "VM.Standard2.8:yarn_nodemanager_resource_memory_mb": "114688",
         "VM.Standard2.8:impalad_memory_limit": "21500000000",
         "VM.Standard2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.Standard2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.Standard2.8:dfs_replication": "3",
         "VM.DenseIO2.8:yarn_nodemanager_resource_cpu_vcores": "16",
         "VM.DenseIO2.8:yarn_nodemanager_resource_memory_mb": "114688",
         "VM.DenseIO2.8:impalad_memory_limit": "21500000000",
         "VM.DenseIO2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
         "VM.DenseIO2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.DenseIO2.8:dfs_replication": "3",
-        "VM.DenseIO1.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.DenseIO1.8:yarn_nodemanager_resource_memory_mb": "114688",
-        "VM.DenseIO1.8:impalad_memory_limit": "21500000000",
-        "VM.DenseIO1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.DenseIO1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.DenseIO1.8:dfs_replication": "3",
-        "VM.Standard1.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.Standard1.8:yarn_nodemanager_resource_memory_mb": "37888",
-        "VM.Standard1.8:impalad_memory_limit": "21500000000",
-        "VM.Standard1.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.Standard1.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.Standard1.8:dfs_replication": "3"
     }
     return switcher.get(worker_shape + ":" + parameter, "NOT FOUND")
-
-
 #
 # SECONDARY FUNCTIONS SECTION
 #
-
-def parse_ssh_key():
-    """
-    Detect SSH key and parse to setup for host deployment
-    :return:
-    """
-    global ssh_key
-    try:
-        with open(ssh_keyfile) as k:
-            ssh_key = k.read()
-        print('->SSH Keyfile Found: %s' % ssh_keyfile)
-    except:    
-        print('->Error ssh keyfile does not exist - verify file/path exists: %s \n' % ssh_keyfile)
-        sys.exit()
-
 
 def build_api_endpoints(user_name, password):
     """
@@ -541,132 +444,6 @@ def read_cluster():
     except ApiException as e:
         print('Exception while calling ClustersResourceAPI->read_cluster: {}\n'.format(e))
 
-
-def remote_host_detection():
-    """
-    SSH to Cloudera Manager Server and detect cluster hosts
-    :return:
-    """
-    print('->Building Host FQDN List dynamically using SSH')
-    global host_fqdn_list, host_ip_list, output, kdc_fqdn
-    kdc_fqdn = 'None'
-    host_fqdn_list = []
-    host_ip_list = []
-    ssh_client = SSHClient()
-    ssh_client.set_missing_host_key_policy(AutoAddPolicy())
-    ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
-    # Cloudera Manager FQDN lookup
-    print('->Lookup Cloudera Manager FQDN')
-    try:
-        ssh_command = '/usr/bin/host ' + cloudera_manager_host_contains
-        stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-        output = stdout.read()
-        fqdn = output.strip().split()
-        if debug == 'True':
-            print('Host Detection output for Cloudera Manager - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
-
-        if stdout.channel.recv_exit_status() == 0:
-            if kdc_fqdn == 'None':
-                kdc_fqdn = fqdn[0]
-
-            host_fqdn_list.append(fqdn[0])
-            host_ip_list.append(fqdn[3])
-
-    except:
-        pass
-    if len(host_fqdn_list) < 1:
-        print('\tCloudera Manager host not found!')
-        sys.exit()
-    else:
-        print('\t%d found' % len(host_fqdn_list))
-    # Master Host Detection
-    x = 1
-    print('->Lookup Master Hosts FQDN')
-    for n in range(x, 6):
-        try:
-            ssh_command = '/usr/bin/host ' + master_hosts_contain + '-%d' % (x,)
-            stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-            output = stdout.read()
-            fqdn = output.strip().split()
-            if debug == 'True':
-                print('Host Detection output for Master Hosts - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
-
-            if stdout.channel.recv_exit_status() == 0:
-                host_fqdn_list.append(fqdn[0])
-                host_ip_list.append(fqdn[3])
-
-            else:
-                if (x-1) < 2:
-                    print('\t%d Master hosts found, minimum 2 required!' % (x-1))
-                    sys.exit()
-                else:
-                    print('\t%d found' % (x - 1))
-                x = 0
-
-        except:
-            pass
-
-        if x == 0:
-            break
-        else:
-            x = x + 1
-
-    # Worker Host Detection
-    # For large scale cluster deployment, change this to a number higher than the number of workers
-    max_worker_count = 100
-    x = 1
-    print('->Lookup Worker Hosts FQDN')
-    for n in range(x, max_worker_count):
-        try:
-            ssh_command = '/usr/bin/host ' + worker_hosts_contain + '-%d' % (x,)
-            stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-            output = stdout.read()
-            fqdn = output.strip().split()
-            if debug == 'True':
-                print('Host Detection output for Worker Hosts - %s - FQDN: %s - IP: %s' % (output, fqdn[0], fqdn[3]))
-
-            if stdout.channel.recv_exit_status() == 0:
-                host_fqdn_list.append(fqdn[0])
-                host_ip_list.append(fqdn[3])
-
-            else:
-                if (x-1) < 3:
-                    print('\t%d Workers found, minimum 3 required!' % (x-1))
-                    sys.exit()
-                else:
-                    print('\t%d found' % (x - 1))
-                x = 0
-
-        except:
-            pass
-
-        if x == 0:
-            break
-
-        else:
-            x = x + 1
-
-
-def remote_worker_shape_detection():
-    """
-    SSH via the Cloudera Manager to the first worker in the cluster and lookup shape metadata, setting "worker_shape"
-    :return:
-    """
-    ssh_client = SSHClient()
-    ssh_client.set_missing_host_key_policy(AutoAddPolicy())
-    ssh_client.connect(hostname=cm_server, username='opc', key_filename=ssh_keyfile)
-    ssh_command = "ssh -oStrictHostKeyChecking=no -i /home/opc/.ssh/id_rsa opc@" + worker_hosts_contain + "-1" + \
-                  " '/usr/bin/curl -s http://169.254.169.254/opc/v1/instance/'"
-    stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-    worker_metadata = stdout.read()
-    if debug == 'True':
-        print('Worker Metadata from Shape Detection:')
-        print(worker_metadata)
-
-    parsed_metadata = json.loads(worker_metadata)
-    worker_shape = parsed_metadata['shape']
-
-
 def build_host_list():
     """
     Create Static Host List for host management - convert the input_host_list input to a list
@@ -674,9 +451,7 @@ def build_host_list():
     """
     print('->Building Host FQDN List from Static Values\n')
     global host_fqdn_list
-    host_fqdn_list = []
-    for host in input_host_list:
-        host_fqdn_list.append(host)
+    host_fqdn_list = host_input_list.split(",")
 
 
 def build_cluster_host_list(host_fqdn_list):
@@ -690,7 +465,6 @@ def build_cluster_host_list(host_fqdn_list):
     h = 0
     for host in host_fqdn_list:
         hostname = host.split('.')[0]
-        host_ip = host_ip_list[h]
         host_info = cm_client.ApiHostRef(host_id=host, hostname=hostname)
         cluster_host_list.append(host_info)
         h = h + 1
@@ -793,37 +567,6 @@ def list_hosts():
             pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClustersResourceApi->list_hosts: {}\n'.format(e))
-
-
-def install_hosts():
-    """
-    Perform SCM Agent Installation on a set of hosts
-    :return:
-    """
-    body = cm_client.ApiHostInstallArguments(host_names=host_fqdn_list, user_name='root', private_key=ssh_key,
-                                             parallel_install_count='20')
-
-    try:
-        api_response = cloudera_manager_api.host_install_command(body=body)
-        if debug == 'True':
-            pprint(api_response)
-    except ApiException as e:
-        print('Exception when calling ClouderaManagerResourceApi->host_install: {}\n'.format(e))
-
-
-def install_host(host_fqdn):
-    """
-    Perform SCM Agent Installation on a specific host
-    :return:
-    """
-    body = cm_client.ApiHostInstallArguments(host_names=host_fqdn, user_name='root', private_key=ssh_key)
-
-    try:
-        api_response = cloudera_manager_api.host_install_command(body=body)
-        if debug == 'True':
-            pprint(api_response)
-    except ApiException as e:
-        print('Exception when calling ClouderaManagerResourceApi->host_install: {}\n'.format(e))
 
 
 def update_parcel_repo(remote_parcel_url, parcel_distribution_rate):
@@ -1000,18 +743,11 @@ def get_mgmt_db_passwords():
     :return:
     """
     global amon_password, rman_password, navigator_password, navigator_meta_password, oozie_password, hive_meta_password
-    parse_ssh_key()
-    ssh_client = SSHClient()
-    ssh_client.set_missing_host_key_policy(AutoAddPolicy())
-    ssh_client.connect(hostname=cm_server, username='root', key_filename=ssh_keyfile)
-    sftp_client = ssh_client.open_sftp()
-    print('->Connecting to %s to gather Cloudera Manager DB passwords.' % cm_server)
     try:
-        sftp_client.stat('/etc/cloudera-scm-server/db.mgmt.properties')
-        remote_file = sftp_client.open('/etc/cloudera-scm-server/db.mgmt.properties')
+        db_file = os.open('/etc/cloudera-scm-server/db.mgmt.properties')
         try:
             print('Postgres DB found - processing.')
-            for line in remote_file:
+            for line in db_file:
                 if 'com.cloudera.cmf.ACTIVITYMONITOR.db.password' in line:
                     amon_password = line.split('=')[1].rstrip()
 
@@ -1030,17 +766,16 @@ def get_mgmt_db_passwords():
                 if 'com.cloudera.cmf.HIVEMETASTORESERVER.db.password' in line:
                     hive_meta_password = line.split('=')[1].rstrip()
         finally:
-            remote_file.close()
+            pass
 
     except IOError:
         print('Postgres DB file not found.')
 
     try:
-        sftp_client.stat('/etc/mysql/mysql.pw')
-        remote_file = sftp_client.open('/etc/mysql/mysql.pw')
+        db_file = os.open('/etc/mysql/mysql.pw')
         try:
             print('MySQL DB found - processing.')
-            for line in remote_file:
+            for line in db_file:
                 if 'amon' in line:
                     amon_password = line.split(':')[1].rstrip()
 
@@ -1062,7 +797,7 @@ def get_mgmt_db_passwords():
                 if 'oozie' in line:
                     oozie_password = line.split(':')[1].rstrip()
         finally:
-            remote_file.close()
+            pass
 
     except IOError:
         print('MySQL DB file not found.')
@@ -1312,9 +1047,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                 if rcg == 'HDFS-DATANODE-BASE':
                     print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'DATANODE'  # type: str
-                    dfs_replication = [cm_client.ApiConfig(name='dfs_replication',
-                                                           value=get_parameter_value(worker_shape, 'dfs_replication'))]
-
+                    dfs_replication = [cm_client.ApiConfig(name='dfs_replication', value='3')]
                     core_site_safety_valve = [cm_client.ApiConfig(name='core_site_safety_valve', value=s3a_config)]
                     dfs_data_dir = [cm_client.ApiConfig(name='dfs_data_dir_list', value=dfs_data_dir_list)]
                     datanode_java_heapsize = [cm_client.ApiConfig(name='datanode_java_heapsize', value='351272960')]
@@ -1987,7 +1720,6 @@ def cluster_action(action, *kwargs):
             print('Exception running ClustersResourceApi->deploy_client_config {}\n'.format(e))
 
 
-
 def build_api_role_list(role):
     """
     Build API Role Name List based on role
@@ -2013,7 +1745,6 @@ def mgmt_role_commands(action):
     :param role: Role to perform action on
     :return:
     """
-
     if action == 'restart_command':
         for role in mgmt_roles_list:
             build_api_role_list(role)
@@ -2524,6 +2255,7 @@ def options_parser(args=None):
                         help='Delete Cluster %s' % cluster_name)
     parser.add_argument('-B', '--BUILD', action='store_true',
                         help='Build Cluster %s' % cluster_name)
+    parser.add_argument('-S', '--SIMPLE', action='store_true', help='Simple, no HA or Kerberos at deployment')
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
                       help='Cloudera Manager IP to connect API using cm_client')
     parser.add_argument('-i', '--input_host_list', metavar='host.fqdn', nargs='+',
@@ -2534,6 +2266,9 @@ def options_parser(args=None):
                       help='Cloudera Manager License File Name')
     parser.add_argument('-w', '--worker_shape', metavar='worker_shape',
                       help='OCI Shape of Worker Instances in the Cluster')
+    paresr.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
+    parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='CDH version to deploy')
+    parser.add_argument('-ad', '--availability_domain', metavar='availability_domain', help='OCI Availability Domain')
     options = parser.parse_args(args)
     if options.cm_server and options.DELETE:
         pass
@@ -2550,6 +2285,11 @@ def options_parser(args=None):
             print('Worker Shape is required.')
             parser.print_help()
             exit(-1)
+        if options.cm_server and not options.availability_domain:
+            print('OCI Availability Domain is required.')
+            parser.print_help()
+            exit(-1)
+
     if options.license_file:
         try:
             with open(options.license_file) as l:
@@ -2561,8 +2301,8 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.BUILD, options.DELETE)
-
+            options.num_workers, options.BUILD, options.DELETE, options.SIMPLE, options.cdh_version,
+            options.availability_domain)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
@@ -2573,7 +2313,6 @@ def build_cloudera_cluster():
     Deploy and Configure a Cloudera EDH Cluster
     :return:
     """
-    parse_ssh_key()
     build_disk_lists(disk_count, data_tiering, nvme_disks)
     try:
         api_response = users_api.read_user2(admin_user_name)
@@ -2594,35 +2333,17 @@ def build_cloudera_cluster():
 
     print('->Initializing Cluster %s' % cluster_name)
     init_cluster()
-    if input_host_list == 'None':
-        print('->No input host list found, running remote detection via SSH')
-        remote_host_detection()
-        if len(host_fqdn_list) < 6:
-            print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
-            sys.exit()
+    # Pass host count for Workers, asssume default layout
+    if len(host_fqdn_list) < 6:
+        print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
+        sys.exit()
 
-    else:
-        print('->Input host list found: %s' % input_host_list)
-        build_host_list()
-
+    build_host_list()
     build_cluster_host_list(host_fqdn_list)
     read_cluster()
-    ## Failure mode when SCM Agent fails - so we need to loop here
-    install_success = 'False'
-    while install_success == 'False':
-        install_hosts()
-        wait_for_active_cluster_commands('Host Agents Installing')
-        print('->Host Installation Complete')
-        add_hosts_to_cluster(cluster_host_list)
-        active_command = '\tHosts Adding to Cluster ' + cluster_name
-        wait_for_active_cluster_commands(active_command)
-        if host_install_failure == 'True':
-            print('->Host SCM Agent Install Failure Detected, trying again')
-            remove_all_hosts_from_cluster()
-        else:
-            print('->Hosts added to Cluster %s' % cluster_name)
-            install_success = 'True'
-
+    add_hosts_to_cluster(cluster_host_list)
+    active_command = '\tHosts Adding to Cluster ' + cluster_name
+    wait_for_active_cluster_commands(active_command)
     print('->Updating Parcel Remote Repo: %s' % remote_parcel_url)
     update_parcel_repo(remote_parcel_url, parcel_distribution_rate)
     print('->Parcel Setup Running')
@@ -2655,7 +2376,6 @@ def build_cloudera_cluster():
     mgmt_service('restart_command')
     print('->Restart MGMT Roles')
     mgmt_role_commands(action='restart_command')
-    # TODO - Need to refactor here if license is provided
     if license_file == 'None':
         print('->Activating Trial License')
         begin_trial()
@@ -2674,7 +2394,11 @@ def build_cloudera_cluster():
         sys.exit()
     global cluster_setup_time
     cluster_setup_time = time.time() - start_time
-    if hdfs_ha == 'True':
+    if SIMPLE == 'True':
+        hdfs_ha = 'False'
+        secure_cluster = 'False'
+        pass
+    elif hdfs_ha == 'True':
         hdfs_ha_deployment_start = time.time()
         print('->Enabling HDFS HA')
         hdfs_enable_nn_ha(snn_host_id)
@@ -2769,7 +2493,8 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, host_fqdn_list, disk_count, license_file, worker_shape, BUILD, DELETE = options_parser(sys.argv[1:])
+    cm_server, host_fqdn_list, disk_count, license_file, worker_shape, num_workers, BUILD, DELETE, SIMPLE, cdh_version,\
+    cms_version = options_parser(sys.argv[1:])
     if DELETE == True:
         print('Delete %s selected' % cluster_name)
         print('Are you absolutely sure you want to DELETE %s?' % cluster_name)
@@ -2822,7 +2547,9 @@ if __name__ == '__main__':
         if cluster_exists == 'False':
             print('%s does not exist - creating.' % cluster_name)
             build_cloudera_cluster()
-            if secure_cluster == 'True':
+            if SIMPLE == 'True':
+                pass
+            elif secure_cluster == 'True':
                 print('->Enable Kerberos')
                 enable_kerberos()
 

@@ -9,3 +9,7 @@ output "public-id" {
 output "bastion-id" {
         value = "${oci_core_subnet.bastion.*.id[var.availability_domain - 1]}"
 }
+
+output "vcn-dn" {
+	value = "${oci_core_vcn.cloudera_vcn.dns_label}.oraclevcn.com"
+}

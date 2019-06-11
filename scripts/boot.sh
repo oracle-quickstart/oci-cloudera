@@ -6,6 +6,7 @@ cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version
 cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
+block_volume_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
 EXECNAME="TUNING"
 log "->TUNING START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -16,8 +17,7 @@ yum install java-1.8.0-openjdk.x86_64 -y >> $LOG_FILE
 yum install krb5-workstation -y >> $LOG_FILE
 EXECNAME="KERBEROS"
 log "->krb5.conf"
-kdc_server='cdh-utility-1'
-kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
+kdc_fqdn=${cm_fqdn}
 realm="hadoop.com"
 REALM="HADOOP.COM"
 log "-> CONFIG"
@@ -168,33 +168,16 @@ while [ "$detection_flag" = "0" ]; do
 			fi
 		fi
 	done;
-	log "->Sanity check, loop again"
-	sleep 30
-	sanity_detection_done="0"
-	sanity_volume_count="0"
-	for i in `seq 2 33`; do
-                if [ $sanity_detection_done = "0" ]; then
-                        iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.$i:3260 2>&1 2>/dev/null
-                        iscsi_chk=`echo -e $?`
-                        if [ $iscsi_chk = "0" ]; then
-                                siqn[${i}]=`iscsiadm -m discoverydb -D -t sendtargets -p 169.254.2.${i}:3260 | gawk '{print $2}'`
-                                continue
-                        else
-                                sanity_volume_count="${#siqn[@]}"
-                                log "--> Sanity Discovery Complete - ${#siqn[@]} volumes found"
-                                sanity_detection_done="1"
-                        fi
-                fi
-        done;
+	total_volume_count=$((block_volume_count+2))
 	if [ "$volume_count" = "0" ]; then 
-		log "-- $volume_count Block Volumes detected, sleeping 30 then retry --"
-		sleep 30
-		continue
-	elif [ "$volume_count" != "$sanity_volume_count" ]; then
-		log "-- Sanity Check Failed - $sanity_volume_count Volumes found, $volume_count on first run.  Re-running --"
+		log "-- $volume_count Block Volumes detected, sleeping 15 then retry --"
 		sleep 15
 		continue
-	elif [ "$volume_count" = "$sanity_volume_count" ]; then 
+	elif [ "$volume_count" != "$total_volume_count" ]; then
+		log "-- Sanity Check Failed - $volume_count Volumes found, $total_volume_count expected.  Re-running --"
+		sleep 15
+		continue
+	elif [ "$volume_count" = "$total_volume_count" ]; then 
 		log "-- Setup for ${#iqn[@]} Block Volumes --"
 		for i in `seq 1 ${#iqn[@]}`; do
 			n=$((i+1))

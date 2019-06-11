@@ -1,10 +1,15 @@
 #!/bin/bash
 LOG_FILE="/var/log/cloudera-OCI-initialize.log"
 log() { echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" }
+cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
+cm_ip=`host ${cm_fqdn} | gawk '{print $4}'`
 cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
 cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
+availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/availability_domain`
+worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
+worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -36,8 +41,7 @@ log "-> INSTALL"
 yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
 KERBEROS_PASSWORD="SOMEPASSWORD"
 SCM_USER_PASSWORD="somepassword"
-kdc_server=$(hostname)
-kdc_fqdn=`host $kdc_server | gawk '{print $1}'`
+kdc_server=${cm_fqdn}
 realm="hadoop.com"
 REALM="HADOOP.COM"
 log "-> CONFIG"
@@ -351,5 +355,35 @@ EXECNAME="Clouera Manager"
 log "->Starting Cloudera Manager"
 chown -R cloudera-scm:cloudera-scm /etc/cloudera-scm-server
 systemctl start cloudera-scm-server
+EXECNAME="Cluster Build"
+log "->Installing Python Pre-reqs"
+sudo yum install python python-pip -y >> $LOG_FILE
+sudo pip install --upgrade pip >> $LOG_FILE
+sudo pip install cm_client >> $LOG_FILE
+log "->Running Cluster Deployment"
+log "-->Host Discovery"
+detection_flag="0"
+w=1
+while [ $detection_flag = "0" ]; do
+	worker_lookup=`host cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com`
+	worker_check=`echo -e $?`
+	if [ $worker_check = "0" ]; then 
+		worker_fqdn[$w]=`cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com`
+		w=$((w+1))
+	else
+		detection_flag="1"
+	fi
+done;
+worker_fqdn_list=""
+num_workers=${#worker_fqdn[@]}
+for w in `seq 1 $num_workers`; do 
+	if [ $w = "1" ]; then 
+		worker_fqdn_list="${worker_fqdn[$w]}"
+	else
+		worker_fqdn_list=`echo "${worker_fqdn_list},${worker_fqdn[$w]}"`
+	fi
+done;
+echo "curl -L http://169.254.169.254/opc/v1/instance/metadata/extended_metadata | base64 -d " >> $LOG_FILE
+echo "python deploy_on_oci.py -B -S -m ${cm_ip} -i ${worker_fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}" >> $LOG_FILE
 EXECNAME="END"
 log "->DONE"

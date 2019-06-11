@@ -13,6 +13,10 @@ variable "instances" {}
 variable "subnet_id" {}
 variable "user_data" {}
 variable "image_ocid" {}
+variable "cm_version" {}
+variable "cdh_version" {}
+variable "worker_shape" {}
+variable "block_volume_count" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

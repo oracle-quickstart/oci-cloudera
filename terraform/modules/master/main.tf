@@ -16,6 +16,9 @@ resource "oci_core_instance" "Master" {
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}"
+    cloudera_manager    = "${var.cloudera_manager}"
+    cdh_version         = "${var.cdh_version}"
+    cm_version          = "${var.cm_version}" 
   }
 
   timeouts {

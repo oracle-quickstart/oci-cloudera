@@ -14,6 +14,9 @@ module "bastion" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
 	user_data = "${base64encode(file("../scripts/boot.sh"))}"
+	cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+	cm_version = "${var.cm_version}"
+	cdh_version = "${var.cdh_version}"
 }
 
 module "utility" {
@@ -32,6 +35,13 @@ module "utility" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
         user_data = "${base64encode(file("../scripts/cm_boot_mysql.sh"))}"
+	extended_metadata = "${base64encode(gzip(file("../scripts/deploy_on_oci.py")))}"
+        cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+        cm_version = "${var.cm_version}"
+        cdh_version = "${var.cdh_version}"
+	worker_shape = "${var.worker_instance_shape}"
+	block_volume_count = "${var.block_volume_count}"
+	AD = "${var.availability_domain}"
 }
 
 module "master" {
@@ -50,6 +60,9 @@ module "master" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
         user_data = "${base64encode(file("../scripts/boot.sh"))}"
+        cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+        cm_version = "${var.cm_version}"
+        cdh_version = "${var.cdh_version}"
 }
 
 module "worker" {
@@ -70,4 +83,8 @@ module "worker" {
 	block_volumes_per_worker = "${var.block_volumes_per_worker}"
 	data_blocksize_in_gbs = "${var.data_blocksize_in_gbs}"
         user_data = "${base64encode(file("../scripts/boot.sh"))}"
+        cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+        cm_version = "${var.cm_version}"
+        cdh_version = "${var.cdh_version}"
+	block_volume_count = "${var.block_volumes_per_worker}"
 }

@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # Environmental variables
 # You probably want to define these as environmental variables.
-# Instructions on that are here: https://github.com/oci-quickstart/oci-prerequisites
+# Instructions on that are here: https://github.com/oracle/oci-quickstart-prerequisites
 # ---------------------------------------------------------------------------------------------------------------------
 
 variable "compartment_ocid" {}
@@ -14,6 +14,15 @@ variable "fingerprint" {}
 variable "region" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Cloudera variables
+# You can modify these.
+# ---------------------------------------------------------------------------------------------------------------------
+# Cloudera Manager Version
+variable "cm_version" { default = "6.2.0" }
+# Cloudera Enterprise Data Hub Version
+variable "cdh_version" { default = "6.2.0" }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
