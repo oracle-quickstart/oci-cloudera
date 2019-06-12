@@ -166,41 +166,38 @@ resource "oci_core_security_list" "BastionSubnet" {
 }
 
 resource "oci_core_subnet" "public" {
-  count               = "3"
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index],"name")}"
-  cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, count.index)}"
-  display_name        = "public_${count.index+1}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
+  cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, 1)}"
+  display_name        = "public_${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${oci_core_vcn.cloudera_vcn.id}"
   route_table_id      = "${oci_core_route_table.RouteForComplete.id}"
   security_list_ids   = ["${oci_core_security_list.PublicSubnet.id}"]
   dhcp_options_id     = "${oci_core_vcn.cloudera_vcn.default_dhcp_options_id}"
-  dns_label           = "public${count.index+1}"
+  dns_label           = "public${var.availability_domain}"
 }
 
 resource "oci_core_subnet" "private" {
-  count               = "3"
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index],"name")}"
-  cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, count.index+3)}"
-  display_name        = "private_ad${count.index+1}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
+  cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, 2)}"
+  display_name        = "private_ad${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${oci_core_vcn.cloudera_vcn.id}"
   route_table_id      = "${oci_core_route_table.private.id}"
   security_list_ids   = ["${oci_core_security_list.PrivateSubnet.id}"]
   dhcp_options_id     = "${oci_core_vcn.cloudera_vcn.default_dhcp_options_id}"
   prohibit_public_ip_on_vnic = "true"
-  dns_label = "private${count.index+1}"
+  dns_label = "private${var.availability_domain}"
 }
 
 resource "oci_core_subnet" "bastion" {
-  count               = "3"
-  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[count.index],"name")}"
-  cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, count.index+6)}"
-  display_name        = "bastion_ad${count.index+1}"
+  availability_domain = "${lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain - 1],"name")}"
+  cidr_block          = "${cidrsubnet(var.VPC-CIDR, 8, 3)}"
+  display_name        = "bastion_ad${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${oci_core_vcn.cloudera_vcn.id}"
   route_table_id      = "${oci_core_route_table.RouteForComplete.id}"
   security_list_ids   = ["${oci_core_security_list.BastionSubnet.id}"]
   dhcp_options_id     = "${oci_core_vcn.cloudera_vcn.default_dhcp_options_id}"
-  dns_label           = "bastion${count.index+1}"
+  dns_label           = "bastion${var.availability_domain}"
 }
