@@ -1,6 +1,8 @@
 #!/bin/bash
 LOG_FILE="/var/log/cloudera-OCI-initialize.log"
-log() { echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" }
+log() { 
+	echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" 
+}
 cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
 cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
 cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
