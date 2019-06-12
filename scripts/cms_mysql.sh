@@ -371,7 +371,7 @@ while [ $detection_flag = "0" ]; do
 	worker_lookup=`host cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com`
 	worker_check=`echo -e $?`
 	if [ $worker_check = "0" ]; then 
-		worker_fqdn[$w]=`cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com`
+		worker_fqdn[$w]="cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com"
 		w=$((w+1))
 	else
 		detection_flag="1"
@@ -386,7 +386,6 @@ for w in `seq 1 $num_workers`; do
 		worker_fqdn_list=`echo "${worker_fqdn_list},${worker_fqdn[$w]}"`
 	fi
 done;
-echo "curl -L http://169.254.169.254/opc/v1/instance/metadata/deploy_on_oci | base64 -d " >> $LOG_FILE
-echo "python deploy_on_oci.py -S -m ${cm_ip} -i ${worker_fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}" >> $LOG_FILE
+python deploy_on_oci.py -S -m ${cm_ip} -i ${worker_fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} >> $LOG_FILE
 EXECNAME="END"
 log "->DONE"
