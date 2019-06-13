@@ -33,6 +33,7 @@ host_fqdn_list = []
 data_tiering = 'False'
 nvme_disks = 0
 cluster_version = '6.2.0'  # type: str
+SIMPLE = 'None'
 
 #
 # Custom Global Parameters - Customize below here
@@ -2186,32 +2187,13 @@ def build_cloudera_cluster():
     except ApiException as e:
         print('Exception calling ClustersResourceApi -> first_run {}\n'.format(e))
         sys.exit()
+
     global cluster_setup_time
     cluster_setup_time = time.time() - start_time
-    if SIMPLE == 'True':
-        hdfs_ha = 'False'
-        secure_cluster = 'False'
-        pass
-    elif hdfs_ha == 'True':
-        hdfs_ha_deployment_start = time.time()
-        print('->Enabling HDFS HA')
-        hdfs_enable_nn_ha(snn_host_id)
-        wait_for_active_service_commands('\tEnable HDFS HA', 'HDFS')
-        global hdfs_ha_deployment_time
-        hdfs_ha_deployment_time = time.time() - hdfs_ha_deployment_start
-    else:
-        pass
-    if secure_cluster == 'True':
-        pass
-    else:
-        print('---> CLUSTER SETUP COMPLETE <---')
-        deployment_time = time.time() - start_time
-        print('TOTAL SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_time)))
-        if hdfs_ha == 'True':
-            print('CLUSTER SETUP TIME: %s ' % str(datetime.timedelta(seconds=cluster_setup_time)))
-            print('HDFS HA SETUP TIME: %s ' % str(datetime.timedelta(seconds=hdfs_ha_deployment_time)))
-        else:
-            pass
+    print('---> INITIAL CLUSTER SETUP COMPLETE <---')
+    deployment_time = time.time() - start_time
+    print('SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_time)))
+
 
 def enable_kerberos():
     """
@@ -2323,9 +2305,18 @@ if __name__ == '__main__':
     build_cloudera_cluster()
     if SIMPLE == 'True':
         pass
-    elif secure_cluster == 'True':
-        print('->Enable Kerberos')
-        enable_kerberos()
+    else:
+        if hdfs_ha == 'True':
+            hdfs_ha_deployment_start = time.time()
+            print('->Enabling HDFS HA')
+            hdfs_enable_nn_ha(snn_host_id)
+            wait_for_active_service_commands('\tEnable HDFS HA', 'HDFS')
+            global hdfs_ha_deployment_time
+            hdfs_ha_deployment_time = time.time() - hdfs_ha_deployment_start
+
+        if secure_cluster == 'True':
+            print('->Enable Kerberos')
+            enable_kerberos()
 
     print('Access Cloudera Manager: http://%s:%s/cmf/' % (cm_server, cm_port))
 
