@@ -130,6 +130,7 @@ cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
 sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.ini
 #export JDK=`ls /usr/lib/jvm | head -n 1`
 #sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
+chown -R cloudera-scm:cloudera-scm /var/lib/cloudera-scm-agent/
 systemctl start cloudera-scm-agent
 
 create_random_password()
@@ -354,11 +355,11 @@ for i in `seq 1 ${#iqn[@]}`; do
         done;
 done;
 fi
-EXECNAME="Clouera Manager"
+EXECNAME="Cloudera Manager"
 log "->Starting Cloudera Manager"
 chown -R cloudera-scm:cloudera-scm /etc/cloudera-scm-server
 systemctl start cloudera-scm-server
-EXECNAME="Cluster Build"
+EXECNAME="Cloudera Enterprise Data Hub"
 log "->Installing Python Pre-reqs"
 sudo yum install python python-pip -y >> $LOG_FILE
 sudo pip install --upgrade pip >> $LOG_FILE
@@ -377,15 +378,13 @@ while [ $detection_flag = "0" ]; do
 		detection_flag="1"
 	fi
 done;
-worker_fqdn_list=""
+fqdn_list="cdh-utility-1.public${availability_domain}.cdhvcn.oraclevcn.com,cdh-master-1.private${availability_domain}.cdhvcn.oraclevcn.com,cdh-master-2.private${availability_domain}.cdhvcn.oraclevcn.com"
 num_workers=${#worker_fqdn[@]}
 for w in `seq 1 $num_workers`; do 
-	if [ $w = "1" ]; then 
-		worker_fqdn_list="${worker_fqdn[$w]}"
-	else
-		worker_fqdn_list=`echo "${worker_fqdn_list},${worker_fqdn[$w]}"`
-	fi
+	fqdn_list=`echo "${fqdn_list},${worker_fqdn[$w]}"`
 done;
-python deploy_on_oci.py -S -m ${cm_ip} -i ${worker_fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} >> $LOG_FILE
-EXECNAME="END"
+log "-->Host List: ${fqdn_list}"
+log "-->Cluster Build"
+log "---> python deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
+python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} >> $LOG_FILE
 log "->DONE"

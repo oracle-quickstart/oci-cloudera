@@ -56,7 +56,7 @@ resource "oci_core_volume" "MasterClouderaVolume" {
 }
 
 resource "oci_core_volume_attachment" "MasterClouderaAttachment" {
-  count           = "1"
+  count           = "${var.instances}"
   attachment_type = "iscsi"
   compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Master.*.id[count.index]}"

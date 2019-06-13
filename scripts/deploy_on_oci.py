@@ -27,7 +27,7 @@ start_time = time.time()
 disk_count = 'None'
 worker_shape = 'None'
 cm_server = 'None'
-input_host_list = 'None'
+input_host_list = 'None'  # type: str
 license_file = 'None'
 host_fqdn_list = []
 data_tiering = 'False'
@@ -393,14 +393,15 @@ def read_cluster():
         print('Exception while calling ClustersResourceAPI->read_cluster: {}\n'.format(e))
 
 
-def build_host_list():
+def build_host_list(input_host_list):
     """
     Create Static Host List for host management - convert the input_host_list input to a list
     :return:
     """
     print('->Building Host FQDN List from Static Values\n')
     global host_fqdn_list
-    host_fqdn_list = host_input_list.split(",")
+    host_fqdn_list = []
+    host_fqdn_list = input_host_list.split(",")
 
 
 def build_cluster_host_list(host_fqdn_list):
@@ -693,8 +694,7 @@ def get_mgmt_db_passwords():
     """
     global amon_password, rman_password, navigator_password, navigator_meta_password, oozie_password, hive_meta_password
     try:
-        db_file = os.open('/etc/cloudera-scm-server/db.mgmt.properties', os.O_RDONLY)
-        try:
+        with open('/etc/cloudera-scm-server/db.mgmt.properties', 'r') as db_file:
             print('Postgres DB found - processing.')
             for line in db_file:
                 if 'com.cloudera.cmf.ACTIVITYMONITOR.db.password' in line:
@@ -714,15 +714,12 @@ def get_mgmt_db_passwords():
 
                 if 'com.cloudera.cmf.HIVEMETASTORESERVER.db.password' in line:
                     hive_meta_password = line.split('=')[1].rstrip()
-        finally:
-            os.close(db_file)
-
+    
     except IOError:
         print('Postgres DB file not found.')
 
     try:
-        db_file = os.open('/etc/mysql/mysql.pw', os.O_RDONLY)
-        try:
+        with open('/etc/mysql/mysql.pw', 'r') as db_file:
             print('MySQL DB found - processing.')
             for line in db_file:
                 if 'amon' in line:
@@ -745,8 +742,6 @@ def get_mgmt_db_passwords():
 
                 if 'oozie' in line:
                     oozie_password = line.split(':')[1].rstrip()
-        finally:
-            os.close(db_file)
 
     except IOError:
         print('MySQL DB file not found.')
@@ -1454,24 +1449,24 @@ def cluster_host_id_map():
     global nn_host_id, snn_host_id, cm_host_id, worker_host_ids
     global nn_hostname, snn_hostname, cm_hostname, worker_hostnames
     for x in range(0, len(cluster_host_list.items)):
-        if cloudera_manager_host_contains in cluster_host_list.items[x].hostname:
+        if cloudera_manager_host in cluster_host_list.items[x].hostname:
             cm_hostname = cluster_host_list.items[x].hostname
             cm_host_id = cluster_host_list.items[x].host_id
 
     for x in range(0, len(cluster_host_list.items)):
-        if namenode_host_contains in cluster_host_list.items[x].hostname:
+        if namenode_host in cluster_host_list.items[x].hostname:
             nn_hostname = cluster_host_list.items[x].hostname
             nn_host_id = cluster_host_list.items[x].host_id
 
     for x in range(0, len(cluster_host_list.items)):
-        if secondary_namenode_host_contains in cluster_host_list.items[x].hostname:
+        if secondary_namenode_host in cluster_host_list.items[x].hostname:
             snn_hostname = cluster_host_list.items[x].hostname
             snn_host_id = cluster_host_list.items[x].host_id
 
     worker_hostnames = []
     worker_host_ids = []
     for x in range(0, len(cluster_host_list.items)):
-        if worker_hosts_contain in cluster_host_list.items[x].hostname:
+        if worker_hosts_prefix in cluster_host_list.items[x].hostname:
             worker_hostnames.append(cluster_host_list.items[x].hostname)
             worker_host_ids.append(cluster_host_list.items[x].host_id)
     x = 0
@@ -1979,10 +1974,10 @@ def config_mgmt_for_kerberos():
     Setup Cloudera Manager Kerberos Configuration
     :return:
     """
-    KDC_ADMIN_HOST = cm_client.ApiConfig(name='KDC_ADMIN_HOST', value=cloudera_manager_host_contains)
+    KDC_ADMIN_HOST = cm_client.ApiConfig(name='KDC_ADMIN_HOST', value=cloudera_manager_host)
     KDC_ADMIN_PASSWORD = cm_client.ApiConfig(name='KDC_ADMIN_PASSWORD', value=kdc_password)
     KDC_ADMIN_USER = cm_client.ApiConfig(name='KDC_ADMIN_USER', value=kdc_admin)
-    KDC_HOST = cm_client.ApiConfig(name='KDC_HOST', value=cloudera_manager_host_contains)
+    KDC_HOST = cm_client.ApiConfig(name='KDC_HOST', value=cloudera_manager_host)
     MAX_RENEW_LIFE = cm_client.ApiConfig(name='MAX_RENEW_LIFE', value='604800')
     KRB_DNS_LOOKUP_KDC = cm_client.ApiConfig(name='KRB_DNS_LOOKUP_KDC', value='true')
     KRB_MANAGE_KRB5_CONF = cm_client.ApiConfig(name='KRB_MANAGE_KRB5_CONF', value='true')
@@ -2061,15 +2056,15 @@ def options_parser(args=None):
     parser.add_argument('-S', '--SIMPLE', action='store_true', help='Simple, no HA or Kerberos at deployment')
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
                         help='Cloudera Manager IP to connect API using cm_client')
-    parser.add_argument('-i', '--input_host_list', metavar='host.fqdn', nargs='+',
-                        help='List of Cluster Hosts (FQDN) to deploy')
+    parser.add_argument('-i', '--input_host_list', metavar='input_host_list',
+                        help='List of Cluster Hosts (FQDN) to deploy separated by commas')
     parser.add_argument('-d', '--disk_count', metavar='disk_count',
                         help='Number of disks attached to Worker Instances, used to calculate DFS configuration')
     parser.add_argument('-l', '--license_file', metavar='license_file',
                         help='Cloudera Manager License File Name')
     parser.add_argument('-w', '--worker_shape', metavar='worker_shape',
                         help='OCI Shape of Worker Instances in the Cluster')
-    paresr.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
+    parser.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
     parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='CDH version to deploy')
     parser.add_argument('-ad', '--availability_domain', metavar='availability_domain', help='OCI Availability Domain')
     options = parser.parse_args(args)
@@ -2133,12 +2128,11 @@ def build_cloudera_cluster():
 
     print('->Initializing Cluster %s' % cluster_name)
     init_cluster()
-    # Pass host count for Workers, asssume default layout
+    build_host_list(input_host_list)
     if len(host_fqdn_list) < 6:
         print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
         sys.exit()
 
-    build_host_list()
     build_cluster_host_list(host_fqdn_list)
     read_cluster()
     add_hosts_to_cluster(cluster_host_list)
@@ -2293,11 +2287,11 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, host_fqdn_list, disk_count, license_file, worker_shape, num_workers, SIMPLE, cdh_version, cms_version =\
+    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, SIMPLE, cdh_version, cms_version =\
         options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
-        print('input_host_list = %s' % host_fqdn_list)
+        print('input_host_list = %s' % input_host_list)
         print('disk_count = %s' % disk_count)
         print('license_file = %s' % license_file)
         print('worker_shape = %s' % worker_shape)
