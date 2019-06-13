@@ -18,9 +18,10 @@ resource "oci_core_instance" "Utility" {
     cloudera_manager    = "${var.cloudera_manager}"
     cdh_version         = "${var.cdh_version}"
     cm_version          = "${var.cm_version}"  
-    worker_shape = "${var.worker_shape}"
-    block_volume_count = "${var.block_volume_count}"	
+    worker_shape        = "${var.worker_shape}"
+    block_volume_count  = "${var.block_volume_count}"	
     availability_domain = "${var.AD}"
+    deployment_type     = "${var.deployment_type}"
   }
 
   extended_metadata {

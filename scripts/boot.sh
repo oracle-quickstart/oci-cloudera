@@ -221,7 +221,9 @@ block_data_mount () {
   mkdir -p /data$dcount
   mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /data$dcount
   UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-  echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+  if [ ! -z $UUID ]; then 
+  	echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+  fi
 }
 EXECNAME="DISK SETUP"
 log "->Checking for disks..."
@@ -247,7 +249,9 @@ for i in `seq 1 ${#iqn[@]}`; do
                                 mkdir -p /var/log/cloudera
                                 mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
                                 UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+				if [ ! -z $UUID ]; then 
+	                                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+				fi
                                 mkdir -p /var/log/cloudera/cloudera-scm-agent
                                 ln -s /var/log/cloudera/cloudera-scm-agent /var/log/cloudera-scm-agent
                                 ;;
@@ -257,7 +261,9 @@ for i in `seq 1 ${#iqn[@]}`; do
                                 mkdir -p /opt/cloudera
                                 mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
                                 UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+				if [ ! -z $UUID ]; then 
+	                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+				fi
                                 ;;
                                 *)
                                 mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
@@ -266,6 +272,7 @@ for i in `seq 1 ${#iqn[@]}`; do
                                 ;;
                         esac
                         /sbin/tune2fs -i0 -c0 /dev/oracleoci/$disk
+			unset UUID
                         dsetup="1"
                 else
                         log "--->${disk} not found, running ISCSI again."

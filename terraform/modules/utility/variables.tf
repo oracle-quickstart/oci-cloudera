@@ -21,6 +21,7 @@ variable "AD" {}
 variable "cloudera_manager" {}
 variable "cm_install" {}
 variable "deploy_on_oci" {}
+variable "deployment_type" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

@@ -33,7 +33,7 @@ host_fqdn_list = []
 data_tiering = 'False'
 nvme_disks = 0
 cluster_version = '6.2.0'  # type: str
-SIMPLE = 'None'
+simple_deployment = 'False'  # type: bool
 
 #
 # Custom Global Parameters - Customize below here
@@ -51,12 +51,12 @@ admin_password = 'somepassword'  # type: str
 cluster_name = 'TestCluster'  # type: str
 
 # Set this to 'True' (default) to enable secure cluster (Kerberos) functionality
-# Set this to 'False" to deploy an insecure cluster - This is automatically off for SIMPLE deployment
-secure_cluster = 'True'
+# Set this to 'False" to deploy an insecure cluster - This is automatically off for  simple_deployment
+secure_cluster = 'True'  # type: bool
 
 # Set this to 'False' if you do not want HDFS HA - useful for Development or if you want to save some setup time
-# This is automatically off for SIMPLE deployment
-hdfs_ha = 'True'
+# This is automatically off for simple_deployment
+hdfs_ha = 'True'  # type: bool
 
 # They should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
 realm = 'HADOOP.COM'
@@ -2054,7 +2054,7 @@ def options_parser(args=None):
                                                                                  'OCI using cm_client with Cloudera '
                                                                                  'Manager API %s' % (cluster_version,
                                                                                                      api_version))
-    parser.add_argument('-S', '--SIMPLE', action='store_true', help='Simple, no HA or Kerberos at deployment')
+    parser.add_argument('-S', '--simple_deployment', action='store_true', help='Simple, no HA or Kerberos at deployment')
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
                         help='Cloudera Manager IP to connect API using cm_client')
     parser.add_argument('-i', '--input_host_list', metavar='input_host_list',
@@ -2098,7 +2098,7 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.SIMPLE, options.cdh_version, options.availability_domain)
+            options.num_workers, options.simple_deployment, options.cdh_version, options.availability_domain)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
@@ -2269,7 +2269,7 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, SIMPLE, cdh_version, cms_version =\
+    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, simple_deployment, cdh_version, cms_version =\
         options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
@@ -2302,21 +2302,30 @@ if __name__ == '__main__':
             time.sleep(30)
             wait_status = wait_status + '*'
 
-    build_cloudera_cluster()
-    if SIMPLE == 'True':
-        pass
+    if simple_deployment is True:
+        print('Simple Deployment Selected')
+        print('Cluster Security and High Availabilty is DISABLED')
     else:
-        if hdfs_ha == 'True':
+        print('Cluster Deployment options - HA: %s - Kerberos: %s' % hdfs_ha, secure_cluster)
+
+    build_cloudera_cluster()
+    if simple_deployment is True:
+        exit(0)
+    else:
+        if hdfs_ha is True:
             hdfs_ha_deployment_start = time.time()
             print('->Enabling HDFS HA')
             hdfs_enable_nn_ha(snn_host_id)
             wait_for_active_service_commands('\tEnable HDFS HA', 'HDFS')
             global hdfs_ha_deployment_time
             hdfs_ha_deployment_time = time.time() - hdfs_ha_deployment_start
-
-        if secure_cluster == 'True':
+        else:
+            pass
+        if secure_cluster is True:
             print('->Enable Kerberos')
             enable_kerberos()
+        else:
+            pass
 
     print('Access Cloudera Manager: http://%s:%s/cmf/' % (cm_server, cm_port))
 

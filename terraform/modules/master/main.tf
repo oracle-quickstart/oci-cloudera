@@ -18,7 +18,8 @@ resource "oci_core_instance" "Master" {
     user_data		= "${var.user_data}"
     cloudera_manager    = "${var.cloudera_manager}"
     cdh_version         = "${var.cdh_version}"
-    cm_version          = "${var.cm_version}" 
+    cm_version          = "${var.cm_version}"
+    deployment_type     = "${var.deployment_type}" 
   }
 
   timeouts {
