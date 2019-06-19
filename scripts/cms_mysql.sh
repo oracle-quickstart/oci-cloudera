@@ -13,6 +13,7 @@ cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/availability_domain`
 worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
 worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
+deployment_type=`curl -L http://169.254.169.254/opc/v1/instance/metadata/deployment_type`
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -39,7 +40,8 @@ hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 systemctl stop firewalld
 systemctl disable firewalld
-EXECNAME="KERBEROS"
+if [ ${deployment_type} != "simple" ]; then
+EXECNAME="KERBEROS"i
 log "-> INSTALL"
 yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
 KERBEROS_PASSWORD="SOMEPASSWORD"
@@ -119,6 +121,7 @@ systemctl start krb5kdc.service >> $LOG_FILE
 systemctl start kadmin.service >> $LOG_FILE
 systemctl enable krb5kdc.service >> $LOG_FILE
 systemctl enable kadmin.service >> $LOG_FILE
+fi
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
 rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
@@ -385,6 +388,11 @@ for w in `seq 1 $num_workers`; do
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-log "---> python deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
-python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} >> $LOG_FILE
+if [ ${deployment_type} = "simple" ]; then 
+	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
+	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} 2>&1 1>> $LOG_FILE
+else
+	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
+        python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} 2>&1 1>> $LOG_FILE
+fi
 log "->DONE"

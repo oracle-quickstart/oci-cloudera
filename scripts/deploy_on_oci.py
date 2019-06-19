@@ -17,6 +17,7 @@ import datetime
 import argparse
 import socket
 import os
+import subprocess
 
 start_time = time.time()
 
@@ -122,6 +123,10 @@ if meta_db_port == '3306':
     meta_db_type = 'mysql'
 elif meta_db_port == '5432':
     meta_db_type = 'postgresql'
+
+java_version = subprocess.Popen("ls /usr/lib/jvm/ | grep java", shell=True,
+                                stdout=subprocess.PIPE).stdout.read().rstrip()
+java_home = '/usr/lib/jvm/' + java_version + '/jre/'  # type: str
 
 # OCI Shape Specific Tunings - Modify at your own discretion
 
@@ -394,6 +399,19 @@ def read_cluster():
         print('Exception while calling ClustersResourceAPI->read_cluster: {}\n'.format(e))
 
 
+def delete_cluster():
+    """
+    Delete Cluster
+    :return:
+    """
+
+    try:
+        cluster_api_response = clusters_api.delete_cluster(cluster_name)
+        pprint(cluster_api_response)
+    except ApiException as e:
+        print('Exception when calling ClustersResourceAPI->delete_cluster: {}\n'.format(e))
+
+
 def build_host_list(input_host_list):
     """
     Create Static Host List for host management - convert the input_host_list input to a list
@@ -477,8 +495,8 @@ def add_hosts_to_cluster(cluster_host_list):
     :param cluster_host_list: List of hosts to add to the cluster
     :return:
     """
-    global host_install_failure, api_failure_message
-    host_install_failure = 'False'
+    global host_add_failure, api_failure_message
+    host_add_failure = 'False'
     body = cm_client.ApiHostRefList(cluster_host_list)
 
     try:
@@ -487,7 +505,7 @@ def add_hosts_to_cluster(cluster_host_list):
             pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClustersResourceApi->add_hosts: {}\n'.format(e))
-        host_install_failure = 'True'
+        host_add_failure = 'True'
 
 
 def remove_all_hosts_from_cluster():
@@ -592,19 +610,6 @@ def dda_parcel(parcel_product):
     target_stage = 'ACTIVATED'
     monitor_parcel(parcel_product, parcel_version, target_stage)
     print('\n\n')
-
-
-def get_parcel_status(parcel_product):
-    """
-    Get Parcel Status for all Parcels, filter by parcel_product
-    :param parcel_product: Parcel Product Name - e.g. CDH, SPARK_ON_YARN
-    :return:
-    """
-    parcels = parcels_api.read_parcels(cluster_name, view='FULL')
-    print('PARCELS: \n')
-    for x in range(0, len(parcel.items)):
-        if parcel.items[x].name == parcel_product:
-            print(parcels.items[x])
 
 
 def read_parcels():
@@ -863,7 +868,10 @@ def setup_mgmt_rcg(mgmt_roles_list):
             mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-firehose')]
             firehose_storage_dir = [cm_client.ApiConfig(name='firehose_storage_dir',
                                                         value=LOG_DIR + "/lib/cloudera-service-monitor")]
-            role_config_list = [mgmt_log_dir, firehose_storage_dir]
+            firehose_heapsize = [cm_client.ApiConfig(name='firehose_heapsize', value='2147483648')]
+            firehose_non_java_memory_bytes = [cm_client.ApiConfig(name='firehose_non_java_memory_bytes',
+                                                                  value='12884901888')]
+            role_config_list = [mgmt_log_dir, firehose_storage_dir, firehose_heapsize, firehose_non_java_memory_bytes]
 
         if role == "NAVIGATOR":
             display_name = 'Navigator Default Group'
@@ -981,7 +989,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                                                               value='70')]
                     dfs_namenode_servicerpc_address = [cm_client.ApiConfig(name='dfs_namenode_servicerpc_address',
                                                                             value='8022')]
-                    namenode_java_heapsize = [cm_client.ApiConfig(name='namenode_java_heapsize', value='4196000000')]
+                    namenode_java_heapsize = [cm_client.ApiConfig(name='namenode_java_heapsize', value='4294967296')]
                     namenode_log_dir = [cm_client.ApiConfig(name='namenode_log_dir', value=LOG_DIR + '/nn')]
                     nn_config_list = [dfs_namenode_service_handler_count, dfs_namenode_handler_count, dfs_name_dir,
                                       namenode_java_heapsize, namenode_log_dir, dfs_namenode_servicerpc_address]
@@ -1026,7 +1034,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     rcg_roletype = 'SECONDARYNAMENODE'  # type: str
                     fs_checkpoint_dir = [cm_client.ApiConfig(name='fs_checkpoint_dir_list', value='/data/dfs/snn')]
                     secondary_namenode_java_heapsize = [cm_client.ApiConfig(name='secondary_namenode_java_heapsize',
-                                                                            value='41960000000')]
+                                                                            value='4294967296')]
                     secondary_namenode_log_dir = [cm_client.ApiConfig(name='secondarynamenode_log_dir',
                                                                       value=LOG_DIR + '/snn')]
                     snn_config_list = [fs_checkpoint_dir, secondary_namenode_java_heapsize,
@@ -1280,9 +1288,12 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     io_file_buffer_size = [cm_client.ApiConfig(name='io_file_buffer_size', value='131072')]
                     io_sort_mb = [cm_client.ApiConfig(name='io_sort_mb', value='1024')]
                     yarn_app_mapreduce_am_max_heap = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_max_heap',
-                                                                          value='1073741824')]
+                                                                          value='3650722201')]
+                    yarn_app_mapreduce_am_resource_mb = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_resource_mb',
+                                                                             value='4096')]
                     gw_config_list = [mapred_submit_replication, mapreduce_map_java_opts, mapreduce_reduce_java_opts,
-                                      io_file_buffer_size, io_sort_mb, yarn_app_mapreduce_am_max_heap]
+                                      io_file_buffer_size, io_sort_mb, yarn_app_mapreduce_am_max_heap,
+                                      yarn_app_mapreduce_am_resource_mb]
                     for config in gw_config_list:
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
@@ -2042,6 +2053,23 @@ def hdfs_enable_nn_ha(snn_host_id):
         print('Exception calling ServicesResourceApi -> hdfs_enable_ha_command {}'.format(e))
 
 
+def update_clients_config(clients_config, commit_message):
+    """
+    Update all Clients config
+    :return:
+    """
+    clients_api_instance = cm_client.AllHostsResourceApi(api_client)
+    body = cm_client.ApiConfigList(clients_config)
+
+    try:
+        api_response = clients_api_instance.update_config(message=commit_message, body=body)
+        if debug == 'True':
+            pprint(api_response)
+
+    except ApiException as e:
+        print('Exception calling AllHostsResourceApi -> update_clients_config {}'.format(e))
+
+
 # END SECONDARY FUNCTIONS
 
 def options_parser(args=None):
@@ -2127,25 +2155,34 @@ def build_cloudera_cluster():
         print('->Deleting default admin user')
         delete_default_admin_user()
 
-    print('->Initializing Cluster %s' % cluster_name)
-    init_cluster()
-    build_host_list(input_host_list)
-    if len(host_fqdn_list) < 6:
-        print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
-        sys.exit()
+    build_success = 'False'
+    while build_success == 'False':
+        print('->Initializing Cluster %s' % cluster_name)
+        init_cluster()
+        build_host_list(input_host_list)
+        if len(host_fqdn_list) < 6:
+            print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
+            sys.exit()
 
-    build_cluster_host_list(host_fqdn_list)
-    read_cluster()
-    add_hosts_to_cluster(cluster_host_list)
-    active_command = '\tHosts Adding to Cluster ' + cluster_name
-    wait_for_active_cluster_commands(active_command)
+        build_cluster_host_list(host_fqdn_list)
+        read_cluster()
+        add_hosts_to_cluster(cluster_host_list)
+        active_command = '\tHosts Adding to Cluster ' + cluster_name
+        wait_for_active_cluster_commands(active_command)
+        if host_add_failure == 'True':
+            print('->Cluster Initialization Failed')
+            print('->Deleting Cluster %s' % cluster_name)
+            delete_cluster()
+            active_command = '\tDelete Cluster ' + cluster_name
+            wait_for_active_cluster_commands(active_command)
+            time.sleep(10)
+        else:
+            build_success = 'True'
+
     print('->Updating Parcel Remote Repo: %s' % remote_parcel_url)
     update_parcel_repo(remote_parcel_url, parcel_distribution_rate)
     print('->Parcel Setup Running')
     dda_parcel('CDH')
-    if debug == 'True':
-        print('-->DEBUG - Reading Parcel Status')
-        get_parcel_status('CDH')
     print('->Mapping Cluster Hostnames and Host IDs')
     cluster_host_id_map()
     print('->Reading DB Passwords')
@@ -2167,6 +2204,12 @@ def build_cloudera_cluster():
     mgmt_service('auto_configure_roles')
     print('->Updating Management RCG')
     setup_mgmt_rcg(mgmt_roles_list)
+    print('->Setting Clients Java Home: %s' % java_home)
+    java_home_config = [cm_client.ApiConfig(name='java_home', value=java_home)]
+    commit_message = 'Clients JAVA Home'
+    if debug == 'True':
+        print('DEBUG: Java_home Config: %s' % java_home_config)
+    update_clients_config(java_home_config, commit_message)
     print('->Restart MGMT Service')
     mgmt_service('restart_command')
     print('->Restart MGMT Roles')
@@ -2304,9 +2347,9 @@ if __name__ == '__main__':
 
     if simple_deployment is True:
         print('Simple Deployment Selected')
-        print('Cluster Security and High Availabilty is DISABLED')
+        print('Cluster Security and High Availabilty are DISABLED')
     else:
-        print('Cluster Deployment options - HA: %s - Kerberos: %s' % hdfs_ha, secure_cluster)
+        print('Cluster Deployment options - HA: %s - Kerberos: %s' % (hdfs_ha, secure_cluster))
 
     build_cloudera_cluster()
     if simple_deployment is True:
@@ -2327,5 +2370,5 @@ if __name__ == '__main__':
         else:
             pass
 
-    print('Access Cloudera Manager: http://%s:%s/cmf/' % (cm_server, cm_port))
+    print('-> CLUSTER DEPLOYMENT COMPLETE <-')
 

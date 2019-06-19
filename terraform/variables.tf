@@ -29,7 +29,7 @@ variable "cm_version" { default = "6.2.0" }
 # Cloudera Enterprise Data Hub Version
 variable "cdh_version" { default = "6.2.0" }
 # Deployment type - set this to "simple" if you want to DISABLE High Availabilty and Kerberos Security
-variable "deployment_type" { default = "full" }
+variable "deployment_type" { default = "secure" }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
