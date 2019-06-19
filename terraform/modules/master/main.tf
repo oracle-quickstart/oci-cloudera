@@ -16,6 +16,10 @@ resource "oci_core_instance" "Master" {
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}"
+    cloudera_manager    = "${var.cloudera_manager}"
+    cdh_version         = "${var.cdh_version}"
+    cm_version          = "${var.cm_version}"
+    deployment_type     = "${var.deployment_type}" 
   }
 
   timeouts {
@@ -53,7 +57,7 @@ resource "oci_core_volume" "MasterClouderaVolume" {
 }
 
 resource "oci_core_volume_attachment" "MasterClouderaAttachment" {
-  count           = "1"
+  count           = "${var.instances}"
   attachment_type = "iscsi"
   compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Master.*.id[count.index]}"

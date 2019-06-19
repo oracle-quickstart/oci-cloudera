@@ -15,7 +15,12 @@ resource "oci_core_instance" "Worker" {
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data		= "${var.user_data}"    
+    user_data		= "${var.user_data}"
+    cloudera_manager    = "${var.cloudera_manager}"
+    cdh_version         = "${var.cdh_version}"
+    cm_version          = "${var.cm_version}" 
+    block_volume_count  = "${var.block_volume_count}"
+    deployment_type     = "${var.deployment_type}"
   }
 
   timeouts {

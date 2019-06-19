@@ -13,6 +13,15 @@ variable "instances" {}
 variable "subnet_id" {}
 variable "user_data" {}
 variable "image_ocid" {}
+variable "cm_version" {}
+variable "cdh_version" {}
+variable "worker_shape" {}
+variable "block_volume_count" {}
+variable "AD" {}
+variable "cloudera_manager" {}
+variable "cm_install" {}
+variable "deploy_on_oci" {}
+variable "deployment_type" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

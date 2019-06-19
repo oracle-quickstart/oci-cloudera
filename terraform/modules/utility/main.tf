@@ -14,7 +14,19 @@ resource "oci_core_instance" "Utility" {
 
   metadata {
     ssh_authorized_keys = "${var.ssh_public_key}"
-    user_data		= "${var.user_data}"    
+    user_data		= "${var.user_data}" 
+    cloudera_manager    = "${var.cloudera_manager}"
+    cdh_version         = "${var.cdh_version}"
+    cm_version          = "${var.cm_version}"  
+    worker_shape        = "${var.worker_shape}"
+    block_volume_count  = "${var.block_volume_count}"	
+    availability_domain = "${var.AD}"
+    deployment_type     = "${var.deployment_type}"
+  }
+
+  extended_metadata {
+    cm_install = "${var.cm_install}"
+    deploy_on_oci = "${var.deploy_on_oci}"
   }
 
   timeouts {

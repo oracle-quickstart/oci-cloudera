@@ -14,6 +14,10 @@ module "bastion" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
 	user_data = "${base64encode(file("../scripts/boot.sh"))}"
+	cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+	cm_version = "${var.cm_version}"
+	cdh_version = "${var.cdh_version}"
+	deployment_type = "${var.deployment_type}"
 }
 
 module "utility" {
@@ -31,7 +35,16 @@ module "utility" {
         utility_instance_shape = "${var.utility_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
-        user_data = "${base64encode(file("../scripts/cm_boot_mysql.sh"))}"
+        user_data = "${base64encode(file("../scripts/cloudera_manager_boot.sh"))}"
+	cm_install = "${base64gzip(file("../scripts/cms_mysql.sh"))}"
+	deploy_on_oci = "${base64gzip(file("../scripts/deploy_on_oci.py"))}"
+        cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+        cm_version = "${var.cm_version}"
+        cdh_version = "${var.cdh_version}"
+	worker_shape = "${var.worker_instance_shape}"
+	block_volume_count = "${var.block_volume_count}"
+	AD = "${var.availability_domain}"
+	deployment_type = "${var.deployment_type}"
 }
 
 module "master" {
@@ -50,6 +63,10 @@ module "master" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
         user_data = "${base64encode(file("../scripts/boot.sh"))}"
+        cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+        cm_version = "${var.cm_version}"
+        cdh_version = "${var.cdh_version}"
+	deployment_type = "${var.deployment_type}"
 }
 
 module "worker" {
@@ -70,4 +87,9 @@ module "worker" {
 	block_volumes_per_worker = "${var.block_volumes_per_worker}"
 	data_blocksize_in_gbs = "${var.data_blocksize_in_gbs}"
         user_data = "${base64encode(file("../scripts/boot.sh"))}"
+        cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
+        cm_version = "${var.cm_version}"
+        cdh_version = "${var.cdh_version}"
+	block_volume_count = "${var.block_volumes_per_worker}"
+	deployment_type = "${var.deployment_type}"
 }
