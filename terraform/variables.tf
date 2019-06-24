@@ -14,22 +14,31 @@ variable "fingerprint" {}
 variable "region" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
-variable "cm_install" { default = "" }
-variable "deploy_on_oci" { default = "" }
-variable "cloudera_manager" { default = "10.0.0.2"}
-variable "AD" { default="2" }
-variable "block_volume_count" { default = "3"}
+variable "private_key_path" {
+    default = "/home/opc/.ssh/id_rsa"
+}
+variable "AD" { 
+    default = "1" }
+variable "block_volume_count" { 
+    default = "3"
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera Manager Version
-variable "cm_version" { default = "6.2.0" }
+variable "cm_version" { 
+    default = "6.2.0" 
+}
 # Cloudera Enterprise Data Hub Version
-variable "cdh_version" { default = "6.2.0" }
+variable "cdh_version" { 
+    default = "6.2.0" 
+}
 # Deployment type - set this to "simple" if you want to DISABLE High Availabilty and Kerberos Security
-variable "deployment_type" { default = "simple" }
+variable "deployment_type" { 
+    default = "simple" 
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
@@ -59,16 +68,6 @@ variable "utility_instance_shape" {
 
 variable "worker_instance_shape" {
   default = "BM.DenseIO2.52"
-}
-
-# Path to SSH Key used for deployment and host access
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
-}
-
-variable "private_key_path" {
-  default = "/home/opc/.ssh/id_rsa"
 }
 
 #

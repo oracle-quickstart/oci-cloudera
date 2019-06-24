@@ -6,7 +6,6 @@
 
 variable "region" {}
 variable "compartment_ocid" {}
-variable "private_key_path" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
 variable "instances" {}
@@ -83,12 +82,6 @@ variable "nn_volume_size_in_gbs" {
 
 variable "worker_instance_shape" {
   default = "BM.DenseIO2.52"
-}
-
-# Path to SSH Key
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

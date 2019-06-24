@@ -6,7 +6,6 @@
 
 variable "region" {}
 variable "compartment_ocid" {}
-variable "private_key_path" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
 variable "instances" {}
@@ -45,12 +44,6 @@ variable "cloudera_volume_size_in_gbs" {
 
 variable "bastion_instance_shape" {
   default = "VM.Standard2.8"
-}
-
-# Path to SSH Key
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
