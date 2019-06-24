@@ -9,16 +9,12 @@ variable "compartment_ocid" {}
 # Required by the OCI Provider
 
 variable "tenancy_ocid" {}
-variable "user_ocid" {}
-variable "fingerprint" {}
 variable "region" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
-variable "private_key_path" {
-    default = "/home/opc/.ssh/id_rsa"
-}
 variable "AD" { 
-    default = "1" }
+    default="1" 
+}
 variable "block_volume_count" { 
     default = "3"
 }

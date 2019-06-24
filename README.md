@@ -11,10 +11,6 @@ Future development will include support for EDH v5 clusters.  In the meantime, u
 
 Host types can be customized in this template.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See [variables.tf](https://github.com/oracle/oci-quickstart-cloudera/blob/master/terraform/variables.tf#L48-L62)  for more information in-line.
 
-This file also allows customization of which version of Cloudera Manager and Cloudera Enterprise Data Hub is being deployed.  Before modifying these versions, it is encouraged you check the [Supported Upgrade Paths](https://www.cloudera.com/documentation/enterprise/upgrade/topics/ug_upgrade_paths.html) to ensure the version of Cloudera Manager you are deploying will support the EDH Cluster version.  It is recommended to use the latest version of Cloudera Manager regardless of which EDH version you wish to deploy.   
-
-Note that this deployment WILL NOT support Cloudera Manager versions less than v6, as they use the older v19 API which is deprecated.
-
 ## Prerequisites
 First off you'll need to do some pre deploy setup.  That's all detailed [here](https://github.com/oracle/oci-quickstart-prerequisites).
 

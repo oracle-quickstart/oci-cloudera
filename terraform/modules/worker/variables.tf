@@ -84,6 +84,7 @@ variable "worker_instance_shape" {
   default = "BM.DenseIO2.52"
 }
 
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Constants
 # You probably don't need to change these.
