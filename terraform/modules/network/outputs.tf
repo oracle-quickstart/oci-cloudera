@@ -1,13 +1,13 @@
 output "private-id" {
-	value = "${oci_core_subnet.private.*.id}"
+	value = "${oci_core_subnet.private.id}"
 }
 
 output "public-id" {
-        value = "${oci_core_subnet.public.*.id}"
+        value = "${oci_core_subnet.public.id}"
 }
 
 output "bastion-id" {
-        value = "${oci_core_subnet.bastion.*.id}"
+        value = "${oci_core_subnet.bastion.id}"
 }
 
 output "vcn-dn" {
