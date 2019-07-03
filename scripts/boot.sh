@@ -17,7 +17,6 @@ setenforce 0
 EXECNAME="JAVA"
 log "->INSTALL"
 yum install java-1.8.0-openjdk.x86_64 -y >> $LOG_FILE
-if [ $deployment_type != "simple" ]; then
 EXECNAME="KERBEROS"
 log "->INSTALL"
 yum install krb5-workstation -y >> $LOG_FILE
@@ -63,7 +62,6 @@ includedir /etc/krb5.conf.d/
     admin_server = FILE:/var/log/kadmin.log
     default = FILE:/var/log/krb5lib.log
 EOF
-fi
 EXECNAME="TUNING"
 log "->OS"
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled

@@ -40,7 +40,6 @@ hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 systemctl stop firewalld
 systemctl disable firewalld
-if [ ${deployment_type} != "simple" ]; then
 EXECNAME="KERBEROS"i
 log "-> INSTALL"
 yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
@@ -121,7 +120,7 @@ systemctl start krb5kdc.service >> $LOG_FILE
 systemctl start kadmin.service >> $LOG_FILE
 systemctl enable krb5kdc.service >> $LOG_FILE
 systemctl enable kadmin.service >> $LOG_FILE
-fi
+
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
 rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
