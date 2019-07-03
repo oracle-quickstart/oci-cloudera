@@ -2345,17 +2345,17 @@ if __name__ == '__main__':
             time.sleep(30)
             wait_status = wait_status + '*'
 
-    if simple_deployment is True:
+    if simple_deployment == 'True':
         print('Simple Deployment Selected')
         print('Cluster Security and High Availabilty are DISABLED')
     else:
         print('Cluster Deployment options - HA: %s - Kerberos: %s' % (hdfs_ha, secure_cluster))
 
     build_cloudera_cluster()
-    if simple_deployment is True:
+    if simple_deployment == 'True':
         exit(0)
     else:
-        if hdfs_ha is True:
+        if hdfs_ha == 'True':
             hdfs_ha_deployment_start = time.time()
             print('->Enabling HDFS HA')
             hdfs_enable_nn_ha(snn_host_id)
@@ -2364,7 +2364,7 @@ if __name__ == '__main__':
             hdfs_ha_deployment_time = time.time() - hdfs_ha_deployment_start
         else:
             pass
-        if secure_cluster is True:
+        if secure_cluster == 'True':
             print('->Enable Kerberos')
             enable_kerberos()
         else:
