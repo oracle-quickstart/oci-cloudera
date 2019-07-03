@@ -38,7 +38,7 @@ module "utility" {
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
 	worker_shape = "${var.worker_instance_shape}"
-	block_volume_count = "${var.block_volume_count}"
+	block_volume_count = "${var.block_volumes_per_worker}"
 	AD = "${var.availability_domain}"
 	deployment_type = "${var.deployment_type}"
 }
