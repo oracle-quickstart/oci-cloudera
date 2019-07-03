@@ -1,8 +1,16 @@
 # ---------------------------------------------------------------------------------------------------------------------
+# SSH Keys - Put this to top level because they are required
+# ---------------------------------------------------------------------------------------------------------------------
+
+variable "ssh_public_key" {}
+variable "ssh_private_key" {}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
 # These default to recommended minimum values in most cases
 # ---------------------------------------------------------------------------------------------------------------------
+
 # Cloudera Manager Version
 variable "cm_version" { 
     default = "6.2.0" 
@@ -66,7 +74,7 @@ variable "bastion_instance_shape" {
   default = "VM.Standard2.4"
 }
 
-# Which AD to target
+# Which AD to target - this can be adjusted.  Default 1 for single AD regions.
 variable "availability_domain" {
   default = "1"
 }
@@ -83,8 +91,7 @@ variable "compartment_ocid" {}
 
 variable "tenancy_ocid" {}
 variable "region" {}
-variable "ssh_public_key" {}
-variable "ssh_private_key" {}
+# This is auto-calculated and doesn't need to be adjusted - default 1 for single AD regions
 variable "AD" {
     default="1"
 }
