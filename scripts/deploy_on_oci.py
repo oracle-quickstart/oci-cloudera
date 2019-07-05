@@ -1986,15 +1986,18 @@ def config_mgmt_for_kerberos():
     Setup Cloudera Manager Kerberos Configuration
     :return:
     """
-    KDC_ADMIN_HOST = cm_client.ApiConfig(name='KDC_ADMIN_HOST', value=cloudera_manager_host)
+    cm_fqdn = cm_hostname + 'public' + availability_domain + '.cdhvcn.oraclevcn.com'
+    KDC_ADMIN_HOST = cm_client.ApiConfig(name='KDC_ADMIN_HOST', value=cm_fqdn)
     KDC_ADMIN_PASSWORD = cm_client.ApiConfig(name='KDC_ADMIN_PASSWORD', value=kdc_password)
     KDC_ADMIN_USER = cm_client.ApiConfig(name='KDC_ADMIN_USER', value=kdc_admin)
-    KDC_HOST = cm_client.ApiConfig(name='KDC_HOST', value=cloudera_manager_host)
+    KDC_HOST = cm_client.ApiConfig(name='KDC_HOST', value=cm_fqdn)
     MAX_RENEW_LIFE = cm_client.ApiConfig(name='MAX_RENEW_LIFE', value='604800')
     KRB_DNS_LOOKUP_KDC = cm_client.ApiConfig(name='KRB_DNS_LOOKUP_KDC', value='true')
     KRB_MANAGE_KRB5_CONF = cm_client.ApiConfig(name='KRB_MANAGE_KRB5_CONF', value='true')
+    KRB_DOMAIN = cm_client.ApiConfig(name='KRB_DOMAIN', value='hadoop.com,HADOOP.COM')
     kerberos_cm_configs = cm_client.ApiConfigList([KDC_ADMIN_HOST, KDC_ADMIN_PASSWORD, KDC_ADMIN_USER, KDC_HOST,
-                                                   MAX_RENEW_LIFE, KRB_DNS_LOOKUP_KDC, KRB_MANAGE_KRB5_CONF])
+                                                   MAX_RENEW_LIFE, KRB_DNS_LOOKUP_KDC, KRB_MANAGE_KRB5_CONF,
+                                                   KRB_DOMAIN])
     updated_cm_configs = cloudera_manager_api.update_config(body=kerberos_cm_configs)
     if debug == 'True':
         pprint(updated_cm_configs)
