@@ -10,7 +10,7 @@ Future development will include support for EDH v5 clusters.  In the meantime, u
 | Minimum     | VM.Standard2.8 | VM.Standard2.1   | VM.Standard2.8               |
 
 ## Resource Manager Deployment
-Using [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) makes deployment quite easy.  Simply [download the .zip](https://github.com/oracle/oci-quickstart-cloudear/zipball/resource-manager) and follow the [Resource Manager instructions](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/usingconsole.htm) for how to build a stack.  Prior to building the Stack, you may want to modify some parts of the deployment detailed in the sections below.
+Using [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) makes deployment quite easy.  Simply [download the .zip](https://github.com/oracle/oci-quickstart-cloudera/zipball/resource-manager) and follow the [Resource Manager instructions](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/usingconsole.htm) for how to build a stack.  Prior to building the Stack, you may want to modify some parts of the deployment detailed in the sections below.
 
 ## Python Deployment using cm_client
 The deployment script "deploy_on_oci.py" uses cm_client against Cloudera Manger API v31.  As such it does require some customization before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
