@@ -40,7 +40,7 @@ hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 systemctl stop firewalld
 systemctl disable firewalld
-EXECNAME="KERBEROS"i
+EXECNAME="KERBEROS"
 log "-> INSTALL"
 yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
 KERBEROS_PASSWORD="SOMEPASSWORD"
