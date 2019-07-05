@@ -9,8 +9,6 @@ Future development will include support for EDH v5 clusters.  In the meantime, u
 | Recommended | BM.DenseIO2.52 | VM.Standard2.4   | VM.Standard2.16              |
 | Minimum     | VM.Standard2.8 | VM.Standard2.1   | VM.Standard2.8               |
 
-Host types can be customized in this template.   Also included with this template is an easy method to customize block volume quantity and size as pertains to HDFS capacity.   See [variables.tf](https://github.com/oracle/oci-quickstart-cloudera/blob/master/terraform/variables.tf#L48-L62)  for more information in-line.
-
 ## Resource Manager Deployment
 Using [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) makes deployment quite easy.  Simply [download the .zip](https://github.com/oracle/oci-quickstart-cloudear/zipball/resource-manager) and follow the [Resource Manager instructions](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/usingconsole.htm) for how to build a stack.  Prior to building the Stack, you may want to modify some parts of the deployment detailed in the sections below.
 
