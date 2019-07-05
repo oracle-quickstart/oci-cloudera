@@ -558,9 +558,9 @@ def update_parcel_repo(remote_parcel_url, parcel_distribution_rate):
 
     new_parcel_repo_urls = old_parcel_repo_urls + ", " + remote_parcel_url
     repo_cm_config = cm_client.ApiConfig(name='REMOTE_PARCEL_REPO_URLS', value=new_parcel_repo_urls)
-    distribute_cm_config = cm_client.ApiConfig(name="PARCEL_DISTRIBUTE_RATE_LIMIT_KBS_PER_SECOND",
+    distribute_cm_config = cm_client.ApiConfig(name='PARCEL_DISTRIBUTE_RATE_LIMIT_KBS_PER_SECOND',
                                                value=parcel_distribution_rate)
-    phone_home = cm_client.ApiConfig(name='PHONE_HOME', value="false")
+    phone_home = cm_client.ApiConfig(name='PHONE_HOME', value='false')
     new_cm_configs = cm_client.ApiConfigList([repo_cm_config, distribute_cm_config, phone_home])
     updated_cm_configs = cloudera_manager_api.update_config(body=new_cm_configs)
     if debug == 'True':
@@ -1992,7 +1992,7 @@ def config_mgmt_for_kerberos():
     KDC_HOST = cm_client.ApiConfig(name='KDC_HOST', value=cloudera_manager_host)
     MAX_RENEW_LIFE = cm_client.ApiConfig(name='MAX_RENEW_LIFE', value='604800')
     KRB_DNS_LOOKUP_KDC = cm_client.ApiConfig(name='KRB_DNS_LOOKUP_KDC', value='true')
-    KRB_MANAGE_KRB5_CONF = cm_client.ApiConfig(name='KRB_MANAGE_KRB5_CONF', value='true')
+    KRB_MANAGE_KRB5_CONF = cm_client.ApiConfig(name='KRB_MANAGE_KRB5_CONF', value='false')
     kerberos_cm_configs = cm_client.ApiConfigList([KDC_ADMIN_HOST, KDC_ADMIN_PASSWORD, KDC_ADMIN_USER, KDC_HOST,
                                                    MAX_RENEW_LIFE, KRB_DNS_LOOKUP_KDC, KRB_MANAGE_KRB5_CONF])
     updated_cm_configs = cloudera_manager_api.update_config(body=kerberos_cm_configs)
