@@ -84,7 +84,7 @@ This will create all the required elements in a compartment in the target OCI te
 The output of the Apply command will contain a URL to access Cloudera Manager.   This is the public IP of the Utility Host, which runs the deployment.   
 
 ## Monitoring Cluster Build
-Because all tasks are done in CloudInit, there are two ways to monitor the deployment.   Firstly you can login go the Cloudera Manager URL once it is up and running a few minutes after the Apply command finishes.  Alternatively you can SSH into the Utility node, and monitor the log file "/var/log/cloudera-OCI-initialize.log" which contains detailed output from the deployment.
+Because all tasks are done in CloudInit, there are two ways to monitor the deployment.   Firstly you can login to the Cloudera Manager URL once it is up and running a few minutes after the Apply command finishes.  Alternatively you can SSH into the Utility node, and monitor the log file "/var/log/cloudera-OCI-initialize.log" which contains detailed output from the deployment.
 
 ## Destroy the Deployment
 
