@@ -47,7 +47,6 @@ resource "oci_core_volume" "UtilLogVolume" {
 resource "oci_core_volume_attachment" "UtilLogAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Utility.id}"
   volume_id       = "${oci_core_volume.UtilLogVolume.id}"
   device          = "/dev/oracleoci/oraclevdb"
@@ -65,7 +64,6 @@ resource "oci_core_volume" "UtilClouderaVolume" {
 resource "oci_core_volume_attachment" "UtilClouderaAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Utility.id}"
   volume_id       = "${oci_core_volume.UtilClouderaVolume.id}"
   device          = "/dev/oracleoci/oraclevdc"

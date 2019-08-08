@@ -38,7 +38,6 @@ resource "oci_core_volume" "BastionLogVolume" {
 resource "oci_core_volume_attachment" "BastionLogAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Bastion.id}"
   volume_id       = "${oci_core_volume.BastionLogVolume.id}"
   device          = "/dev/oracleoci/oraclevdb"
@@ -56,7 +55,6 @@ resource "oci_core_volume" "BastionClouderaVolume" {
 resource "oci_core_volume_attachment" "BastionClouderaAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Bastion.id}"
   volume_id       = "${oci_core_volume.BastionClouderaVolume.id}"
   device          = "/dev/oracleoci/oraclevdc"

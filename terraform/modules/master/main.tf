@@ -41,7 +41,6 @@ resource "oci_core_volume" "MasterLogVolume" {
 resource "oci_core_volume_attachment" "MasterLogAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Master.*.id[count.index]}"
   volume_id       = "${oci_core_volume.MasterLogVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdb"
@@ -59,7 +58,6 @@ resource "oci_core_volume" "MasterClouderaVolume" {
 resource "oci_core_volume_attachment" "MasterClouderaAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Master.*.id[count.index]}"
   volume_id       = "${oci_core_volume.MasterClouderaVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdc"
@@ -77,7 +75,6 @@ resource "oci_core_volume" "MasterNNVolume" {
 resource "oci_core_volume_attachment" "MasterNNAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Master.*.id[count.index]}"
   volume_id       = "${oci_core_volume.MasterNNVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdd"

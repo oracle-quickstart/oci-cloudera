@@ -41,7 +41,6 @@ resource "oci_core_volume" "WorkerLogVolume" {
 resource "oci_core_volume_attachment" "WorkerLogAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Worker.*.id[count.index]}"
   volume_id       = "${oci_core_volume.WorkerLogVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdb"
@@ -59,7 +58,6 @@ resource "oci_core_volume" "WorkerClouderaVolume" {
 resource "oci_core_volume_attachment" "WorkerClouderaAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Worker.*.id[count.index]}"
   volume_id       = "${oci_core_volume.WorkerClouderaVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdc"
@@ -77,7 +75,6 @@ resource "oci_core_volume" "WorkerDataVolume" {
 resource "oci_core_volume_attachment" "WorkerDataAttachment" {
   count               = "${(var.instances * var.block_volumes_per_worker)}"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Worker.*.id[count.index/var.block_volumes_per_worker]}"
   volume_id       = "${oci_core_volume.WorkerDataVolume.*.id[count.index]}"
   device = "${var.data_volume_attachment_device[count.index%(var.block_volumes_per_worker)]}"
