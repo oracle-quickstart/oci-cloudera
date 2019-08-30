@@ -8,14 +8,14 @@ groupings:
   - ${ssh_public_key}
   - ${ssh_private_key}
   - ${availability_domain}
-  - ${log_volume_size_in_gbs}
-  - ${cloudera_volume_size_in_gbs}
 - title: "CDH Options"
   variables:
   - ${cm_version}
   - ${cdh_version}
   - ${cluster_name}
   - ${deployment_type}
+  - ${log_volume_size_in_gbs}
+  - ${cloudera_volume_size_in_gbs}
 - title: "Worker Node Options"
   variables:
   - ${worker_instance_shape}
