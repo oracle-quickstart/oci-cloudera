@@ -79,6 +79,10 @@ variable "availability_domain" {
   default = "1"
 }
 
+variable "cluster_name" {
+  default = "TestCluster"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Environmental variables
 # You probably want to define these as environmental variables.

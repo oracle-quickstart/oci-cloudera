@@ -41,6 +41,7 @@ module "utility" {
 	block_volume_count = "${var.block_volumes_per_worker}"
 	AD = "${var.availability_domain}"
 	deployment_type = "${var.deployment_type}"
+	cluster_name = "${var.cluster_name}"
 }
 
 module "master" {

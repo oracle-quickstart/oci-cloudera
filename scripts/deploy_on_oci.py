@@ -34,7 +34,7 @@ host_fqdn_list = []
 data_tiering = 'False'
 nvme_disks = 0
 cluster_version = '6.2.0'  # type: str
-simple_deployment = 'False'  # type: bool
+deployment_type = 'simple'  # type: str
 
 #
 # Custom Global Parameters - Customize below here
@@ -52,11 +52,11 @@ admin_password = 'somepassword'  # type: str
 cluster_name = 'TestCluster'  # type: str
 
 # Set this to 'True' (default) to enable secure cluster (Kerberos) functionality
-# Set this to 'False" to deploy an insecure cluster - This is automatically off for  simple_deployment
+# Set this to 'False" to deploy an insecure cluster - This is automatically off for simple deployment 
 secure_cluster = 'True'  # type: bool
 
 # Set this to 'False' if you do not want HDFS HA - useful for Development or if you want to save some setup time
-# This is automatically off for simple_deployment
+# This is automatically off for simple deployment
 hdfs_ha = 'True'  # type: bool
 
 # They should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
@@ -2085,7 +2085,7 @@ def options_parser(args=None):
                                                                                  'OCI using cm_client with Cloudera '
                                                                                  'Manager API %s' % (cluster_version,
                                                                                                      api_version))
-    parser.add_argument('-S', '--simple_deployment', action='store_true', help='Simple, no HA or Kerberos at deployment')
+    parser.add_argument('-D', '--deployment_type', metavar='deployment_type', help='simple, no HA or Kerberos at deployment, or secure to enable both')
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
                         help='Cloudera Manager IP to connect API using cm_client')
     parser.add_argument('-i', '--input_host_list', metavar='input_host_list',
@@ -2099,6 +2099,7 @@ def options_parser(args=None):
     parser.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
     parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='CDH version to deploy')
     parser.add_argument('-ad', '--availability_domain', metavar='availability_domain', help='OCI Availability Domain')
+    parser.add_argument('-N', '--cluster_name', metavar='cluster_name', help='CDH Cluster Name')
     options = parser.parse_args(args)
     if not options.cm_server:
         print('Cloudera Manager Server IP required.')
@@ -2117,6 +2118,10 @@ def options_parser(args=None):
             print('OCI Availability Domain is required.')
             parser.print_help()
             exit(-1)
+        if options.cm_server and not options.cluster_name:
+            print('Cluster Name is required.')
+            parser.print_help()
+            exit(-1)
 
     if options.license_file:
         try:
@@ -2129,7 +2134,7 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.simple_deployment, options.cdh_version, options.availability_domain)
+            options.num_workers, options.deployment_type, options.cdh_version, options.availability_domain, options.cluster_name)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
@@ -2315,7 +2320,7 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, simple_deployment, cdh_version, cms_version =\
+    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, deployment_type, cdh_version, cms_version, cluster_name =\
         options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
@@ -2323,6 +2328,13 @@ if __name__ == '__main__':
         print('disk_count = %s' % disk_count)
         print('license_file = %s' % license_file)
         print('worker_shape = %s' % worker_shape)
+        print('cluster_name = %s' % cluster_name)
+        print('deployment_type = %s' % deployment_type)
+    if deployment_type == 'simple':
+        hdfs_ha = 'False'
+        secure_cluster = 'False'
+    else:
+	pass
     user_name = 'admin'
     password = 'admin'
     print('->Building API Endpoints')
@@ -2348,14 +2360,14 @@ if __name__ == '__main__':
             time.sleep(30)
             wait_status = wait_status + '*'
 
-    if simple_deployment == 'True':
+    if deployment_type == 'simple':
         print('Simple Deployment Selected')
         print('Cluster Security and High Availabilty are DISABLED')
     else:
         print('Cluster Deployment options - HA: %s - Kerberos: %s' % (hdfs_ha, secure_cluster))
 
     build_cloudera_cluster()
-    if simple_deployment == 'True':
+    if deployment_type == 'simple':
         exit(0)
     else:
         if hdfs_ha == 'True':

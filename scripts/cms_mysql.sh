@@ -14,6 +14,7 @@ availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/ava
 worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
 worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
 deployment_type=`curl -L http://169.254.169.254/opc/v1/instance/metadata/deployment_type`
+cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_name`
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -387,11 +388,6 @@ for w in `seq 1 $num_workers`; do
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-if [ ${deployment_type} = "simple" ]; then 
-	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
-	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} 2>&1 1>> $LOG_FILE
-else
-	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
-        python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} 2>&1 1>> $LOG_FILE
-fi
+log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type}  -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
 log "->DONE"
