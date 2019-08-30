@@ -8,6 +8,8 @@ groupings:
   - ${ssh_public_key}
   - ${ssh_private_key}
   - ${availability_domain}
+  - ${log_volume_size_in_gbs}
+  - ${cloudera_volume_size_in_gbs}
 - title: "CDH Options"
   variables:
   - ${cm_version}
@@ -46,6 +48,7 @@ groupings:
   - ${tenancy_ocid}
   - ${InstanceImageOCID}
   - ${oci_service_gateway}
+  - ${AD}
   visible: false
 
 variables:
@@ -200,7 +203,24 @@ variables:
   nn_volume_size_in_gbs:
     type: integer
     title: "Block Volume Size for NameNode Metadata"
-    description: "500 to 32,768 "
+    description: "500 to 32,768"
     minimum: 500
     maximum: 32768
     required: true
+
+  log_volume_size_in_gbs:
+    type: integer
+    title: "Volume size in GB for CDH Logs"
+    description: "50 to 32,768"
+    minimum: 50
+    maximum: 32768
+    required: true
+
+  cloudera_volume_size_in_gbs:
+    type: integer
+    title: "Volume size in GB for CDH Data (Parcels)"
+    description: "150 to 32,768"
+    minimum: 150
+    maximum: 32768
+    required: true
+
