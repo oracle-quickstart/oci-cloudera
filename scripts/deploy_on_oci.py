@@ -20,11 +20,7 @@ import os
 import subprocess
 
 start_time = time.time()
-
-#
 # Global Parameter Defaults - These are passed to the script, do not modify
-#
-
 disk_count = 'None'
 worker_shape = 'None'
 cm_server = 'None'
@@ -33,53 +29,36 @@ license_file = 'None'
 host_fqdn_list = []
 data_tiering = 'False'
 nvme_disks = 0
-cluster_version = '6.2.0'  # type: str
 deployment_type = 'simple'  # type: str
-
-#
 # Custom Global Parameters - Customize below here
-#
-
-# Enable Debug Output set this to 'True' for detailed API output during execution
 debug = 'False'  # type: str
-
 # Define new admin username and password for Cloudera Manager
 # This replaces the default (insecure) admin/admin account
 admin_user_name = 'cdhadmin'  # type: str
 admin_password = 'somepassword'  # type: str
-
-# Define cluster name
+# Defaults
 cluster_name = 'TestCluster'  # type: str
-
-# Set this to 'True' (default) to enable secure cluster (Kerberos) functionality
-# Set this to 'False" to deploy an insecure cluster - This is automatically off for simple deployment 
+cdh_version = ' '  # type: str
+cluster_primary_version = ' '
+kafka_parcel_url = ' '
 secure_cluster = 'True'  # type: bool
-
-# Set this to 'False' if you do not want HDFS HA - useful for Development or if you want to save some setup time
-# This is automatically off for simple deployment
 hdfs_ha = 'True'  # type: bool
-
-# They should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
+# These should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
 realm = 'HADOOP.COM'
 kdc_admin = 'cloudera-scm@HADOOP.COM'
 kdc_password = 'somepassword'
-
 # Set port number for Cloudera Manager - used to build API endpoints and check if CM is up/listening
 # Only modify if you customized the Cloudera Manager deployment to use a non-standard port
 cm_port = '7180'
 # Set API version to use with Cloudera Manager
 api_version = 'v31'
-
 # Define DB port number for Cluster Metadata
 # This should match the CloudInit boot file you chose in Terraform
 # For MySQL this is 3306
 # For Postgres this is 5432
 meta_db_port = '3306'
-
-# Define Remote Parcel URL & Distribution Rate if desired
-remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + cluster_version + '/parcels'  # type: str
+# Distribution rate for remote repo
 parcel_distribution_rate = "1024000"  # type: int
-
 # Cluster Services List
 cluster_service_list = ['SOLR', 'HBASE', 'HIVE', 'SPARK_ON_YARN', 'HDFS', 'OOZIE', 'SQOOP_CLIENT', 'ZOOKEEPER',
                         'YARN', 'KAFKA', 'IMPALA']
@@ -366,12 +345,12 @@ def delete_default_admin_user():
         print('Exception when calling UsersResourceApi->delete_user2: {}\n'.format(e))
 
 
-def init_cluster():
+def init_cluster(cdh_version):
     """
     Initialize Cluster
     :return:
     """
-    cluster = [cm_client.ApiCluster(name=cluster_name, display_name=cluster_name, full_version=cluster_version)]
+    cluster = [cm_client.ApiCluster(name=cluster_name, display_name=cluster_name, full_version=cdh_version)]
     body = cm_client.ApiClusterList(cluster)
 
     try:
@@ -574,7 +553,8 @@ def dda_parcel(parcel_product):
     :param parcel_product: Parcel Product Name - e.g. CDH, SPARK_ON_YARN
     :return:
     """
-
+    parcel_version = ' '
+    target_stage = ' '
     def monitor_parcel(parcel_product, parcel_version, target_stage):
         while True:
             parcel = parcel_api.read_parcel(cluster_name, parcel_product, parcel_version)
@@ -2081,9 +2061,11 @@ def options_parser(args=None):
     :return:
     """
     global objects
+    global remote_parcel_url
+    global cdh_version
     parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH %s Cluster on '
                                                                                  'OCI using cm_client with Cloudera '
-                                                                                 'Manager API %s' % (cluster_version,
+                                                                                 'Manager API %s' % (cdh_version,
                                                                                                      api_version))
     parser.add_argument('-D', '--deployment_type', metavar='deployment_type', help='simple, no HA or Kerberos at deployment, or secure to enable both')
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
@@ -2101,6 +2083,19 @@ def options_parser(args=None):
     parser.add_argument('-ad', '--availability_domain', metavar='availability_domain', help='OCI Availability Domain')
     parser.add_argument('-N', '--cluster_name', metavar='cluster_name', help='CDH Cluster Name')
     options = parser.parse_args(args)
+    cluster_primary_version = options.cdh_version.split('.')
+    cluster_primary_version = cluster_primary_version[0]
+    cdh_version = options.cdh_version
+    if cluster_primary_version == '6':
+	remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + options.cdh_version + '/parcels'  # type: str
+    else:
+	remote_parcel_url = 'https://archive.cloudera.com/cdh5/parcels/' + options.cdh_version  #type: str
+        if options.cdh_version.split('.')[2] >= '13':
+                kafka_version = '4.1.0.4'
+	else:
+                kafka_version = '2.2.0.68'
+
+        kafka_parcel_url = 'https://archive.cloudera.com/kafka/parcels/' + kafka_version  # type: str
     if not options.cm_server:
         print('Cloudera Manager Server IP required.')
         parser.print_help()
@@ -2134,13 +2129,14 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.deployment_type, options.cdh_version, options.availability_domain, options.cluster_name)
+            options.num_workers, options.deployment_type, options.cdh_version, options.availability_domain, options.cluster_name,
+            cluster_primary_version, kafka_parcel_url)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
 #
 
-def build_cloudera_cluster():
+def build_cloudera_cluster(cluster_primary_version):
     """
     Deploy and Configure a Cloudera EDH Cluster
     :return:
@@ -2166,7 +2162,7 @@ def build_cloudera_cluster():
     build_success = 'False'
     while build_success == 'False':
         print('->Initializing Cluster %s' % cluster_name)
-        init_cluster()
+        init_cluster(cdh_version)
         build_host_list(input_host_list)
         if len(host_fqdn_list) < 6:
             print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
@@ -2191,6 +2187,12 @@ def build_cloudera_cluster():
     update_parcel_repo(remote_parcel_url, parcel_distribution_rate)
     print('->Parcel Setup Running')
     dda_parcel('CDH')
+    if cluster_primary_version == '5':
+        update_parcel_repo(kafka_parcel_url, parcel_distribution_rate)
+        dda_parcel('KAFKA')
+    else:
+        pass
+    time.sleep(10) 
     print('->Mapping Cluster Hostnames and Host IDs')
     cluster_host_id_map()
     print('->Reading DB Passwords')
@@ -2320,7 +2322,7 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, deployment_type, cdh_version, cms_version, cluster_name =\
+    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, deployment_type, cdh_version, cms_version, cluster_name, cluster_primary_version, kafka_parcel_url =\
         options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
@@ -2366,7 +2368,7 @@ if __name__ == '__main__':
     else:
         print('Cluster Deployment options - HA: %s - Kerberos: %s' % (hdfs_ha, secure_cluster))
 
-    build_cloudera_cluster()
+    build_cloudera_cluster(cluster_primary_version)
     if deployment_type == 'simple':
         exit(0)
     else:
