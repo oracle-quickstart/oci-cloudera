@@ -53,6 +53,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
+    bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .public1.cdhvcn.oraclevcn.com = ${REALM}
+    public1.cdhvcn.oraclevcn.com = ${REALM}
+    .public2.cdhvcn.oraclevcn.com = ${REALM}
+    public2.cdhvcn.oraclevcn.com = ${REALM}
+    .public3.cdhvcn.oraclevcn.com = ${REALM}
+    public3.cdhvcn.oraclevcn.com = ${REALM}
+    .private1.cdhvcn.oraclevcn.com = ${REALM}
+    private1.cdhvcn.oraclevcn.com = ${REALM}
+    .private2.cdhvcn.oraclevcn.com = ${REALM}
+    private2.cdhvcn.oraclevcn.com = ${REALM}
+    .private3.cdhvcn.oraclevcn.com = ${REALM}
+    private3.cdhvcn.oraclevcn.com = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf

@@ -16,6 +16,14 @@ groupings:
   - ${deployment_type}
   - ${log_volume_size_in_gbs}
   - ${cloudera_volume_size_in_gbs}
+- title: "High Availability"
+  variables:
+  - ${hdfs_ha}
+  visible:
+    not:
+      - eq:
+        - ${deployment_type}
+        - "simple"
 - title: "Worker Node Options"
   variables:
   - ${worker_instance_shape}
@@ -40,6 +48,7 @@ groupings:
 - title: "Edge Node Options"
   variables:
   - ${bastion_instance_shape}
+  - ${bastion_node_count}
 
 - title: "Pre-Defined"
   variables:
@@ -104,6 +113,15 @@ variables:
     - "simple"
     - "secure"
     title: "Deployment Type"
+    required: true
+
+  hdfs_ha:
+    type: enum
+    enum:
+    - "True"
+    - "False"
+    title: "High Availability"
+    description: "Enable High Availability?"
     required: true
 
   worker_instance_shape:
@@ -177,6 +195,13 @@ variables:
     - "VM.DenseIO2.24"
     - "BM.DenseIO2.52"
     title: "Shape of Edge Nodes"
+    required: true
+
+  bastion_node_count:
+    type: integer
+    title: "Number of Edge Nodes"
+    description: "Enter a number, 0 to service limit of shape"
+    minimum: 0
     required: true
 
   ssh_public_key:

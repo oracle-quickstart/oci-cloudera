@@ -14,6 +14,7 @@ availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/ava
 worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
 worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
 deployment_type=`curl -L http://169.254.169.254/opc/v1/instance/metadata/deployment_type`
+hdfs_ha=`curl -L http://169.254.169.254/opc/v1/instance/metadata/hdfs_ha`
 cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_name`
 EXECNAME="TUNING"
 log "-> START"
@@ -46,7 +47,7 @@ log "-> INSTALL"
 yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
 KERBEROS_PASSWORD="SOMEPASSWORD"
 SCM_USER_PASSWORD="somepassword"
-kdc_server=${cm_fqdn}
+kdc_fqdn=${cm_fqdn}
 realm="hadoop.com"
 REALM="HADOOP.COM"
 log "-> CONFIG"
@@ -78,6 +79,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
+    bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .public1.cdhvcn.oraclevcn.com = ${REALM}
+    public1.cdhvcn.oraclevcn.com = ${REALM}
+    .public2.cdhvcn.oraclevcn.com = ${REALM}
+    public2.cdhvcn.oraclevcn.com = ${REALM}
+    .public3.cdhvcn.oraclevcn.com = ${REALM}
+    public3.cdhvcn.oraclevcn.com = ${REALM}
+    .private1.cdhvcn.oraclevcn.com = ${REALM}
+    private1.cdhvcn.oraclevcn.com = ${REALM}
+    .private2.cdhvcn.oraclevcn.com = ${REALM}
+    private2.cdhvcn.oraclevcn.com = ${REALM}
+    .private3.cdhvcn.oraclevcn.com = ${REALM}
+    private3.cdhvcn.oraclevcn.com = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf
@@ -388,6 +407,11 @@ for w in `seq 1 $num_workers`; do
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type}  -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+if [ $hdfs_ha = "True" ]; then 
+	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE	
+else
+	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+fi
 log "->DONE"

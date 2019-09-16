@@ -1,6 +1,6 @@
 module "bastion" {
 	source	= "modules/bastion"
-	instances = "1"
+	instances = "${var.bastion_node_count}"
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
 	subnet_id = "${module.network.bastion-id}" 
@@ -41,6 +41,7 @@ module "utility" {
 	block_volume_count = "${var.block_volumes_per_worker}"
 	AD = "${var.availability_domain}"
 	deployment_type = "${var.deployment_type}"
+	hdfs_ha = "${var.hdfs_ha}"
 	cluster_name = "${var.cluster_name}"
 }
 

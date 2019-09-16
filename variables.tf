@@ -24,6 +24,10 @@ variable "deployment_type" {
     default = "simple" 
 }
 
+variable "hdfs_ha" {
+    default = "False"
+}
+
 variable "worker_instance_shape" {
   default = "BM.DenseIO2.52"
 }
@@ -72,6 +76,10 @@ variable "nn_volume_size_in_gbs" {
 
 variable "bastion_instance_shape" {
   default = "VM.Standard2.4"
+}
+
+variable "bastion_node_count" {
+  default = "1"
 }
 
 # Which AD to target - this can be adjusted.  Default 1 for single AD regions.
