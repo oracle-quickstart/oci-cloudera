@@ -21,6 +21,7 @@ variable "cloudera_manager" {}
 variable "cm_install" {}
 variable "deploy_on_oci" {}
 variable "deployment_type" {}
+variable "hdfs_ha" {} 
 variable "cluster_name" {}
 
 # ---------------------------------------------------------------------------------------------------------------------

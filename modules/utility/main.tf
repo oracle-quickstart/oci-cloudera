@@ -22,6 +22,7 @@ resource "oci_core_instance" "Utility" {
     block_volume_count  = "${var.block_volume_count}"	
     availability_domain = "${var.AD}"
     deployment_type     = "${var.deployment_type}"
+    hdfs_ha		= "${var.hdfs_ha}"
     cluster_name	= "${var.cluster_name}"
   }
 
