@@ -29,7 +29,6 @@ license_file = 'None'
 host_fqdn_list = []
 data_tiering = 'False'
 nvme_disks = 0
-deployment_type = 'simple'  # type: str
 availability_domain = 'None'
 # Custom Global Parameters - Customize below here
 debug = 'False'  # type: str
@@ -42,7 +41,7 @@ cluster_name = 'TestCluster'  # type: str
 cdh_version = ' '  # type: str
 cluster_primary_version = ' '
 kafka_parcel_url = ' '
-secure_cluster = 'True'  # type: bool
+secure_cluster = 'False'  # type: bool
 hdfs_ha = 'False'  # type: bool
 # These should match what is in the Cloudera Manager CloudInit bootstrap file and instance boot files
 realm = 'HADOOP.COM'
@@ -2016,11 +2015,10 @@ def options_parser(args=None):
     global objects
     global remote_parcel_url
     global cdh_version
-    parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH %s Cluster on '
+    parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH Cluster on '
                                                                                  'OCI using cm_client with Cloudera '
-                                                                                 'Manager API %s' % (cdh_version,
-                                                                                                     api_version))
-    parser.add_argument('-D', '--deployment_type', metavar='deployment_type', help='simple, no Kerberos at deployment, or secure to enable')
+                                                                                 'Manager API')
+    parser.add_argument('-S', '--secure_cluster', action='store_true')
     parser.add_argument('-H', '--hdfs_ha', action='store_true')
     parser.add_argument('-m', '--cm_server', metavar='cm_server', required='True',
                         help='Cloudera Manager IP to connect API using cm_client')
@@ -2084,7 +2082,7 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.deployment_type, options.hdfs_ha, options.cdh_version, options.availability_domain, 
+            options.num_workers, options.secure_cluster, options.hdfs_ha, options.cdh_version, options.availability_domain, 
             options.cluster_name, cluster_primary_version, kafka_parcel_url)
 
 #
@@ -2277,7 +2275,7 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, deployment_type, hdfs_ha, \
+    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, secure_cluster, hdfs_ha, \
     cdh_version, availability_domain, cluster_name, cluster_primary_version, kafka_parcel_url =\
     options_parser(sys.argv[1:])
     if debug == 'True':
@@ -2287,11 +2285,8 @@ if __name__ == '__main__':
         print('license_file = %s' % license_file)
         print('worker_shape = %s' % worker_shape)
         print('cluster_name = %s' % cluster_name)
-        print('deployment_type = %s' % deployment_type)
-    if deployment_type == 'simple':
-        secure_cluster = 'False'
-    else:
-	pass
+        print('secure_cluster = %s' % secure_cluster)
+        print('hdfs_ha = %s' % hdfs_ha)
     user_name = 'admin'
     password = 'admin'
     print('->Building API Endpoints')
@@ -2317,30 +2312,21 @@ if __name__ == '__main__':
             time.sleep(30)
             wait_status = wait_status + '*'
 
-    if deployment_type == 'simple':
-        print('Simple Deployment Selected')
-        print('Cluster Security and High Availabilty are DISABLED')
-    else:
-        print('Cluster Deployment options - HA: %s - Kerberos: %s' % (hdfs_ha, secure_cluster))
-
+    print('Cluster Deployment options - High Availability: %s - Kerberos: %s' % (hdfs_ha, secure_cluster))
     build_cloudera_cluster(cluster_primary_version)
-    if deployment_type == 'simple':
-        exit(0)
+    if hdfs_ha is True:
+        hdfs_ha_deployment_start = time.time()
+        print('->Enabling HDFS HA')
+        hdfs_enable_nn_ha(snn_host_id)
+        wait_for_active_service_commands('\tEnable HDFS HA', 'HDFS')
+        global hdfs_ha_deployment_time
+        hdfs_ha_deployment_time = time.time() - hdfs_ha_deployment_start
     else:
-        if hdfs_ha is True:
-            hdfs_ha_deployment_start = time.time()
-            print('->Enabling HDFS HA')
-            hdfs_enable_nn_ha(snn_host_id)
-            wait_for_active_service_commands('\tEnable HDFS HA', 'HDFS')
-            global hdfs_ha_deployment_time
-            hdfs_ha_deployment_time = time.time() - hdfs_ha_deployment_start
-        else:
-            pass
-        if secure_cluster == 'True':
-            print('->Enable Kerberos')
-            enable_kerberos()
-        else:
-            pass
-
+        pass
+    if secure_cluster is True:
+        print('->Enable Kerberos')
+        enable_kerberos()
+    else:
+        pass
     print('-> CLUSTER DEPLOYMENT COMPLETE <-')
-
+    exit(0)

@@ -15,7 +15,6 @@ module "bastion" {
 	cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
 	cm_version = "${var.cm_version}"
 	cdh_version = "${var.cdh_version}"
-	deployment_type = "${var.deployment_type}"
 }
 
 module "utility" {
@@ -40,8 +39,8 @@ module "utility" {
 	worker_shape = "${var.worker_instance_shape}"
 	block_volume_count = "${var.block_volumes_per_worker}"
 	AD = "${var.availability_domain}"
-	deployment_type = "${var.deployment_type}"
 	hdfs_ha = "${var.hdfs_ha}"
+	secure_cluster = "${var.secure_cluster}"
 	cluster_name = "${var.cluster_name}"
 }
 
@@ -62,7 +61,6 @@ module "master" {
         cloudera_manager = "cdh-utility-1.public${var.availability_domain}.${module.network.vcn-dn}"
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
-	deployment_type = "${var.deployment_type}"
 }
 
 module "worker" {
@@ -85,5 +83,4 @@ module "worker" {
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
 	block_volume_count = "${var.block_volumes_per_worker}"
-	deployment_type = "${var.deployment_type}"
 }

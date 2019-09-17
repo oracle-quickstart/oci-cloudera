@@ -21,7 +21,7 @@ resource "oci_core_instance" "Utility" {
     worker_shape        = "${var.worker_shape}"
     block_volume_count  = "${var.block_volume_count}"	
     availability_domain = "${var.AD}"
-    deployment_type     = "${var.deployment_type}"
+    secure_cluster      = "${var.secure_cluster}"
     hdfs_ha		= "${var.hdfs_ha}"
     cluster_name	= "${var.cluster_name}"
   }

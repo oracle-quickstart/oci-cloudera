@@ -13,9 +13,11 @@ groupings:
   - ${cm_version}
   - ${cdh_version}
   - ${cluster_name}
-  - ${deployment_type}
   - ${log_volume_size_in_gbs}
   - ${cloudera_volume_size_in_gbs}
+- title: "Security"
+  variables:
+  - ${secure_cluster}
 - title: "High Availability"
   variables:
   - ${hdfs_ha}
@@ -102,12 +104,13 @@ variables:
     maximum: 3
     required: true
 
-  deployment_type:
+  secure_cluster:
     type: enum
     enum:
-    - "simple"
-    - "secure"
-    title: "Deployment Type"
+    - "True"
+    - "False"
+    title: "Kerberos Security"
+    description: "Enable Kerberos for Secure Cluster?"
     required: true
 
   hdfs_ha:
@@ -116,7 +119,7 @@ variables:
     - "True"
     - "False"
     title: "High Availability"
-    description: "Enable High Availability?"
+    description: "Enable HDFS High Availability?"
     required: true
 
   worker_instance_shape:

@@ -13,7 +13,7 @@ cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/availability_domain`
 worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
 worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
-deployment_type=`curl -L http://169.254.169.254/opc/v1/instance/metadata/deployment_type`
+secure_cluster=`curl -L http://169.254.169.254/opc/v1/instance/metadata/secure_cluster`
 hdfs_ha=`curl -L http://169.254.169.254/opc/v1/instance/metadata/hdfs_ha`
 cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_name`
 EXECNAME="TUNING"
@@ -407,11 +407,21 @@ for w in `seq 1 $num_workers`; do
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-if [ $hdfs_ha = "True" ]; then 
-	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE	
+if [ $secure_cluster = "True" ]; then 
+	if [ $hdfs_ha = "True" ]; then 
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE	
+	else
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+	fi
 else
-	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -D ${deployment_type} -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+        if [ $hdfs_ha = "True" ]; then
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+        else
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+	fi
 fi
 log "->DONE"

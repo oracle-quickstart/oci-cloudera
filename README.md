@@ -40,11 +40,11 @@ This automation supports using a local KDC deployed on the Cloudera Manager inst
 
 Also - for cluster management, you will need to manually create at a minimum the HDFS Superuser Principal as [detailed here](https://www.cloudera.com/documentation/enterprise/latest/topics/cm_sg_using_cm_sec_config.html#create-hdfs-superuser) after deployment.
 
-Enabling Kerberos is managed using a terraform metadata tag "deployment_type".   Setting this value to "secure" will enable cluster security as part of the setup process.  Changing this to "simple" will deploy an unsecured cluster.  By default this value is set to "simple" for speed of deployment and ease of use for those not familiar with secure cluster operation.
-
+Enabling Kerberos is managed using a terraform metadata tag "secure_cluster"   Setting this value to "True" will enable cluster security as part of the setup process.  Changing this to "False" will deploy an unsecured cluster.
+  
 ## High Availability
 
-High Availability is also offered as part of the deployment process.  When secure cluster operation is chosen this is enabled by default.  It can be disabled by either changing the deployment_type to "simple", or modifying the [deploy_on_oci.py](https://github.com/oracle/oci-quickstart-cloudera/blob/master/scripts/deploy_on_oci.py#L60) script and changing the value for "hdfs_ha".
+High Availability for HDFS services is also offered as part of the deployment process.  This can be toggled during the installation process by setting the value to "True".
 
 ## Metadata and MySQL
 

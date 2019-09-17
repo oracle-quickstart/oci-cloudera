@@ -19,9 +19,8 @@ variable "cm_version" {
 variable "cdh_version" { 
     default = "6.2.0" 
 }
-# Deployment type - set this to "secure" to enable Kerberos and High Availability
-variable "deployment_type" { 
-    default = "simple" 
+variable "secure_cluster" { 
+    default = "True" 
 }
 
 variable "hdfs_ha" {
