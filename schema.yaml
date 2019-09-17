@@ -19,11 +19,6 @@ groupings:
 - title: "High Availability"
   variables:
   - ${hdfs_ha}
-  visible:
-    not:
-      - eq:
-        - ${deployment_type}
-        - "simple"
 - title: "Worker Node Options"
   variables:
   - ${worker_instance_shape}

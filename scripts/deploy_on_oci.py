@@ -1313,10 +1313,11 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'SERVER'  # type: str
                     maxclientcnxns = [cm_client.ApiConfig(name='maxClientCnxns', value='1024')]
+		    maxSessionTimeout = [cm_client.ApiConfig(name='maxSessionTimeout', value='60000')]
                     datalogdir = [cm_client.ApiConfig(name='dataLogDir', value=LOG_DIR + '/zookeeper')]
                     datadir = [cm_client.ApiConfig(name='dataDir', value=LOG_DIR + '/zookeeper')]
                     zk_server_log_dir = [cm_client.ApiConfig(name='zk_server_log_dir', value=LOG_DIR + '/zookeeper')]
-                    zk_config_list = [maxclientcnxns, datalogdir, datadir, zk_server_log_dir]
+                    zk_config_list = [maxclientcnxns, maxSessionTimeout, datalogdir, datadir, zk_server_log_dir]
                     for config in zk_config_list:
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
@@ -2083,8 +2084,8 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.deployment_type, options.cdh_version, options.availability_domain, options.cluster_name,
-            cluster_primary_version, kafka_parcel_url)
+            options.num_workers, options.deployment_type, options.hdfs_ha, options.cdh_version, options.availability_domain, 
+            options.cluster_name, cluster_primary_version, kafka_parcel_url)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
@@ -2266,7 +2267,7 @@ def enable_kerberos():
     deployment_time = time.time() - start_time
     print('TOTAL SETUP TIME: %s ' % str(datetime.timedelta(seconds=deployment_time)))
     print('CLUSTER SETUP TIME: %s ' % str(datetime.timedelta(seconds=cluster_setup_time)))
-    if hdfs_ha == 'True':
+    if hdfs_ha is True:
         print('HDFS HA SETUP TIME: %s ' % str(datetime.timedelta(seconds=hdfs_ha_deployment_time)))
     else:
         pass
@@ -2276,8 +2277,9 @@ def enable_kerberos():
 #
 
 if __name__ == '__main__':
-    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, deployment_type, cdh_version, availability_domain, cluster_name, cluster_primary_version, kafka_parcel_url =\
-        options_parser(sys.argv[1:])
+    cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, deployment_type, hdfs_ha, \
+    cdh_version, availability_domain, cluster_name, cluster_primary_version, kafka_parcel_url =\
+    options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
         print('input_host_list = %s' % input_host_list)
@@ -2287,7 +2289,6 @@ if __name__ == '__main__':
         print('cluster_name = %s' % cluster_name)
         print('deployment_type = %s' % deployment_type)
     if deployment_type == 'simple':
-        hdfs_ha = 'False'
         secure_cluster = 'False'
     else:
 	pass
@@ -2326,7 +2327,7 @@ if __name__ == '__main__':
     if deployment_type == 'simple':
         exit(0)
     else:
-        if hdfs_ha == 'True':
+        if hdfs_ha is True:
             hdfs_ha_deployment_start = time.time()
             print('->Enabling HDFS HA')
             hdfs_enable_nn_ha(snn_host_id)
