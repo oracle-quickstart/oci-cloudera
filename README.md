@@ -1,4 +1,4 @@
-# oci-quickstart-cloudera
+# oci-cloudera
 This is a Terraform module that deploys [Cloudera Enterprise Data Hub](https://www.cloudera.com/products/enterprise-data-hub.html) on [Oracle Cloud Infrastructure (OCI)](https://cloud.oracle.com/en_US/cloud-infrastructure).  It is developed jointly by Oracle and Cloudera.
 
 ## Alternate Versions
