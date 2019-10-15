@@ -6,7 +6,6 @@
 
 variable "region" {}
 variable "compartment_ocid" {}
-variable "private_key_path" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
 variable "instances" {}
@@ -16,7 +15,6 @@ variable "image_ocid" {}
 variable "cm_version" {}
 variable "cdh_version" {}
 variable "cloudera_manager" {}
-variable "deployment_type" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
@@ -58,12 +56,6 @@ variable "nn_volume_size_in_gbs" {
 
 variable "master_instance_shape" {
   default = "VM.Standard2.8"
-}
-
-# Path to SSH Key
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

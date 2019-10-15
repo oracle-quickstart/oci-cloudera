@@ -21,7 +21,9 @@ resource "oci_core_instance" "Utility" {
     worker_shape        = "${var.worker_shape}"
     block_volume_count  = "${var.block_volume_count}"	
     availability_domain = "${var.AD}"
-    deployment_type     = "${var.deployment_type}"
+    secure_cluster      = "${var.secure_cluster}"
+    hdfs_ha		= "${var.hdfs_ha}"
+    cluster_name	= "${var.cluster_name}"
   }
 
   extended_metadata {
@@ -47,7 +49,6 @@ resource "oci_core_volume" "UtilLogVolume" {
 resource "oci_core_volume_attachment" "UtilLogAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Utility.id}"
   volume_id       = "${oci_core_volume.UtilLogVolume.id}"
   device          = "/dev/oracleoci/oraclevdb"
@@ -65,7 +66,6 @@ resource "oci_core_volume" "UtilClouderaVolume" {
 resource "oci_core_volume_attachment" "UtilClouderaAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Utility.id}"
   volume_id       = "${oci_core_volume.UtilClouderaVolume.id}"
   device          = "/dev/oracleoci/oraclevdc"

@@ -6,7 +6,6 @@
 
 variable "region" {}
 variable "compartment_ocid" {}
-variable "private_key_path" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
 variable "instances" {}
@@ -17,7 +16,6 @@ variable "cm_version" {}
 variable "cdh_version" {}
 variable "cloudera_manager" {}
 variable "block_volume_count" {}
-variable "deployment_type" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
@@ -85,11 +83,6 @@ variable "worker_instance_shape" {
   default = "BM.DenseIO2.52"
 }
 
-# Path to SSH Key
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
-}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Constants

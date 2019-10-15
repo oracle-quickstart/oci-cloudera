@@ -6,7 +6,6 @@
 
 variable "region" {}
 variable "compartment_ocid" {}
-variable "private_key_path" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
 variable "instances" {}
@@ -15,13 +14,7 @@ variable "user_data" {}
 variable "image_ocid" {}
 variable "cm_version" {}
 variable "cdh_version" {}
-variable "worker_shape" {}
-variable "block_volume_count" {}
-variable "AD" {}
 variable "cloudera_manager" {}
-variable "cm_install" {}
-variable "deploy_on_oci" {}
-variable "deployment_type" {}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
@@ -31,6 +24,8 @@ variable "deployment_type" {}
 variable "availability_domain" {
   default = "2"
 }
+
+# Size for Cloudera Log Volumes across all hosts deployed to /var/log/cloudera
 
 variable "log_volume_size_in_gbs" {
   default = "200"
@@ -42,27 +37,16 @@ variable "cloudera_volume_size_in_gbs" {
   default = "300"
 }
 
-# Size for NameNode and SecondaryNameNode data volume (Journal Data)
-
-variable "nn_volume_size_in_gbs" {
-  default = "500"
-}
-
 # 
 # Set Cluster Shapes in this section
 #
 
-variable "utility_instance_shape" {
+variable "bastion_instance_shape" {
   default = "VM.Standard2.8"
-}
-
-# Path to SSH Key
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Constants
 # You probably don't need to change these.
 # ---------------------------------------------------------------------------------------------------------------------
+

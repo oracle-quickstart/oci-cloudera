@@ -17,7 +17,6 @@ resource "oci_core_instance" "Bastion" {
     cloudera_manager    = "${var.cloudera_manager}"
     cdh_version         = "${var.cdh_version}"
     cm_version          = "${var.cm_version}"
-    deployment_type     = "${var.deployment_type}" 
   }
 
   timeouts {
@@ -38,7 +37,6 @@ resource "oci_core_volume" "BastionLogVolume" {
 resource "oci_core_volume_attachment" "BastionLogAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Bastion.id}"
   volume_id       = "${oci_core_volume.BastionLogVolume.id}"
   device          = "/dev/oracleoci/oraclevdb"
@@ -56,7 +54,6 @@ resource "oci_core_volume" "BastionClouderaVolume" {
 resource "oci_core_volume_attachment" "BastionClouderaAttachment" {
   count           = "1"
   attachment_type = "iscsi"
-  compartment_id  = "${var.compartment_ocid}"
   instance_id     = "${oci_core_instance.Bastion.id}"
   volume_id       = "${oci_core_volume.BastionClouderaVolume.id}"
   device          = "/dev/oracleoci/oraclevdc"

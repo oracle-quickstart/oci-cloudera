@@ -1,117 +1,58 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# Environmental variables
-# You probably want to define these as environmental variables.
-# Instructions on that are here: https://github.com/oracle/oci-quickstart-prerequisites
+# SSH Keys - Put this to top level because they are required
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "compartment_ocid" {}
-
-# Required by the OCI Provider
-
-variable "tenancy_ocid" {}
-variable "user_ocid" {}
-variable "fingerprint" {}
-variable "region" {}
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
-variable "cm_install" { default = "" }
-variable "deploy_on_oci" { default = "" }
-variable "cloudera_manager" { default = "10.0.0.2"}
-variable "AD" { default="2" }
-variable "block_volume_count" { default = "3"}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
+# These default to recommended minimum values in most cases
 # ---------------------------------------------------------------------------------------------------------------------
+
 # Cloudera Manager Version
-variable "cm_version" { default = "6.2.0" }
+variable "cm_version" { 
+    default = "6.2.0" 
+}
 # Cloudera Enterprise Data Hub Version
-variable "cdh_version" { default = "6.2.0" }
-# Deployment type - set this to "simple" if you want to DISABLE High Availabilty and Kerberos Security
-variable "deployment_type" { default = "simple" }
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Optional variables
-# You can modify these.
-# ---------------------------------------------------------------------------------------------------------------------
-
-# Which AD to target
-variable "availability_domain" {
-  default = "1"
+variable "cdh_version" { 
+    default = "6.2.0" 
+}
+variable "secure_cluster" { 
+    default = "True" 
 }
 
-#
-# Set Cluster Shapes in this section 
-#
-
-variable "bastion_instance_shape" {
-  default = "VM.Standard2.4"
-}
-
-variable "master_instance_shape" {
-  default = "VM.Standard2.16"
-}
-
-variable "utility_instance_shape" {
-  default = "VM.Standard2.16"
+variable "hdfs_ha" {
+    default = "False"
 }
 
 variable "worker_instance_shape" {
   default = "BM.DenseIO2.52"
 }
 
-# Path to SSH Key used for deployment and host access
-
-variable "ssh_keypath" {
-  default = "/home/opc/.ssh/id_rsa"
-}
-
-variable "private_key_path" {
-  default = "/home/opc/.ssh/id_rsa"
-}
-
-#
-# Set Node Counts in this section
-#
-
-# Number of Master Nodes in the Cluster
-# For Scaling See https://www.cloudera.com/documentation/enterprise/latest/topics/cm_ig_host_allocations.html
-# 
-
-variable "master_node_count" {
-  default = "2"
-}
-
-
-# Number of Workers in the Cluster
-
 variable "worker_node_count" {
   default = "3"
 }
-
-# Size of each Block Volume used for HDFS /data/
-# Minimum recommended size is 700GB per Volume to achieve max IOPS/MBps
-# Note that total HDFS capacity per worker is limited by this size. 
-# Here is a total capacity per worker list for reference (using 30 volumes per worker):
-# 700GB Volume Size = 21 TB per worker
-# 1000GB Volume Size = 30 TB per worker
-# 2000GB Volume Size = 60 TB per worker
 
 variable "data_blocksize_in_gbs" {
   default = "700"
 }
 
-# Number of Block Volumes per Worker
-# Minimum recommended is 3 - Scale up to 30 per worker
-# 5 workers @ 700GB Volume Size = Max HDFS Capacity 105 TB, 35 TB Usable with 3x Replication
-# 10 workers @ 1TB Volume Size = Max HDFS Capacity 300 TB, 100 TB Usable with 3x Replication
-# 10 workers @ 2TB Volume Size = Max HDFS Capacity 600 TB, 200 TB Usable with 3x Replication
-# If using DenseIO local storage only - set this to '0'
-# If using Heterogenous storage, this will add Block Volume capacity on top of Local storage and enable Data Tiering.
-
 variable "block_volumes_per_worker" {
    default = "3"
+}
+
+variable "utility_instance_shape" {
+  default = "VM.Standard2.16"
+}
+
+variable "master_instance_shape" {
+  default = "VM.Standard2.16"
+}
+
+variable "master_node_count" {
+  default = "2"
 }
 
 # Size for Cloudera Log Volumes across all hosts deployed to /var/log/cloudera
@@ -130,6 +71,40 @@ variable "cloudera_volume_size_in_gbs" {
 
 variable "nn_volume_size_in_gbs" {
   default = "500"
+}
+
+variable "bastion_instance_shape" {
+  default = "VM.Standard2.4"
+}
+
+variable "bastion_node_count" {
+  default = "1"
+}
+
+# Which AD to target - this can be adjusted.  Default 1 for single AD regions.
+variable "availability_domain" {
+  default = "1"
+}
+
+variable "cluster_name" {
+  default = "TestCluster"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Environmental variables
+# You probably want to define these as environmental variables.
+# Instructions on that are here: https://github.com/oracle/oci-quickstart-prerequisites
+# ---------------------------------------------------------------------------------------------------------------------
+
+variable "compartment_ocid" {}
+
+# Required by the OCI Provider
+
+variable "tenancy_ocid" {}
+variable "region" {}
+# This is auto-calculated and doesn't need to be adjusted - default 1 for single AD regions
+variable "AD" {
+    default="1"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

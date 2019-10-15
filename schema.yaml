@@ -1,0 +1,256 @@
+title: Sample input variable schema
+schemaVersion: 1.0.0
+version: "20190816"
+locale: "en"
+groupings:
+- title: "Global Options"
+  variables:
+  - ${ssh_public_key}
+  - ${ssh_private_key}
+  - ${availability_domain}
+- title: "CDH Options"
+  variables:
+  - ${cm_version}
+  - ${cdh_version}
+  - ${cluster_name}
+  - ${log_volume_size_in_gbs}
+  - ${cloudera_volume_size_in_gbs}
+- title: "Security"
+  variables:
+  - ${secure_cluster}
+- title: "High Availability"
+  variables:
+  - ${hdfs_ha}
+- title: "Worker Node Options"
+  variables:
+  - ${worker_instance_shape}
+  - ${worker_node_count}
+  - ${block_volumes_per_worker}
+- title: "HDFS Block Volume Size"
+  variables:
+  - ${data_blocksize_in_gbs}
+  visible:
+    not :
+      - eq:
+        - ${block_volumes_per_worker}
+        - "0"
+- title: "Master Node Options"
+  variables:
+  - ${master_instance_shape}
+  - ${master_node_count}
+  - ${nn_volume_size_in_gbs}
+- title: "Utility Node Options"
+  variables:
+  - ${utility_instance_shape}
+- title: "Edge Node Options"
+  variables:
+  - ${bastion_instance_shape}
+  - ${bastion_node_count}
+
+- title: "Pre-Defined"
+  variables:
+  - ${region}
+  - ${compartment_ocid}
+  - ${tenancy_ocid}
+  - ${InstanceImageOCID}
+  - ${oci_service_gateway}
+  - ${AD}
+  visible: false
+
+variables:
+  cm_version:
+    type: enum
+    enum:
+    - "6.0.0"
+    - "6.0.1"
+    - "6.1.0"
+    - "6.2.0"
+    - "6.3.0"
+    title: "Cloudera Manager Version"
+    description: "Choose the version of Cloudera Manager to deploy"
+    required: true
+
+  cdh_version:
+    type: enum
+    enum:
+    - "5.10.2.5"
+    - "5.11.2.4"
+    - "5.12.2.4"
+    - "5.13.3.2"
+    - "5.14.4.3"
+    - "5.15.2.3"
+    - "5.16.2.8"
+    - "6.0.0"
+    - "6.0.1"
+    - "6.1.0"
+    - "6.1.1"
+    - "6.2.0"
+    - "6.3.0"
+    title: "CDH Version"
+    description: "Choose the version of CDH to deploy"
+    required: true
+
+  cluster_name:
+    type: string
+    title: "Cluster Name"
+    description: "Name your Cluster"
+    required: true
+
+  availability_domain:
+    type: integer
+    title: "Availability Domain"
+    description: "Select AD"
+    minimum: 1
+    maximum: 3
+    required: true
+
+  secure_cluster:
+    type: enum
+    enum:
+    - "True"
+    - "False"
+    title: "Kerberos Security"
+    description: "Enable Kerberos for Secure Cluster?"
+    required: true
+
+  hdfs_ha:
+    type: enum
+    enum:
+    - "True"
+    - "False"
+    title: "High Availability"
+    description: "Enable HDFS High Availability?"
+    required: true
+
+  worker_instance_shape:
+    type: enum
+    enum:
+    - "VM.Standard2.8"
+    - "VM.Standard2.16"
+    - "VM.Standard2.24"
+    - "BM.Standard2.52"
+    - "VM.DenseIO2.8"
+    - "VM.DenseIO2.16"
+    - "VM.DenseIO2.24"
+    - "BM.DenseIO2.52"
+    title: "Shape of Worker Nodes"
+    required: true
+
+  worker_node_count:
+    type: integer
+    minimum: 3
+    title: "Number of Worker Nodes"
+    description: "3 is the minimum requirement"
+    required: true
+
+  master_instance_shape:
+    type: enum
+    enum:
+    - "VM.Standard2.8"
+    - "VM.Standard2.16"
+    - "VM.Standard2.24"
+    - "BM.Standard2.52"
+    - "VM.DenseIO2.8"
+    - "VM.DenseIO2.16"
+    - "VM.DenseIO2.24"
+    - "BM.DenseIO2.52"
+    title: "Shape of Master Nodes"
+    required: true
+
+  master_node_count:
+    type: integer
+    minimum: 2
+    title: "Number of Master Nodes"
+    description: "2 is the minimum requirement"
+    required: true
+
+  utility_instance_shape:
+    type: enum
+    enum:
+    - "VM.Standard2.8"
+    - "VM.Standard2.16"
+    - "VM.Standard2.24"
+    - "BM.Standard2.52"
+    - "VM.DenseIO2.8"
+    - "VM.DenseIO2.16"
+    - "VM.DenseIO2.24"
+    - "BM.DenseIO2.52"
+    title: "Shape of Utility Node"
+    required: true
+
+  bastion_instance_shape:
+    type: enum
+    enum:
+    - "VM.Standard2.1"
+    - "VM.Standard2.2"
+    - "VM.Standard2.4"
+    - "VM.Standard2.8"
+    - "VM.Standard2.16"
+    - "VM.Standard2.24"
+    - "BM.Standard2.52"
+    - "VM.DenseIO2.8"
+    - "VM.DenseIO2.16"
+    - "VM.DenseIO2.24"
+    - "BM.DenseIO2.52"
+    title: "Shape of Edge Nodes"
+    required: true
+
+  bastion_node_count:
+    type: integer
+    title: "Number of Edge Nodes"
+    description: "Enter a number, 0 to service limit of shape"
+    minimum: 0
+    required: true
+
+  ssh_public_key:
+    type: string
+    title: "SSH Public Key"
+    description: "Copy/Paste the contents of your SSH Public Key"
+    required: true
+
+  ssh_private_key:
+    type: string
+    title: "SSH Private Key"
+    description: "Copy/Paste the contents of your SSH Private Key"
+    required: true
+
+  data_blocksize_in_gbs:
+    type: integer
+    title: "HDFS Block Volume Size ( GB )"
+    description: "700 to 32,768 "
+    minimum: 700
+    maximum: 32768
+    required: true
+
+  block_volumes_per_worker:
+    type: integer
+    title: "Number of Block Volumes for HDFS"
+    description: "0 to 29"
+    minimum: 0
+    maximum: 29
+    required: true
+
+  nn_volume_size_in_gbs:
+    type: integer
+    title: "Block Volume Size for NameNode Metadata"
+    description: "500 to 32,768"
+    minimum: 500
+    maximum: 32768
+    required: true
+
+  log_volume_size_in_gbs:
+    type: integer
+    title: "Volume size in GB for CDH Logs"
+    description: "50 to 32,768"
+    minimum: 50
+    maximum: 32768
+    required: true
+
+  cloudera_volume_size_in_gbs:
+    type: integer
+    title: "Volume size in GB for CDH Data (Parcels)"
+    description: "150 to 32,768"
+    minimum: 150
+    maximum: 32768
+    required: true
+

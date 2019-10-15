@@ -13,7 +13,9 @@ cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/availability_domain`
 worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
 worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
-deployment_type=`curl -L http://169.254.169.254/opc/v1/instance/metadata/deployment_type`
+secure_cluster=`curl -L http://169.254.169.254/opc/v1/instance/metadata/secure_cluster`
+hdfs_ha=`curl -L http://169.254.169.254/opc/v1/instance/metadata/hdfs_ha`
+cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_name`
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -40,13 +42,12 @@ hbase -       nproc   2048" >> /etc/security/limits.conf
 ulimit -n 262144
 systemctl stop firewalld
 systemctl disable firewalld
-if [ ${deployment_type} != "simple" ]; then
-EXECNAME="KERBEROS"i
+EXECNAME="KERBEROS"
 log "-> INSTALL"
 yum -y install krb5-server krb5-libs krb5-workstation >> $LOG_FILE
 KERBEROS_PASSWORD="SOMEPASSWORD"
 SCM_USER_PASSWORD="somepassword"
-kdc_server=${cm_fqdn}
+kdc_fqdn=${cm_fqdn}
 realm="hadoop.com"
 REALM="HADOOP.COM"
 log "-> CONFIG"
@@ -78,6 +79,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
+    bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .public1.cdhvcn.oraclevcn.com = ${REALM}
+    public1.cdhvcn.oraclevcn.com = ${REALM}
+    .public2.cdhvcn.oraclevcn.com = ${REALM}
+    public2.cdhvcn.oraclevcn.com = ${REALM}
+    .public3.cdhvcn.oraclevcn.com = ${REALM}
+    public3.cdhvcn.oraclevcn.com = ${REALM}
+    .private1.cdhvcn.oraclevcn.com = ${REALM}
+    private1.cdhvcn.oraclevcn.com = ${REALM}
+    .private2.cdhvcn.oraclevcn.com = ${REALM}
+    private2.cdhvcn.oraclevcn.com = ${REALM}
+    .private3.cdhvcn.oraclevcn.com = ${REALM}
+    private3.cdhvcn.oraclevcn.com = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf
@@ -121,7 +140,7 @@ systemctl start krb5kdc.service >> $LOG_FILE
 systemctl start kadmin.service >> $LOG_FILE
 systemctl enable krb5kdc.service >> $LOG_FILE
 systemctl enable kadmin.service >> $LOG_FILE
-fi
+
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
 rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
@@ -388,11 +407,21 @@ for w in `seq 1 $num_workers`; do
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-if [ ${deployment_type} = "simple" ]; then 
-	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
-	python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} 2>&1 1>> $LOG_FILE
+if [ $secure_cluster = "True" ]; then 
+	if [ $hdfs_ha = "True" ]; then 
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE	
+	else
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+	fi
 else
-	log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain}"
-        python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} 2>&1 1>> $LOG_FILE
+        if [ $hdfs_ha = "True" ]; then
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+        else
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+	fi
 fi
 log "->DONE"

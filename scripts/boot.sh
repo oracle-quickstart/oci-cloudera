@@ -9,7 +9,6 @@ cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 block_volume_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
-deployment_type=`curl -L http://169.254.169.254/opc/v1/instance/metadata/`
 EXECNAME="TUNING"
 log "->TUNING START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -17,7 +16,6 @@ setenforce 0
 EXECNAME="JAVA"
 log "->INSTALL"
 yum install java-1.8.0-openjdk.x86_64 -y >> $LOG_FILE
-if [ $deployment_type != "simple" ]; then
 EXECNAME="KERBEROS"
 log "->INSTALL"
 yum install krb5-workstation -y >> $LOG_FILE
@@ -54,6 +52,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
+    bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
+    bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
+    bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
+    .public1.cdhvcn.oraclevcn.com = ${REALM}
+    public1.cdhvcn.oraclevcn.com = ${REALM}
+    .public2.cdhvcn.oraclevcn.com = ${REALM}
+    public2.cdhvcn.oraclevcn.com = ${REALM}
+    .public3.cdhvcn.oraclevcn.com = ${REALM}
+    public3.cdhvcn.oraclevcn.com = ${REALM}
+    .private1.cdhvcn.oraclevcn.com = ${REALM}
+    private1.cdhvcn.oraclevcn.com = ${REALM}
+    .private2.cdhvcn.oraclevcn.com = ${REALM}
+    private2.cdhvcn.oraclevcn.com = ${REALM}
+    .private3.cdhvcn.oraclevcn.com = ${REALM}
+    private3.cdhvcn.oraclevcn.com = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf
@@ -63,7 +79,6 @@ includedir /etc/krb5.conf.d/
     admin_server = FILE:/var/log/kadmin.log
     default = FILE:/var/log/krb5lib.log
 EOF
-fi
 EXECNAME="TUNING"
 log "->OS"
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
