@@ -5,6 +5,11 @@
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
 
+# Use Existing VCN
+variable "useExistingVcn" {
+    default = "false"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
