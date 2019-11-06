@@ -1,5 +1,5 @@
 module "bastion" {
-	source	= "modules/bastion"
+	source	= "./modules/bastion"
 	instances = "${var.bastion_node_count}"
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
@@ -18,7 +18,7 @@ module "bastion" {
 }
 
 module "utility" {
-        source  = "modules/utility"
+        source  = "./modules/utility"
         instances = "1"
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
@@ -45,7 +45,7 @@ module "utility" {
 }
 
 module "master" {
-        source  = "modules/master"
+        source  = "./modules/master"
         instances = "${var.master_node_count}"
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
@@ -64,7 +64,7 @@ module "master" {
 }
 
 module "worker" {
-        source  = "modules/worker"
+        source  = "./modules/worker"
         instances = "${var.worker_node_count}"
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
