@@ -50,6 +50,16 @@ High Availability for HDFS services is also offered as part of the deployment pr
 You can customize the default root password for MySQL by editing the source script [cms_mysql.sh](https://github.com/oracle/oci-quickstart-cloudera/blob/master/scripts/cms_mysql.sh#L188).  For the various Cloudera databases, random passwords are generated and used.  These are stored in a flat file on the Utility host for use at deployment time.
 
 ## Object Storage Integration
+As of the 2.1.0 release, included with this template is a means to deploy clusters with configuration to allow use of OCI Object Storage using S3 Compatability.  In order to implement, an S3 Access and Secret key must be set up in the OCI Tenancy first.  This process is detailed [here](https://docs.cloud.oracle.com/iaas/Content/Identity/Tasks/managingcredentials.htm#Working2).  Once that is in place, modify the [deploy_on_oci.py](https://github.com/oci-quickstart/oci-cloudera/blob/master/scripts/deploy_on_oci.py#L133-L141) script, and set the following values:
+
+        s3_compat_enable = 'False'
+        s3a_secret_key = 'None'
+        s3a_access_key = 'None'
+        s3a_endpoint = 'None'
+
+The first should be set to 'True', then replace 'None" with each of the required values.   This configuration will then be pushed as part of the cluster deployment.
+
+## Architecture Diagram
 Here is a diagram showing what is deployed using this template.   Note that resources are automatically distributed among Fault Domains in an Availability Domain to ensure fault tolerance.   Additional workers deployed will stripe between the 3 fault domains in sequence starting with the Fault Domain 1 and incrementing sequentially.
 
 ![Deployment Architecture Diagram](https://github.com/oracle/oci-quickstart-cloudera/blob/master/images/deployment_architecture.png)
