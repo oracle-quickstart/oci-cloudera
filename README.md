@@ -14,8 +14,8 @@ This quickstart leverages  [OCI Resource Manager](https://docs.cloud.oracle.com/
 
 Alternatively you can also use a schema file to make setting deployment variables even easier, this is highly encouraged.   In order to leverage this feature, the GitHub zipball must be re-packaged so that it's contents are top-level prior to creating the ORM Stack.  This is a straight forward process:
 ```
-unzip oci-cloudera-master.zip
-cd oci-cloudera-master-<TAB_COMPLETE>
+unzip oracle-quickstart-oci-cloudera-*.zip
+cd oracle-quickstart-oci-cloudera-master-<TAB_COMPLETE>
 zip -r oci-cloudera.zip *
 ```
 
