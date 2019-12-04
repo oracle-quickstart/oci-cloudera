@@ -5,12 +5,17 @@ log() {
 	echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" 
 }
 cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
+fqdn_fields=`echo -e $cm_fqdn | gawk -F '.' '{print NF}'`
+cluster_domain=`echo -e $cm_fqdn | cut -d '.' -f 3-${fqdn_fields}`
 cm_ip=`host ${cm_fqdn} | gawk '{print $4}'`
+cluster_subnet=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_subnet`
+bastion_subnet=`curl -L http://169.254.169.254/opc/v1/instance/metadata/bastion_subnet`
+utility_subnet=`curl -L http://169.254.169.254/opc/v1/instance/metadata/utility_subnet`
 cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
 cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
-availability_domain=`curl -L http://169.254.169.254/opc/v1/instance/metadata/availability_domain`
+# Note that the AD detection depends on the subnet containing the AD as the last character in the name
 worker_shape=`curl -L http://169.254.169.254/opc/v1/instance/metadata/worker_shape`
 worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
 secure_cluster=`curl -L http://169.254.169.254/opc/v1/instance/metadata/secure_cluster`
@@ -79,24 +84,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
-    bastion1.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
-    bastion2.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
-    bastion3.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
-    .public1.cdhvcn.oraclevcn.com = ${REALM}
-    public1.cdhvcn.oraclevcn.com = ${REALM}
-    .public2.cdhvcn.oraclevcn.com = ${REALM}
-    public2.cdhvcn.oraclevcn.com = ${REALM}
-    .public3.cdhvcn.oraclevcn.com = ${REALM}
-    public3.cdhvcn.oraclevcn.com = ${REALM}
-    .private1.cdhvcn.oraclevcn.com = ${REALM}
-    private1.cdhvcn.oraclevcn.com = ${REALM}
-    .private2.cdhvcn.oraclevcn.com = ${REALM}
-    private2.cdhvcn.oraclevcn.com = ${REALM}
-    .private3.cdhvcn.oraclevcn.com = ${REALM}
-    private3.cdhvcn.oraclevcn.com = ${REALM}
+    bastion1.${cluster_domain} = ${REALM}
+    .bastion1.${cluster_domain} = ${REALM}
+    bastion2.${cluster_domain} = ${REALM}
+    .bastion2.${cluster_domain} = ${REALM}
+    bastion3.${cluster_domain} = ${REALM}
+    .bastion3.${cluster_domain} = ${REALM}
+    .public1.${cluster_domain} = ${REALM}
+    public1.${cluster_domain} = ${REALM}
+    .public2.${cluster_domain} = ${REALM}
+    public2.${cluster_domain} = ${REALM}
+    .public3.${cluster_domain} = ${REALM}
+    public3.${cluster_domain} = ${REALM}
+    .private1.${cluster_domain} = ${REALM}
+    private1.${cluster_domain} = ${REALM}
+    .private2.${cluster_domain} = ${REALM}
+    private2.${cluster_domain} = ${REALM}
+    .private3.${cluster_domain} = ${REALM}
+    private3.${cluster_domain} = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf
@@ -391,37 +396,37 @@ log "-->Host Discovery"
 detection_flag="0"
 w=1
 while [ $detection_flag = "0" ]; do
-	worker_lookup=`host cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com`
+	worker_lookup=`host cdh-worker-$w.${cluster_subnet}.${cluster_domain}`
 	worker_check=`echo -e $?`
 	if [ $worker_check = "0" ]; then 
-		worker_fqdn[$w]="cdh-worker-$w.private${availability_domain}.cdhvcn.oraclevcn.com"
+		worker_fqdn[$w]="cdh-worker-$w.${cluster_subnet}.${cluster_domain}"
 		w=$((w+1))
 	else
 		detection_flag="1"
 	fi
 done;
-fqdn_list="cdh-utility-1.public${availability_domain}.cdhvcn.oraclevcn.com,cdh-master-1.private${availability_domain}.cdhvcn.oraclevcn.com,cdh-master-2.private${availability_domain}.cdhvcn.oraclevcn.com"
+fqdn_list="cdh-utility-1.${utility_subnet}.${cluster_domain},cdh-master-1.${cluster_subnet}.${cluster_domain},cdh-master-2.${cluster_subnet}.${cluster_domain}"
 num_workers=${#worker_fqdn[@]}
 for w in `seq 1 $num_workers`; do 
 	fqdn_list=`echo "${fqdn_list},${worker_fqdn[$w]}"`
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-if [ $secure_cluster = "True" ]; then 
-	if [ $hdfs_ha = "True" ]; then 
-		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE	
+if [ $secure_cluster = "true" ]; then 
+	if [ $hdfs_ha = "true" ]; then 
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE	
 	else
-		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
 	fi
 else
-        if [ $hdfs_ha = "True" ]; then
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+        if [ $hdfs_ha = "true" ]; then
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
         else
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -ad ${availability_domain} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
 	fi
 fi
 log "->DONE"

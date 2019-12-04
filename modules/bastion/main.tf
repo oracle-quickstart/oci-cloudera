@@ -1,17 +1,24 @@
 resource "oci_core_instance" "Bastion" {
+  count               = "${var.instances}"
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
-  display_name        = "CDH Bastion"
-  hostname_label      = "CDH-Bastion"
   shape               = "${var.bastion_instance_shape}"
-  subnet_id	      = "${var.subnet_id}"
+  display_name        = "CDH Bastion ${format("%01d", count.index+1)}"
+  fault_domain        = "FAULT-DOMAIN-${(count.index%3)+1}"
 
   source_details {
     source_type             = "image"
     source_id               = "${var.image_ocid}"
   }
 
-  metadata {
+  create_vnic_details {
+    subnet_id         = "${var.subnet_id}"
+    display_name      = "CDH Bastion ${format("%01d", count.index+1)}"
+    hostname_label    = "CDH-Bastion-${format("%01d", count.index+1)}"
+    assign_public_ip  = "${var.hide_private_subnet ? true : false}"
+  }
+
+  metadata = {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}"
     cloudera_manager    = "${var.cloudera_manager}"
@@ -27,7 +34,7 @@ resource "oci_core_instance" "Bastion" {
 
 # Log Volume for /var/log/cloudera
 resource "oci_core_volume" "BastionLogVolume" {
-  count               = "1"
+  count = "${var.instances}"
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "Bastion ${format("%01d", count.index+1)} Log Data"
@@ -35,16 +42,16 @@ resource "oci_core_volume" "BastionLogVolume" {
 }
 
 resource "oci_core_volume_attachment" "BastionLogAttachment" {
-  count           = "1"
+  count = "${var.instances}"
   attachment_type = "iscsi"
-  instance_id     = "${oci_core_instance.Bastion.id}"
-  volume_id       = "${oci_core_volume.BastionLogVolume.id}"
+  instance_id     = "${oci_core_instance.Bastion.*.id[count.index]}"
+  volume_id       = "${oci_core_volume.BastionLogVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdb"
 }
 
 # Data Volume for /opt/cloudera
 resource "oci_core_volume" "BastionClouderaVolume" {
-  count               = "1"
+  count = "${var.instances}"
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "Bastion ${format("%01d", count.index+1)} Cloudera Data"
@@ -52,10 +59,10 @@ resource "oci_core_volume" "BastionClouderaVolume" {
 }
 
 resource "oci_core_volume_attachment" "BastionClouderaAttachment" {
-  count           = "1"
+  count = "${var.instances}"
   attachment_type = "iscsi"
-  instance_id     = "${oci_core_instance.Bastion.id}"
-  volume_id       = "${oci_core_volume.BastionClouderaVolume.id}"
+  instance_id     = "${oci_core_instance.Bastion.*.id[count.index]}"
+  volume_id       = "${oci_core_volume.BastionClouderaVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdc"
 }
 

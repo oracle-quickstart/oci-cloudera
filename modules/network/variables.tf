@@ -8,7 +8,13 @@ variable "tenancy_ocid" {}
 variable "compartment_ocid" {}
 variable "region" {}
 variable "oci_service_gateway" {}
-
+variable "adnumber" {}
+variable "VPC_CIDR" {}
+variable "useExistingVcn" {}
+variable "vcnId" {}
+variable "vcn_dns_label" {
+  default = "cdhvcn"
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

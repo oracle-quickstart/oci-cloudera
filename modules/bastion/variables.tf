@@ -15,6 +15,9 @@ variable "image_ocid" {}
 variable "cm_version" {}
 variable "cdh_version" {}
 variable "cloudera_manager" {}
+variable "hide_private_subnet" {
+  default = "true"
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

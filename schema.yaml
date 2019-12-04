@@ -10,14 +10,18 @@ groupings:
 - title: "Availabilty Domain"
   variables:
   - ${availability_domain}
+  - ${adnumber}
 - title: "VCN Options"
   variables:
+  - ${VPC_CIDR}
+  - ${vcn_dns_label}
   - ${useExistingVcn}
   - ${hide_public_subnet}
   - ${hide_private_subnet}
 - title: "Custom VCN"
   variables:
   - ${myVcn}
+  - ${custom_dns_domain}
   visibility: ${useExistingVcn}
 - title: "CDH Options"
   variables:
@@ -80,6 +84,7 @@ variables:
     - "6.1.0"
     - "6.2.0"
     - "6.3.0"
+    - "6.3.1"
     title: "Cloudera Manager Version"
     description: "Choose the version of Cloudera Manager to deploy"
     required: true
@@ -100,6 +105,7 @@ variables:
     - "6.1.1"
     - "6.2.0"
     - "6.3.0"
+    - "6.3.1"
     title: "CDH Version"
     description: "Choose the version of CDH to deploy"
     required: true
@@ -180,6 +186,16 @@ variables:
       compartmentId: ${compartment_ocid}
     required: true
 
+  adnumber:
+    type: enum
+    enum:
+    - "1"
+    - "2" 
+    - "3"
+    title: "Numerical value for Availability Domain"
+    description: "Ensure this matches the same AD selected above - used for host detection."
+    required: true
+
   secure_cluster:
     type: Boolean
     title: "Kerberos Security"
@@ -203,6 +219,7 @@ variables:
     - "VM.DenseIO2.16"
     - "VM.DenseIO2.24"
     - "BM.DenseIO2.52"
+    - "BM.HPC2.36"
     title: "Shape of Worker Nodes"
     required: true
 
@@ -323,4 +340,19 @@ variables:
     minimum: 150
     maximum: 32768
     required: true
-    
+
+  VPC_CIDR:
+    type: string
+    title: "VPC CIDR for VCN"
+    description: "Customize VCN top level CIDR"
+
+  vcn_dns_label:
+    type: string
+    title: "VCN DNS Label"
+    description: "Set the VCN DNS label to be used when creating VCN.  Default is 'cdhvcn' which sets the VCN domain to 'cdhvcn.oraclevcn.com'"
+
+  custom_dns_domain:
+    type: string
+    title: "Custom DNS Domain"
+    description: "When using existing VCN, specify the VCN FQDN or if using your own domain set that here.  This is used for host mapping and cluster setup, if incorrect then the deployment process will fail."
+    visible: ${useExistingVcn}

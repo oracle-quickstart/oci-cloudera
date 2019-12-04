@@ -4,6 +4,8 @@ log() {
 	echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" 
 }
 cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
+fqdn_fields=`echo -e $cm_fqdn | gawk -F '.' '{print NF}'`
+cluster_domain=`echo -e $cm_fqdn | cut -d '.' -f 3-${fqdn_fields}`
 cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
 cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
@@ -52,24 +54,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
-    bastion1.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
-    bastion2.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
-    bastion3.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
-    .public1.cdhvcn.oraclevcn.com = ${REALM}
-    public1.cdhvcn.oraclevcn.com = ${REALM}
-    .public2.cdhvcn.oraclevcn.com = ${REALM}
-    public2.cdhvcn.oraclevcn.com = ${REALM}
-    .public3.cdhvcn.oraclevcn.com = ${REALM}
-    public3.cdhvcn.oraclevcn.com = ${REALM}
-    .private1.cdhvcn.oraclevcn.com = ${REALM}
-    private1.cdhvcn.oraclevcn.com = ${REALM}
-    .private2.cdhvcn.oraclevcn.com = ${REALM}
-    private2.cdhvcn.oraclevcn.com = ${REALM}
-    .private3.cdhvcn.oraclevcn.com = ${REALM}
-    private3.cdhvcn.oraclevcn.com = ${REALM}
+    bastion1.${cluster_domain} = ${REALM}
+    .bastion1.${cluster_domain} = ${REALM}
+    bastion2.${cluster_domain} = ${REALM}
+    .bastion2.${cluster_domain} = ${REALM}
+    bastion3.${cluster_domain} = ${REALM}
+    .bastion3.${cluster_domain} = ${REALM}
+    .public1.${cluster_domain} = ${REALM}
+    public1.${cluster_domain} = ${REALM}
+    .public2.${cluster_domain} = ${REALM}
+    public2.${cluster_domain} = ${REALM}
+    .public3.${cluster_domain} = ${REALM}
+    public3.${cluster_domain} = ${REALM}
+    .private1.${cluster_domain} = ${REALM}
+    private1.${cluster_domain} = ${REALM}
+    .private2.${cluster_domain} = ${REALM}
+    private2.${cluster_domain} = ${REALM}
+    .private3.${cluster_domain} = ${REALM}
+    private3.${cluster_domain} = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf

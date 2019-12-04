@@ -16,6 +16,9 @@ variable "cm_version" {}
 variable "cdh_version" {}
 variable "cloudera_manager" {}
 variable "block_volume_count" {}
+variable "hide_public_subnet" {
+  default = "true"
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
