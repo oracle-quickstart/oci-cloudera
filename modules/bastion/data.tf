@@ -1,7 +1,7 @@
 data "oci_core_vnic_attachments" "bastion_vnics" {
   compartment_id      = "${var.compartment_ocid}"
   availability_domain = "${var.availability_domain}"
-  instance_id         = "${oci_core_instance.Bastion.id}"
+  instance_id         = "${oci_core_instance.Bastion.0.id}"
 }
 
 data "oci_core_vnic" "bastion_vnic" {

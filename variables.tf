@@ -4,9 +4,6 @@
 
 variable "ssh_public_key" {}
 variable "ssh_private_key" {}
-variable "adnumber" {
-    default = "1"
-}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Network Settings

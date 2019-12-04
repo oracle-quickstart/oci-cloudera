@@ -1,5 +1,5 @@
 data "oci_core_vcn" "vcn_info" {
-  vcn_id = "${useExistingVcn ? var.myVcn : module.network.vcn-id}" 
+  vcn_id = "${var.useExistingVcn ? var.myVcn : module.network.vcn-id}" 
 }
 
 data "oci_core_subnet" "cluster_subnet" {
@@ -34,7 +34,7 @@ module "bastion" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
 	user_data = "${base64encode(file("scripts/boot.sh"))}"
-	cloudera_manager = "${var.useExistingVcn ? data.null_data_source.values.outputs["cm_custom"] : data.null_data_source.values.outputs["cm_default"]}"
+	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
 	cm_version = "${var.cm_version}"
 	cdh_version = "${var.cdh_version}"
 }
@@ -55,7 +55,7 @@ module "utility" {
         user_data = "${base64encode(file("scripts/cloudera_manager_boot.sh"))}"
 	cm_install = "${base64gzip(file("scripts/cms_mysql.sh"))}"
 	deploy_on_oci = "${base64gzip(file("scripts/deploy_on_oci.py"))}"
-	cloudera_manager = "${var.useExistingVcn ? data.null_data_source.values.outputs["cm_custom"] : data.null_data_source.values.outputs["cm_default"]}"
+	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
 	worker_shape = "${var.worker_instance_shape}"
@@ -82,7 +82,7 @@ module "master" {
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
         user_data = "${base64encode(file("scripts/boot.sh"))}"
-	cloudera_manager = "${var.useExistingVcn ? data.null_data_source.values.outputs["cm_custom"] : data.null_data_source.values.outputs["cm_default"]}"
+	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
 }
@@ -103,7 +103,7 @@ module "worker" {
 	block_volumes_per_worker = "${var.block_volumes_per_worker}"
 	data_blocksize_in_gbs = "${var.data_blocksize_in_gbs}"
         user_data = "${base64encode(file("scripts/boot.sh"))}"
-	cloudera_manager = "${var.useExistingVcn ? data.null_data_source.values.outputs["cm_custom"] : data.null_data_source.values.outputs["cm_default"]}"
+	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
 	block_volume_count = "${var.block_volumes_per_worker}"

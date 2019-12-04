@@ -8,7 +8,6 @@ variable "tenancy_ocid" {}
 variable "compartment_ocid" {}
 variable "region" {}
 variable "oci_service_gateway" {}
-variable "adnumber" {}
 variable "VPC_CIDR" {}
 variable "useExistingVcn" {}
 variable "vcnId" {}

@@ -170,38 +170,38 @@ resource "oci_core_subnet" "public" {
   count = var.useExistingVcn ? 0 : 1
   availability_domain = "${var.availability_domain}"
   cidr_block          = "${cidrsubnet(var.VPC_CIDR, 8, 1)}"
-  display_name        = "public_${var.adnumber}"
+  display_name        = "public"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${var.useExistingVcn ? var.vcnId : data.oci_core_vcn.cloudera_vcn.vcn_id}"
   route_table_id      = "${oci_core_route_table.RouteForComplete[count.index].id}"
   security_list_ids   = ["${oci_core_security_list.PublicSubnet.*.id[count.index]}"]
   dhcp_options_id     = "${oci_core_vcn.cloudera_vcn[count.index].default_dhcp_options_id}"
-  dns_label           = "public${var.adnumber}"
+  dns_label           = "public"
 }
 
 resource "oci_core_subnet" "private" {
   count = var.useExistingVcn ? 0 : 1
   availability_domain = "${var.availability_domain}"
   cidr_block          = "${cidrsubnet(var.VPC_CIDR, 8, 2)}"
-  display_name        = "private_ad${var.adnumber}"
+  display_name        = "private"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${var.useExistingVcn ? var.vcnId : data.oci_core_vcn.cloudera_vcn.vcn_id}"
   route_table_id      = "${oci_core_route_table.private[count.index].id}"
   security_list_ids   = ["${oci_core_security_list.PrivateSubnet.*.id[count.index]}"]
   dhcp_options_id     = "${oci_core_vcn.cloudera_vcn[count.index].default_dhcp_options_id}"
   prohibit_public_ip_on_vnic = "true"
-  dns_label = "private${var.adnumber}"
+  dns_label = "private"
 }
 
 resource "oci_core_subnet" "bastion" {
   count = var.useExistingVcn ? 0 : 1
   availability_domain = "${var.availability_domain}"
   cidr_block          = "${cidrsubnet(var.VPC_CIDR, 8, 3)}"
-  display_name        = "bastion_ad${var.adnumber}"
+  display_name        = "bastion"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${var.useExistingVcn ? var.vcnId : data.oci_core_vcn.cloudera_vcn.vcn_id}"
   route_table_id      = "${oci_core_route_table.RouteForComplete[count.index].id}"
   security_list_ids   = ["${oci_core_security_list.BastionSubnet.*.id[count.index]}"]
   dhcp_options_id     = "${oci_core_vcn.cloudera_vcn[count.index].default_dhcp_options_id}"
-  dns_label           = "bastion${var.adnumber}"
+  dns_label           = "bastion"
 }

@@ -10,7 +10,6 @@ groupings:
 - title: "Availabilty Domain"
   variables:
   - ${availability_domain}
-  - ${adnumber}
 - title: "VCN Options"
   variables:
   - ${VPC_CIDR}
@@ -183,16 +182,6 @@ variables:
     description: "Select AD"
     dependsOn:
       compartmentId: ${compartment_ocid}
-    required: true
-
-  adnumber:
-    type: enum
-    enum:
-    - "1"
-    - "2" 
-    - "3"
-    title: "Numerical value for Availability Domain"
-    description: "Ensure this matches the same AD selected above - used for host detection."
     required: true
 
   secure_cluster:
