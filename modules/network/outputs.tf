@@ -1,3 +1,7 @@
+output "vcn-id" {
+	value = "${oci_core_vcn.cloudera_vcn.0.id}"
+}
+
 output "private-id" {
 	value = "${oci_core_subnet.private.0.id}"
 }
@@ -9,4 +13,3 @@ output "public-id" {
 output "bastion-id" {
         value = "${oci_core_subnet.bastion.0.id}"
 }
-

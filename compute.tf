@@ -1,8 +1,5 @@
-data "null_data_source" "values" {
-  inputs = {
-    cm_custom = "cdh-utility-1.${var.custom_dns_domain}"
-    cm_default = "cdh-utility-1.public${var.adnumber}.${var.vcn_dns_label}.oraclevcn.com"
-  }
+data "oci_core_vcn" "vcn_info" {
+  vcn_id = "${useExistingVcn ? var.myVcn : module.network.vcn-id}" 
 }
 
 data "oci_core_subnet" "cluster_subnet" {
@@ -17,6 +14,11 @@ data "oci_core_subnet" "utility_subnet" {
   subnet_id = "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}" 
 }
 
+data "null_data_source" "values" {
+  inputs = {
+    cm_default = "cdh-utility-1.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
+  }
+}
 
 module "bastion" {
 	source	= "./modules/bastion"

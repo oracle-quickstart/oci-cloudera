@@ -21,7 +21,6 @@ groupings:
 - title: "Custom VCN"
   variables:
   - ${myVcn}
-  - ${custom_dns_domain}
   visibility: ${useExistingVcn}
 - title: "CDH Options"
   variables:
@@ -350,9 +349,3 @@ variables:
     type: string
     title: "VCN DNS Label"
     description: "Set the VCN DNS label to be used when creating VCN.  Default is 'cdhvcn' which sets the VCN domain to 'cdhvcn.oraclevcn.com'"
-
-  custom_dns_domain:
-    type: string
-    title: "Custom DNS Domain"
-    description: "When using existing VCN, specify the VCN FQDN or if using your own domain set that here.  This is used for host mapping and cluster setup, if incorrect then the deployment process will fail."
-    visible: ${useExistingVcn}

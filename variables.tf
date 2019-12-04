@@ -43,10 +43,6 @@ variable "vcn_dns_label" {
   default = "cdhvcn"
 }
 
-variable "custom_dns_domain" {
-  default = "vcn_dns_name.oraclevcn.com" 
-}
-
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
