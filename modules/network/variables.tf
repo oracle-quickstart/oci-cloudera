@@ -10,7 +10,10 @@ variable "region" {}
 variable "oci_service_gateway" {}
 variable "VPC_CIDR" {}
 variable "useExistingVcn" {}
-variable "vcnId" {}
+variable "custom_vcn" {
+  type = list(string)
+  default = [" "]
+}
 variable "vcn_dns_label" {
   default = "cdhvcn"
 }

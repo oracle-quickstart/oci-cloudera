@@ -7,5 +7,5 @@ module "network" {
 	oci_service_gateway = "${var.oci_service_gateway[var.region]}"
 	useExistingVcn = "${var.useExistingVcn}"
         VPC_CIDR = "${var.VPC_CIDR}"
-	vcnId = "${var.myVcn}"
+	custom_vcn = ["${var.myVcn}"]
 }
