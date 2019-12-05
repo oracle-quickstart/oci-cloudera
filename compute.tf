@@ -16,7 +16,7 @@ data "oci_core_subnet" "utility_subnet" {
 
 data "null_data_source" "values" {
   inputs = {
-    cm_default = "cdh-utility-1.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
+    cm_default = "cdh-utility-1.${data.oci_core_subnet.utility_subnet.dns_label}.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
   }
 }
 
