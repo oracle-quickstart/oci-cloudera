@@ -25,6 +25,7 @@ resource "oci_core_instance" "Worker" {
     cdh_version         = "${var.cdh_version}"
     cm_version          = "${var.cm_version}" 
     block_volume_count  = "${var.block_volume_count}"
+    objectstoreRAID     = "${var.objectstoreRAID}"
   }
 
   timeouts {
@@ -67,6 +68,23 @@ resource "oci_core_volume_attachment" "WorkerClouderaAttachment" {
   device          = "/dev/oracleoci/oraclevdc"
 }
 
+# RAID Volumes for Object Store Cache
+resource "oci_core_volume" "WorkerRAIDVolume" {
+  count               = var.objectstoreRAID ? (var.instances * 4) : 0
+  availability_domain = "${var.availability_domain}"
+  compartment_id      = "${var.compartment_ocid}"
+  display_name        = "Cloudera Worker ${format("%01d", floor((count.index / 4)+1))} RAID ${format("%01d", floor((count.index%(4))+1))}"
+  size_in_gbs         = 700
+}
+
+resource "oci_core_volume_attachment" "WorkerRAIDAttachment" {
+  count               = var.objectstoreRAID ? (var.instances * 4) : 0
+  attachment_type = "iscsi"
+  instance_id     = "${oci_core_instance.Worker[floor(count.index/4)].id}"
+  volume_id       = "${oci_core_volume.WorkerRAIDVolume[count.index].id}"
+  device = "${var.data_volume_attachment_device[floor(count.index%(4))]}"
+}
+
 # Data Volumes for HDFS
 resource "oci_core_volume" "WorkerDataVolume" {
   count               = "${(var.instances * var.block_volumes_per_worker)}"
@@ -81,6 +99,6 @@ resource "oci_core_volume_attachment" "WorkerDataAttachment" {
   attachment_type = "iscsi"
   instance_id     = "${oci_core_instance.Worker[floor(count.index/var.block_volumes_per_worker)].id}"
   volume_id       = "${oci_core_volume.WorkerDataVolume[count.index].id}"
-  device = "${var.data_volume_attachment_device[floor(count.index%(var.block_volumes_per_worker))]}"
+  device = "${var.objectstoreRAID ? var.data_volume_attachment_device[(floor(count.index%(var.block_volumes_per_worker))+4)] : var.data_volume_attachment_device[floor(count.index%(var.block_volumes_per_worker))]}"
 }
 

@@ -107,4 +107,5 @@ module "worker" {
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
 	block_volume_count = "${var.block_volumes_per_worker}"
+	objectstoreRAID = "${var.objectstoreRAID}"
 }

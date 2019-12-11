@@ -11,6 +11,10 @@ cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 block_volume_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
+objectstoreRAID=`curl -L http://169.254.169.254/opc/v1/instance/metadata/objectstoreRAID`
+if [ $objectstoreRAID = "true" ]; then 
+	block_volume_count=$((block_volume_count+4))
+fi
 EXECNAME="TUNING"
 log "->TUNING START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -246,6 +250,18 @@ block_data_mount () {
   	echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
   fi
 }
+raid_disk_setup() {
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk /dev/oracleoci/$disk
+n
+p
+1
+
+
+t
+fd
+w
+EOF
+}
 EXECNAME="DISK SETUP"
 log "->Checking for disks..."
 dcount=0
@@ -286,6 +302,15 @@ for i in `seq 1 ${#iqn[@]}`; do
 	                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
 				fi
                                 ;;
+				oraclevdd|oraclevde|oraclevdf|oraclevdg)
+				if [ $objectstoreRAID = "true" ]; then 
+					raid_disk_setup
+				else
+	                                mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
+	                                block_data_mount
+        	                        dcount=$((dcount+1))
+				fi
+                                ;;
                                 *)
                                 mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
                                 block_data_mount
@@ -312,6 +337,19 @@ for i in `seq 1 ${#iqn[@]}`; do
                 fi
         done;
 done;
+fi
+if [ $objectstoreRAID = "true" ]; then 
+	EXECNAME="TMP"
+	log "->Setup LVM"
+	vgcreate RAID0 /dev/oracleoci/oraclevd[d-g]1
+	lvcreate -i 2 -I 64 -l 100%FREE -n tmp RAID0
+	mkfs.ext4 /dev/RAID0/tmp
+	mkdir -p /mnt/tmp
+	chmod 1777 /mnt/tmp
+	mount /dev/RAID0/tmp /mnt/tmp
+	mount -B /tmp /mnt/tmp
+	chmod 1777 /tmp
+	echo "/dev/RAID0/tmp                /tmp              ext4    defaults,_netdev,noatime,discard,barrier=0         0 0" | tee -a /etc/fstab
 fi
 EXECNAME="Cloudera Agent Install"
 rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera

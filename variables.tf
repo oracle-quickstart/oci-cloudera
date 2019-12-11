@@ -125,6 +125,9 @@ variable "cluster_name" {
   default = "TestCluster"
 }
 
+variable "objectstoreRAID" {
+  default = "false" 
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # Environmental variables
 # You probably want to define these as environmental variables.

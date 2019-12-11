@@ -39,6 +39,7 @@ groupings:
   - ${worker_instance_shape}
   - ${worker_node_count}
   - ${block_volumes_per_worker}
+  - ${objectstoreRAID}
   - ${clusterSubnet}
 - title: "HDFS Block Volume Size"
   variables:
@@ -338,3 +339,9 @@ variables:
     type: string
     title: "VCN DNS Label"
     description: "Set the VCN DNS label to be used when creating VCN.  Default is 'cdhvcn' which sets the VCN domain to 'cdhvcn.oraclevcn.com'"
+
+  objectstoreRAID:
+    type: boolean
+    title: "RAID0 Block Volume Cache"
+    description: "Enable RAID0 Block Volume cache to enhance througput when moving data to/from Object Storage.  This is recommended when using DistCP."
+    default: false

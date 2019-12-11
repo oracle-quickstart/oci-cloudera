@@ -19,7 +19,9 @@ variable "block_volume_count" {}
 variable "hide_public_subnet" {
   default = "true"
 }
-
+variable "objectstoreRAID" {
+  default = "false"
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.
@@ -128,33 +130,3 @@ variable "data_volume_attachment_device" {
   }
 }
 
-variable "data_volume_attachment_device_object" {
-  type = "map"
-  default = {
-    "0" = "/dev/oracleoci/oraclevdh"
-    "1" = "/dev/oracleoci/oraclevdi"
-    "2" = "/dev/oracleoci/oraclevdj"
-    "3" = "/dev/oracleoci/oraclevdk"
-    "4" = "/dev/oracleoci/oraclevdl"
-    "5" = "/dev/oracleoci/oraclevdm"
-    "6" = "/dev/oracleoci/oraclevdn"
-    "7" = "/dev/oracleoci/oraclevdo"
-    "8" = "/dev/oracleoci/oraclevdp"
-    "9" = "/dev/oracleoci/oraclevdq"
-    "10" = "/dev/oracleoci/oraclevdr"
-    "11" = "/dev/oracleoci/oraclevds"
-    "12" = "/dev/oracleoci/oraclevdt"
-    "13" = "/dev/oracleoci/oraclevdu"
-    "14" = "/dev/oracleoci/oraclevdv"
-    "15" = "/dev/oracleoci/oraclevdw"
-    "16" = "/dev/oracleoci/oraclevdx"
-    "17" = "/dev/oracleoci/oraclevdy"
-    "18" = "/dev/oracleoci/oraclevdz"
-    "19" = "/dev/oracleoci/oraclevdab"
-    "20" = "/dev/oracleoci/oraclevdac"
-    "21" = "/dev/oracleoci/oraclevdad"
-    "22" = "/dev/oracleoci/oraclevdae"
-    "23" = "/dev/oracleoci/oraclevdaf"
-    "24" = "/dev/oracleoci/oraclevdag"
-  }
-}
