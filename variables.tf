@@ -44,6 +44,14 @@ variable "meta_db_type" {
   default = "mysql"
 }
 
+variable "use_edge_nodes" {
+  default = "false"
+}
+
+variable "enable_block_volumes" {
+  default = "false"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
@@ -52,11 +60,11 @@ variable "meta_db_type" {
 
 # Cloudera Manager Version
 variable "cm_version" { 
-    default = "6.3.1" 
+    default = "7.3.0" 
 }
 # Cloudera Enterprise Data Hub Version
 variable "cdh_version" { 
-    default = "6.3.1" 
+    default = "7.3.0.0" 
 }
 variable "secure_cluster" { 
     default = "True" 

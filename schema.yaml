@@ -1,6 +1,6 @@
 title: Sample input variable schema
 schemaVersion: 1.0.0
-version: "20190816"
+version: "20200107"
 locale: "en"
 groupings:
 - title: "SSH Configuration"
@@ -38,17 +38,14 @@ groupings:
   variables:
   - ${worker_instance_shape}
   - ${worker_node_count}
-  - ${block_volumes_per_worker}
+  - ${enable_block_volumes}
   - ${objectstoreRAID}
   - ${clusterSubnet}
-- title: "HDFS Block Volume Size"
+- title: "HDFS Block Volume Configuration"
   variables:
+  - ${block_volumes_per_worker}
   - ${data_blocksize_in_gbs}
-  visible:
-    not :
-      - eq:
-        - ${block_volumes_per_worker}
-        - "0"
+  visible: ${enable_block_volumes}
 - title: "Master Node Options"
   variables:
   - ${master_instance_shape}
@@ -59,12 +56,15 @@ groupings:
   - ${utility_instance_shape}
   - ${utilitySubnet}
   - ${meta_db_type}
+- title: "Edge Nodes"
+  variables:
+  - ${use_edge_nodes}
 - title: "Edge Node Options"
   variables:
   - ${bastion_instance_shape}
   - ${bastion_node_count}
   - ${bastionSubnet}
-
+  visible: ${use_edge_nodes}
 - title: "Pre-Defined"
   variables:
   - ${region}
@@ -89,6 +89,7 @@ variables:
     title: "Cloudera Manager Version"
     description: "Choose the version of Cloudera Manager to deploy, CDP requires 7.0.3"
     required: true
+    default: "7.0.3"
 
   cdh_version:
     type: enum
@@ -111,6 +112,7 @@ variables:
     title: "Cluster Version"
     description: "Choose the version of CDH to deploy, for CDP choose 7.0.3.0"
     required: true
+    default: "7.0.3.0"
 
   cluster_name:
     type: string
@@ -356,4 +358,16 @@ variables:
     enum:
     - "mysql"
     - "postgresql"
-    required: true            
+    required: true
+
+  use_edge_nodes:
+    type: boolean
+    title: "Enable Edge Nodes"
+    description: "Check to enable Edge Nodes for the cluster."
+    default: false
+
+  enable_block_volumes:
+    type: boolean
+    title: "Enable Block Volumes for HDFS"
+    description: "Check to enable Block Volumes for use with HDFS."
+    default: false

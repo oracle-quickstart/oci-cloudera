@@ -22,7 +22,7 @@ data "null_data_source" "values" {
 
 module "bastion" {
 	source	= "./modules/bastion"
-	instances = "${var.bastion_node_count}"
+	instances = "${var.use_edge_nodes ? var.bastion_node_count : 0}"
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
 	subnet_id = "${var.useExistingVcn ? var.bastionSubnet : module.network.bastion-id}"
@@ -107,6 +107,6 @@ module "worker" {
 	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
         cdh_version = "${var.cdh_version}"
-	block_volume_count = "${var.block_volumes_per_worker}"
+	block_volume_count = "${var.enable_block_volumes ? var.block_volumes_per_worker : 0}"
 	objectstoreRAID = "${var.objectstoreRAID}"
 }
