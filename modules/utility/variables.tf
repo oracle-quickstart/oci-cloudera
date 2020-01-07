@@ -28,7 +28,7 @@ variable "hide_private_subnet" {
 variable "cluster_subnet" {}
 variable "bastion_subnet" {}
 variable "utility_subnet" {}
-
+variable "meta_db_type" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

@@ -148,8 +148,15 @@ systemctl enable kadmin.service >> $LOG_FILE
 
 EXECNAME="Cloudera Manager & Pre-Reqs Install"
 log "-> Installation"
-rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
-wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+if [ ${cm_major_version} = "7" ]; then 
+	log "-->CDP install detected - CM version $cm_version"
+	rpm --import https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+	wget https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager-trial.repo -O /etc/yum.repos.d/cloudera-manager.repo
+else
+	log "-->Setup GPG Key & CM ${cm_version} repo"
+	rpm --import https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+	wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+fi
 yum install cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y >> $LOG_FILE
 pip install psycopg2==2.7.5 --ignore-installed >> $LOG_FILE
 yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y >> $LOG_FILE

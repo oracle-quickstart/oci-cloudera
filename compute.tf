@@ -52,8 +52,8 @@ module "utility" {
         utility_instance_shape = "${var.utility_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
-        user_data = "${base64encode(file("scripts/cloudera_manager_boot.sh"))}"
-	cm_install = "${base64gzip(file("scripts/cms_mysql.sh"))}"
+        user_data = "${base64gzip(file("scripts/cloudera_manager_boot.sh"))}"
+	cm_install = "${var.meta_db_type == "mysql" ? base64gzip(file("scripts/cms_mysql.sh")) : base64gzip(file("scripts/cms_postgres.sh"))}"
 	deploy_on_oci = "${base64gzip(file("scripts/deploy_on_oci.py"))}"
 	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
@@ -66,6 +66,7 @@ module "utility" {
 	cluster_subnet = "${data.oci_core_subnet.cluster_subnet.dns_label}"
 	bastion_subnet = "${data.oci_core_subnet.bastion_subnet.dns_label}"
 	utility_subnet = "${data.oci_core_subnet.utility_subnet.dns_label}"
+        meta_db_type = "${var.meta_db_type}"
 }
 
 module "master" {

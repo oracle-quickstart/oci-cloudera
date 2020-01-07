@@ -2036,7 +2036,10 @@ def options_parser(args=None):
     cluster_primary_version = options.cdh_version.split('.')
     cluster_primary_version = cluster_primary_version[0]
     cdh_version = options.cdh_version
-    if cluster_primary_version == '6':
+    if cluster_primary_version == '7':
+        remote_parcel_url = 'https://archive.cloudera.com/cdh7/' + options.cdh_version + '/parcels'  # type: str
+        kafka_parcel_url = ' '
+    elif cluster_primary_version == '6':
 	remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + options.cdh_version + '/parcels'  # type: str
 	kafka_parcel_url = ' '
     else:

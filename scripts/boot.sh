@@ -352,8 +352,15 @@ if [ $objectstoreRAID = "true" ]; then
 	echo "/dev/RAID0/tmp                /tmp              ext4    defaults,_netdev,noatime,discard,barrier=0         0 0" | tee -a /etc/fstab
 fi
 EXECNAME="Cloudera Agent Install"
-rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
-wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+if [ ${cm_major_version} = "7" ]; then
+        log "-->CDP install detected - CM $cm_version"
+        rpm --import https://archive.cloudera.com/cm${cm_major_version}/${c_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+        wget https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager-trial.repo -O /etc/yum.repos.d/cloudera-manager.repo
+else
+        log "-->Setup GPG Key & CM ${cm_version} repo"
+        rpm --import https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+        wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+fi
 yum install cloudera-manager-agent -y >> $LOG_FILE
 export JDK=`ls /usr/lib/jvm | head -n 1`
 sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services

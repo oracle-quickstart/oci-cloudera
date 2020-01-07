@@ -58,6 +58,7 @@ groupings:
   variables:
   - ${utility_instance_shape}
   - ${utilitySubnet}
+  - ${meta_db_type}
 - title: "Edge Node Options"
   variables:
   - ${bastion_instance_shape}
@@ -84,6 +85,7 @@ variables:
     - "6.2.0"
     - "6.3.0"
     - "6.3.1"
+    - "7.0.3"
     title: "Cloudera Manager Version"
     description: "Choose the version of Cloudera Manager to deploy"
     required: true
@@ -105,6 +107,7 @@ variables:
     - "6.2.0"
     - "6.3.0"
     - "6.3.1"
+    - "7.0.3"
     title: "CDH Version"
     description: "Choose the version of CDH to deploy"
     required: true
@@ -345,3 +348,12 @@ variables:
     title: "RAID0 Block Volume Cache"
     description: "Enable RAID0 Block Volume cache to enhance througput when moving data to/from Object Storage.  This is recommended when using DistCP."
     default: false
+
+  meta_db_type:
+    type: enum
+    title: "Cloudera Manager Database"
+    description: "Pick which database to use for Cloudera Manager.   Note that Postgresql is not recommended for production clusters."
+    enum:
+    - "mysql"
+    - "postgresql"
+    required: true            
