@@ -87,7 +87,7 @@ variables:
     - "6.3.1"
     - "7.0.3"
     title: "Cloudera Manager Version"
-    description: "Choose the version of Cloudera Manager to deploy"
+    description: "Choose the version of Cloudera Manager to deploy, CDP requires 7.0.3"
     required: true
 
   cdh_version:
@@ -107,9 +107,9 @@ variables:
     - "6.2.0"
     - "6.3.0"
     - "6.3.1"
-    - "7.0.3"
-    title: "CDH Version"
-    description: "Choose the version of CDH to deploy"
+    - "7.0.3.0"
+    title: "Cluster Version"
+    description: "Choose the version of CDH to deploy, for CDP choose 7.0.3.0"
     required: true
 
   cluster_name:
