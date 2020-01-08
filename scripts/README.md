@@ -2,7 +2,6 @@
 All scripts in this location are referenced for deployment automation
 
 * boot.sh is invoked by CloudInit on each instance creation via Terraform.  It contains steps which perform inital bootstrapping of the instance prior to provisioning.
-* boot_plus_tmp.sh is an alternate version of boot.sh which demonstrates configuring a RAID0 Block Volume array for use as /tmp.  This is useful for caching data when using Object Storage.
 * cloudera_manager_boot.sh is a top level boot script for Cloudera Manager (Utility) instance.  This is required because subsequent scripts are too large to fit in metadata without compression.
 * cms_mysql.sh is invoked by cloudinit on the Utility node to stand up Cloudera Manager and Pre-requisites using MySQL for Metadata. It is compressed and loaded into extended metadata.
 * cms_postgres.sh is an older installaltion method using Postgres instead of MySQL for cluster metadata.  This is depracated.
