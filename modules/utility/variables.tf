@@ -16,14 +16,19 @@ variable "cm_version" {}
 variable "cdh_version" {}
 variable "worker_shape" {}
 variable "block_volume_count" {}
-variable "AD" {}
 variable "cloudera_manager" {}
 variable "cm_install" {}
 variable "deploy_on_oci" {}
 variable "secure_cluster" {}
 variable "hdfs_ha" {} 
 variable "cluster_name" {}
-
+variable "hide_private_subnet" {
+  default = "true"
+}
+variable "cluster_subnet" {}
+variable "bastion_subnet" {}
+variable "utility_subnet" {}
+variable "meta_db_type" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

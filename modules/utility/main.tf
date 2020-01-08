@@ -1,10 +1,8 @@
 resource "oci_core_instance" "Utility" {
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
-  display_name        = "CDH Utility-1"
-  hostname_label      = "CDH-Utility-1"
   shape               = "${var.utility_instance_shape}"
-  subnet_id           = "${var.subnet_id}"
+  display_name        = "CDH Utility-1"
   fault_domain	      = "FAULT-DOMAIN-3"
 
   source_details {
@@ -12,7 +10,14 @@ resource "oci_core_instance" "Utility" {
     source_id               = "${var.image_ocid}"
   }
 
-  metadata {
+  create_vnic_details {
+    subnet_id         = "${var.subnet_id}"
+    display_name      = "CDH Utility-1"
+    hostname_label    = "CDH-Utility-1"
+    assign_public_ip  = "${var.hide_private_subnet ? true : false}"
+  }
+
+  metadata = {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}" 
     cloudera_manager    = "${var.cloudera_manager}"
@@ -20,13 +25,16 @@ resource "oci_core_instance" "Utility" {
     cm_version          = "${var.cm_version}"  
     worker_shape        = "${var.worker_shape}"
     block_volume_count  = "${var.block_volume_count}"	
-    availability_domain = "${var.AD}"
     secure_cluster      = "${var.secure_cluster}"
     hdfs_ha		= "${var.hdfs_ha}"
     cluster_name	= "${var.cluster_name}"
+    cluster_subnet      = "${var.cluster_subnet}"
+    bastion_subnet      = "${var.bastion_subnet}"
+    utility_subnet      = "${var.utility_subnet}"
+    meta_db_type        = "${var.meta_db_type}"
   }
 
-  extended_metadata {
+  extended_metadata = {
     cm_install = "${var.cm_install}"
     deploy_on_oci = "${var.deploy_on_oci}"
   }
@@ -39,7 +47,7 @@ resource "oci_core_instance" "Utility" {
 
 # Log Volume for /var/log/cloudera
 resource "oci_core_volume" "UtilLogVolume" {
-  count               = "1"
+  count = 1
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "Cloudera Manager ${format("%01d", count.index+1)} Log Data"
@@ -47,16 +55,16 @@ resource "oci_core_volume" "UtilLogVolume" {
 }
 
 resource "oci_core_volume_attachment" "UtilLogAttachment" {
-  count           = "1"
+  count = 1
   attachment_type = "iscsi"
   instance_id     = "${oci_core_instance.Utility.id}"
-  volume_id       = "${oci_core_volume.UtilLogVolume.id}"
+  volume_id       = "${oci_core_volume.UtilLogVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdb"
 }
 
 # Data Volume for /opt/cloudera
 resource "oci_core_volume" "UtilClouderaVolume" {
-  count               = "1"
+  count = 1
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "Cloudera Manager ${format("%01d", count.index+1)} Data"
@@ -64,9 +72,9 @@ resource "oci_core_volume" "UtilClouderaVolume" {
 }
 
 resource "oci_core_volume_attachment" "UtilClouderaAttachment" {
-  count           = "1"
+  count = 1
   attachment_type = "iscsi"
   instance_id     = "${oci_core_instance.Utility.id}"
-  volume_id       = "${oci_core_volume.UtilClouderaVolume.id}"
+  volume_id       = "${oci_core_volume.UtilClouderaVolume.*.id[count.index]}"
   device          = "/dev/oracleoci/oraclevdc"
 }

@@ -2,10 +2,8 @@ resource "oci_core_instance" "Master" {
   count               = "${var.instances}"
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
-  display_name        = "CDH Master ${format("%01d", count.index+1)}"
-  hostname_label      = "CDH-Master-${format("%01d", count.index+1)}"
   shape               = "${var.master_instance_shape}"
-  subnet_id           = "${var.subnet_id}"
+  display_name        = "CDH Master ${format("%01d", count.index+1)}"
   fault_domain	      = "FAULT-DOMAIN-${(count.index%3)+1}"
 
   source_details {
@@ -13,7 +11,14 @@ resource "oci_core_instance" "Master" {
     source_id               = "${var.image_ocid}"
   }
 
-  metadata {
+  create_vnic_details {
+    subnet_id         = "${var.subnet_id}"
+    display_name      = "CDH Master ${format("%01d", count.index+1)}"
+    hostname_label    = "CDH-Master-${format("%01d", count.index+1)}"
+    assign_public_ip  = "${var.hide_public_subnet ? false : true}"
+  }
+
+  metadata = {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}"
     cloudera_manager    = "${var.cloudera_manager}"
@@ -40,8 +45,8 @@ resource "oci_core_volume" "MasterLogVolume" {
 resource "oci_core_volume_attachment" "MasterLogAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  instance_id     = "${oci_core_instance.Master.*.id[count.index]}"
-  volume_id       = "${oci_core_volume.MasterLogVolume.*.id[count.index]}"
+  instance_id     = "${oci_core_instance.Master[count.index].id}"
+  volume_id       = "${oci_core_volume.MasterLogVolume[count.index].id}"
   device          = "/dev/oracleoci/oraclevdb"
 }
 
@@ -57,8 +62,8 @@ resource "oci_core_volume" "MasterClouderaVolume" {
 resource "oci_core_volume_attachment" "MasterClouderaAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  instance_id     = "${oci_core_instance.Master.*.id[count.index]}"
-  volume_id       = "${oci_core_volume.MasterClouderaVolume.*.id[count.index]}"
+  instance_id     = "${oci_core_instance.Master[count.index].id}"
+  volume_id       = "${oci_core_volume.MasterClouderaVolume[count.index].id}"
   device          = "/dev/oracleoci/oraclevdc"
 }
 
@@ -74,8 +79,8 @@ resource "oci_core_volume" "MasterNNVolume" {
 resource "oci_core_volume_attachment" "MasterNNAttachment" {
   count           = "${var.instances}"
   attachment_type = "iscsi"
-  instance_id     = "${oci_core_instance.Master.*.id[count.index]}"
-  volume_id       = "${oci_core_volume.MasterNNVolume.*.id[count.index]}"
+  instance_id     = "${oci_core_instance.Master[count.index].id}"
+  volume_id       = "${oci_core_volume.MasterNNVolume[count.index].id}"
   device          = "/dev/oracleoci/oraclevdd"
 }
 

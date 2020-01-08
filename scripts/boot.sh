@@ -4,11 +4,17 @@ log() {
 	echo "$(date) [${EXECNAME}]: $*" >> "${LOG_FILE}" 
 }
 cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
+fqdn_fields=`echo -e $cm_fqdn | gawk -F '.' '{print NF}'`
+cluster_domain=`echo -e $cm_fqdn | cut -d '.' -f 3-${fqdn_fields}`
 cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
 cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 block_volume_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`
+objectstoreRAID=`curl -L http://169.254.169.254/opc/v1/instance/metadata/objectstoreRAID`
+if [ $objectstoreRAID = "true" ]; then 
+	block_volume_count=$((block_volume_count+4))
+fi
 EXECNAME="TUNING"
 log "->TUNING START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -52,24 +58,24 @@ includedir /etc/krb5.conf.d/
 [domain_realm]
     .${realm} = ${REALM}
      ${realm} = ${REALM}
-    bastion1.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion1.cdhvcn.oraclevcn.com = ${REALM}
-    bastion2.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion2.cdhvcn.oraclevcn.com = ${REALM}
-    bastion3.cdhvcn.oraclevcn.com = ${REALM}
-    .bastion3.cdhvcn.oraclevcn.com = ${REALM}
-    .public1.cdhvcn.oraclevcn.com = ${REALM}
-    public1.cdhvcn.oraclevcn.com = ${REALM}
-    .public2.cdhvcn.oraclevcn.com = ${REALM}
-    public2.cdhvcn.oraclevcn.com = ${REALM}
-    .public3.cdhvcn.oraclevcn.com = ${REALM}
-    public3.cdhvcn.oraclevcn.com = ${REALM}
-    .private1.cdhvcn.oraclevcn.com = ${REALM}
-    private1.cdhvcn.oraclevcn.com = ${REALM}
-    .private2.cdhvcn.oraclevcn.com = ${REALM}
-    private2.cdhvcn.oraclevcn.com = ${REALM}
-    .private3.cdhvcn.oraclevcn.com = ${REALM}
-    private3.cdhvcn.oraclevcn.com = ${REALM}
+    bastion1.${cluster_domain} = ${REALM}
+    .bastion1.${cluster_domain} = ${REALM}
+    bastion2.${cluster_domain} = ${REALM}
+    .bastion2.${cluster_domain} = ${REALM}
+    bastion3.${cluster_domain} = ${REALM}
+    .bastion3.${cluster_domain} = ${REALM}
+    .public1.${cluster_domain} = ${REALM}
+    public1.${cluster_domain} = ${REALM}
+    .public2.${cluster_domain} = ${REALM}
+    public2.${cluster_domain} = ${REALM}
+    .public3.${cluster_domain} = ${REALM}
+    public3.${cluster_domain} = ${REALM}
+    .private1.${cluster_domain} = ${REALM}
+    private1.${cluster_domain} = ${REALM}
+    .private2.${cluster_domain} = ${REALM}
+    private2.${cluster_domain} = ${REALM}
+    .private3.${cluster_domain} = ${REALM}
+    private3.${cluster_domain} = ${REALM}
 
 [kdc]
     profile = /var/kerberos/krb5kdc/kdc.conf
@@ -244,6 +250,18 @@ block_data_mount () {
   	echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
   fi
 }
+raid_disk_setup() {
+sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk /dev/oracleoci/$disk
+n
+p
+1
+
+
+t
+fd
+w
+EOF
+}
 EXECNAME="DISK SETUP"
 log "->Checking for disks..."
 dcount=0
@@ -284,6 +302,15 @@ for i in `seq 1 ${#iqn[@]}`; do
 	                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
 				fi
                                 ;;
+				oraclevdd|oraclevde|oraclevdf|oraclevdg)
+				if [ $objectstoreRAID = "true" ]; then 
+					raid_disk_setup
+				else
+	                                mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
+	                                block_data_mount
+        	                        dcount=$((dcount+1))
+				fi
+                                ;;
                                 *)
                                 mke2fs -F -t ext4 -b 4096 -E lazy_itable_init=1 -O sparse_super,dir_index,extent,has_journal,uninit_bg -m1 /dev/oracleoci/$disk
                                 block_data_mount
@@ -311,9 +338,29 @@ for i in `seq 1 ${#iqn[@]}`; do
         done;
 done;
 fi
+if [ $objectstoreRAID = "true" ]; then 
+	EXECNAME="TMP"
+	log "->Setup LVM"
+	vgcreate RAID0 /dev/oracleoci/oraclevd[d-g]1
+	lvcreate -i 2 -I 64 -l 100%FREE -n tmp RAID0
+	mkfs.ext4 /dev/RAID0/tmp
+	mkdir -p /mnt/tmp
+	chmod 1777 /mnt/tmp
+	mount /dev/RAID0/tmp /mnt/tmp
+	mount -B /tmp /mnt/tmp
+	chmod 1777 /tmp
+	echo "/dev/RAID0/tmp                /tmp              ext4    defaults,_netdev,noatime,discard,barrier=0         0 0" | tee -a /etc/fstab
+fi
 EXECNAME="Cloudera Agent Install"
-rpm --import https://archive.cloudera.com/cdh${cm_major_version}/${cm_version}/redhat7/yum//RPM-GPG-KEY-cloudera
-wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+if [ ${cm_major_version} = "7" ]; then
+        log "-->CDP install detected - CM $cm_version"
+        rpm --import https://archive.cloudera.com/cm${cm_major_version}/${c_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+        wget https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager-trial.repo -O /etc/yum.repos.d/cloudera-manager.repo
+else
+        log "-->Setup GPG Key & CM ${cm_version} repo"
+        rpm --import https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+        wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
+fi
 yum install cloudera-manager-agent -y >> $LOG_FILE
 export JDK=`ls /usr/lib/jvm | head -n 1`
 sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services

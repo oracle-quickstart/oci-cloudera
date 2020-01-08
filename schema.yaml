@@ -1,13 +1,26 @@
 title: Sample input variable schema
 schemaVersion: 1.0.0
-version: "20190816"
+version: "20200107"
 locale: "en"
 groupings:
-- title: "Global Options"
+- title: "SSH Configuration"
   variables:
   - ${ssh_public_key}
   - ${ssh_private_key}
+- title: "Availabilty Domain"
+  variables:
   - ${availability_domain}
+- title: "VCN Options"
+  variables:
+  - ${VPC_CIDR}
+  - ${vcn_dns_label}
+  - ${useExistingVcn}
+  - ${hide_public_subnet}
+  - ${hide_private_subnet}
+- title: "Custom VCN"
+  variables:
+  - ${myVcn}
+  visibility: ${useExistingVcn}
 - title: "CDH Options"
   variables:
   - ${cm_version}
@@ -25,15 +38,14 @@ groupings:
   variables:
   - ${worker_instance_shape}
   - ${worker_node_count}
-  - ${block_volumes_per_worker}
-- title: "HDFS Block Volume Size"
+  - ${enable_block_volumes}
+  - ${objectstoreRAID}
+  - ${clusterSubnet}
+- title: "HDFS Block Volume Configuration"
   variables:
+  - ${block_volumes_per_worker}
   - ${data_blocksize_in_gbs}
-  visible:
-    not :
-      - eq:
-        - ${block_volumes_per_worker}
-        - "0"
+  visible: ${enable_block_volumes}
 - title: "Master Node Options"
   variables:
   - ${master_instance_shape}
@@ -42,11 +54,17 @@ groupings:
 - title: "Utility Node Options"
   variables:
   - ${utility_instance_shape}
+  - ${utilitySubnet}
+  - ${meta_db_type}
+- title: "Edge Nodes"
+  variables:
+  - ${use_edge_nodes}
 - title: "Edge Node Options"
   variables:
   - ${bastion_instance_shape}
   - ${bastion_node_count}
-
+  - ${bastionSubnet}
+  visible: ${use_edge_nodes}
 - title: "Pre-Defined"
   variables:
   - ${region}
@@ -66,9 +84,12 @@ variables:
     - "6.1.0"
     - "6.2.0"
     - "6.3.0"
+    - "6.3.1"
+    - "7.0.3"
     title: "Cloudera Manager Version"
-    description: "Choose the version of Cloudera Manager to deploy"
+    description: "Choose the version of Cloudera Manager to deploy, CDP requires 7.0.3"
     required: true
+    default: "7.0.3"
 
   cdh_version:
     type: enum
@@ -86,9 +107,12 @@ variables:
     - "6.1.1"
     - "6.2.0"
     - "6.3.0"
-    title: "CDH Version"
-    description: "Choose the version of CDH to deploy"
+    - "6.3.1"
+    - "7.0.3.0"
+    title: "Cluster Version"
+    description: "Choose the version of CDH to deploy, for CDP choose 7.0.3.0"
     required: true
+    default: "7.0.3.0"
 
   cluster_name:
     type: string
@@ -96,30 +120,86 @@ variables:
     description: "Name your Cluster"
     required: true
 
+  useExistingVcn:
+    type: boolean 
+    title: "Use Existing VCN"
+    description: "Click to use existing VCN, otherwise VCN and Subnets will be created"
+    required: true
+
+  myVcn:
+    type: oci:core:vcn:id
+    title: "Existing VCN"
+    description: "Select Existing VCN"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+    visible: ${useExistingVcn}
+    required: true
+     
+  utilitySubnet:
+    type: oci:core:subnet:id
+    title: "Utility Subnet"
+    description: "Select Subnet - Ensure the Subnet is in the same Availability Domain selected above"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      vcnId: ${myVcn}
+      hidePrivateSubnet: ${hide_private_subnet}
+    visible: ${useExistingVcn}
+    required: true
+
+  clusterSubnet:
+    type: oci:core:subnet:id
+    title: "Cluster Subnet"
+    description: "Select Subnet - Ensure the Subnet is in the same Availability Domain selected above"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      vcnId: ${myVcn}
+      hidePublicSubnet: ${hide_public_subnet}
+    visible: ${useExistingVcn}
+    required: true
+
+  bastionSubnet:
+    type: oci:core:subnet:id
+    title: "Utility Subnet"
+    description: "Select Subnet - Ensure the Subnet is in the same Availability Domain selected above"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      vcnId: ${myVcn}
+      hidePrivateSubnet: ${hide_private_subnet}
+    visible: ${useExistingVcn}
+    required: true 
+
+  hide_private_subnet:
+    type: boolean
+    title: "Deploy Utility & Edge hosts to Public Networks"
+    description: "If you wish to deploy to private networks and use VPN, un-check this"
+    default: true
+    visible: ${useExistingVcn}
+
+  hide_public_subnet:
+    type: boolean
+    title: "Deploy Cluster to Private Network Only"
+    description: "This is highly suggested, disable at your own risk"
+    default: true
+    visible: ${useExistingVcn}
+
   availability_domain:
-    type: integer
+    type: oci:identity:availabilitydomain:name 
     title: "Availability Domain"
     description: "Select AD"
-    minimum: 1
-    maximum: 3
+    dependsOn:
+      compartmentId: ${compartment_ocid}
     required: true
 
   secure_cluster:
-    type: enum
-    enum:
-    - "True"
-    - "False"
+    type: Boolean
     title: "Kerberos Security"
-    description: "Enable Kerberos for Secure Cluster?"
+    description: "Click to Enable Kerberos for Secure Cluster"
     required: true
 
   hdfs_ha:
-    type: enum
-    enum:
-    - "True"
-    - "False"
+    type: boolean 
     title: "High Availability"
-    description: "Enable HDFS High Availability?"
+    description: "Click to Enable HDFS High Availability"
     required: true
 
   worker_instance_shape:
@@ -133,6 +213,7 @@ variables:
     - "VM.DenseIO2.16"
     - "VM.DenseIO2.24"
     - "BM.DenseIO2.52"
+    - "BM.HPC2.36"
     title: "Shape of Worker Nodes"
     required: true
 
@@ -254,3 +335,39 @@ variables:
     maximum: 32768
     required: true
 
+  VPC_CIDR:
+    type: string
+    title: "VPC CIDR for VCN"
+    description: "Customize VCN top level CIDR"
+
+  vcn_dns_label:
+    type: string
+    title: "VCN DNS Label"
+    description: "Set the VCN DNS label to be used when creating VCN.  Default is 'cdhvcn' which sets the VCN domain to 'cdhvcn.oraclevcn.com'"
+
+  objectstoreRAID:
+    type: boolean
+    title: "RAID0 Block Volume Cache"
+    description: "Enable RAID0 Block Volume cache to enhance througput when moving data to/from Object Storage.  This is recommended when using DistCP."
+    default: false
+
+  meta_db_type:
+    type: enum
+    title: "Cloudera Manager Database"
+    description: "Pick which database to use for Cloudera Manager.   Note that Postgresql is not recommended for production clusters."
+    enum:
+    - "mysql"
+    - "postgresql"
+    required: true
+
+  use_edge_nodes:
+    type: boolean
+    title: "Enable Edge Nodes"
+    description: "Check to enable Edge Nodes for the cluster."
+    default: false
+
+  enable_block_volumes:
+    type: boolean
+    title: "Enable Block Volumes for HDFS"
+    description: "Check to enable Block Volumes for use with HDFS."
+    default: false

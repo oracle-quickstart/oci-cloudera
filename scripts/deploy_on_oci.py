@@ -29,7 +29,6 @@ license_file = 'None'
 host_fqdn_list = []
 data_tiering = 'False'
 nvme_disks = 0
-availability_domain = 'None'
 # Custom Global Parameters - Customize below here
 debug = 'False'  # type: str
 # Define new admin username and password for Cloudera Manager
@@ -2032,13 +2031,15 @@ def options_parser(args=None):
                         help='OCI Shape of Worker Instances in the Cluster')
     parser.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
     parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='CDH version to deploy')
-    parser.add_argument('-ad', '--availability_domain', metavar='availability_domain', help='OCI Availability Domain')
     parser.add_argument('-N', '--cluster_name', metavar='cluster_name', help='CDH Cluster Name')
     options = parser.parse_args(args)
     cluster_primary_version = options.cdh_version.split('.')
     cluster_primary_version = cluster_primary_version[0]
     cdh_version = options.cdh_version
-    if cluster_primary_version == '6':
+    if cluster_primary_version == '7':
+        remote_parcel_url = 'https://archive.cloudera.com/cdh7/' + options.cdh_version + '/parcels'  # type: str
+        kafka_parcel_url = ' '
+    elif cluster_primary_version == '6':
 	remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + options.cdh_version + '/parcels'  # type: str
 	kafka_parcel_url = ' '
     else:
@@ -2062,10 +2063,6 @@ def options_parser(args=None):
             print('Worker Shape is required.')
             parser.print_help()
             exit(-1)
-        if options.cm_server and not options.availability_domain:
-            print('OCI Availability Domain is required.')
-            parser.print_help()
-            exit(-1)
         if options.cm_server and not options.cluster_name:
             print('Cluster Name is required.')
             parser.print_help()
@@ -2082,8 +2079,8 @@ def options_parser(args=None):
             sys.exit()
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.secure_cluster, options.hdfs_ha, options.cdh_version, options.availability_domain, 
-            options.cluster_name, cluster_primary_version, kafka_parcel_url)
+            options.num_workers, options.secure_cluster, options.hdfs_ha, options.cdh_version, options.cluster_name, 
+            cluster_primary_version, kafka_parcel_url)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
@@ -2276,7 +2273,7 @@ def enable_kerberos():
 
 if __name__ == '__main__':
     cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, secure_cluster, hdfs_ha, \
-    cdh_version, availability_domain, cluster_name, cluster_primary_version, kafka_parcel_url =\
+    cdh_version, cluster_name, cluster_primary_version, kafka_parcel_url =\
     options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
