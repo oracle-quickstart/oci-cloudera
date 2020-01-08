@@ -782,7 +782,7 @@ def setup_mgmt_rcg(mgmt_roles_list):
             firehose_database_type = [cm_client.ApiConfig(name='firehose_database_type', value=meta_db_type)]
             firehose_database_name = [cm_client.ApiConfig(name='firehose_database_name', value='amon')]
             mgmt_log_dir = [cm_client.ApiConfig(name='mgmt_log_dir', value=LOG_DIR + '/cloudera-scm-firehose')]
-            firehose_heapsize = [cm_client.ApiConfig(name='firehose_heapsize', value='268435456')]
+            firehose_heapsize = [cm_client.ApiConfig(name='firehose_heapsize', value='468435456')]
             role_config_list = [firehose_database_host, firehose_database_name, firehose_database_password,
                                 firehose_database_type, firehose_database_user, mgmt_log_dir, firehose_heapsize]
 
