@@ -1047,10 +1047,11 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     hiveserver2_spark_yarn_executor_memory_overhead = \
                         [cm_client.ApiConfig(name='hiveserver2_spark_yarn_executor_memory_overhead',
                                              value='2899')]
+                    hs2_execution_engine = [cm_client.ApiConfig(name='hs2_execution_engine', value='spark')]
                     hive2_config_list = [hiveserver2_spark_driver_memory, hiveserver2_spark_executor_cores,
                                          hiveserver2_spark_yarn_driver_memory_overhead,
                                          hiveserver2_spark_yarn_executor_memory_overhead,
-                                         hiveserver2_spark_executor_memory]
+                                         hiveserver2_spark_executor_memory, hs2_execution_engine]
                     for config in hive2_config_list:
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
