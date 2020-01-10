@@ -6,7 +6,6 @@ groupings:
 - title: "SSH Configuration"
   variables:
   - ${ssh_public_key}
-  - ${ssh_private_key}
 - title: "Availabilty Domain"
   variables:
   - ${availability_domain}
@@ -21,8 +20,10 @@ groupings:
   variables:
   - ${myVcn}
   visibility: ${useExistingVcn}
-- title: "CDH Options"
+- title: "Cloudera Options"
   variables:
+  - ${cm_username}
+  - ${cm_password}
   - ${cm_version}
   - ${cdh_version}
   - ${cluster_name}
@@ -289,12 +290,6 @@ variables:
     description: "Copy/Paste the contents of your SSH Public Key"
     required: true
 
-  ssh_private_key:
-    type: string
-    title: "SSH Private Key"
-    description: "Copy/Paste the contents of your SSH Private Key"
-    required: true
-
   data_blocksize_in_gbs:
     type: integer
     title: "HDFS Block Volume Size ( GB )"
@@ -371,3 +366,15 @@ variables:
     title: "Enable Block Volumes for HDFS"
     description: "Check to enable Block Volumes for use with HDFS."
     default: false
+
+  cm_username:
+    type: string
+    title: "Cloudera Manager Admin"
+    description: "Set the admin username, it must be something other than the default."
+    required: true
+
+  cm_password:
+    type: password
+    title: "Cloudera Manager Admin Password"
+    description: "Set the Admin user default password, do not use spaces as this password is not sanitized.  This will be used for deployment, it is encouraged you change this after deployment is complete."
+    required: true

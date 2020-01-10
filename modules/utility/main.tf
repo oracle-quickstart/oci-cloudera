@@ -32,6 +32,8 @@ resource "oci_core_instance" "Utility" {
     bastion_subnet      = "${var.bastion_subnet}"
     utility_subnet      = "${var.utility_subnet}"
     meta_db_type        = "${var.meta_db_type}"
+    cm_username		= "${var.cm_username}"
+    cm_password		= "${var.cm_password}"
   }
 
   extended_metadata = {

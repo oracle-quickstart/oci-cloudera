@@ -7,7 +7,6 @@
 variable "region" {}
 variable "compartment_ocid" {}
 variable "ssh_public_key" {}
-variable "ssh_private_key" {}
 variable "instances" {}
 variable "subnet_id" {}
 variable "user_data" {}

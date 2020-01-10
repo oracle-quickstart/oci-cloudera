@@ -33,8 +33,8 @@ nvme_disks = 0
 debug = 'False'  # type: str
 # Define new admin username and password for Cloudera Manager
 # This replaces the default (insecure) admin/admin account
-admin_user_name = 'cdhadmin'  # type: str
-admin_password = 'somepassword'  # type: str
+admin_user_name = 'cm_admin'  # type: str
+admin_password = 'changeme'  # type: str
 # Defaults
 cluster_name = 'TestCluster'  # type: str
 cdh_version = ' '  # type: str
@@ -2015,6 +2015,8 @@ def options_parser(args=None):
     global objects
     global remote_parcel_url
     global cdh_version
+    global admin_user_name
+    global admin_password
     parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH Cluster on '
                                                                                  'OCI using cm_client with Cloudera '
                                                                                  'Manager API')
@@ -2031,8 +2033,10 @@ def options_parser(args=None):
     parser.add_argument('-w', '--worker_shape', metavar='worker_shape',
                         help='OCI Shape of Worker Instances in the Cluster')
     parser.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
-    parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='CDH version to deploy')
-    parser.add_argument('-N', '--cluster_name', metavar='cluster_name', help='CDH Cluster Name')
+    parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='Cloudera version to deploy')
+    parser.add_argument('-N', '--cluster_name', metavar='cluster_name', help='Cloudera Cluster Name')
+    parser.add_argument('-a', '--admin_user_name', metavar='admin_user_name', help='Cloudera Manager admin username')
+    parser.add_argument('-p', '--admin_password', metavar='admin_password', help='Cloudera Manager admin password')
     options = parser.parse_args(args)
     cluster_primary_version = options.cdh_version.split('.')
     cluster_primary_version = cluster_primary_version[0]
@@ -2081,7 +2085,7 @@ def options_parser(args=None):
 
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
             options.num_workers, options.secure_cluster, options.hdfs_ha, options.cdh_version, options.cluster_name, 
-            cluster_primary_version, kafka_parcel_url)
+            cluster_primary_version, kafka_parcel_url, options.admin_user_name, options.admin_password)
 
 #
 # MAIN FUNCTION FOR CLUSTER DEPLOYMENT
@@ -2274,7 +2278,7 @@ def enable_kerberos():
 
 if __name__ == '__main__':
     cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, secure_cluster, hdfs_ha, \
-    cdh_version, cluster_name, cluster_primary_version, kafka_parcel_url =\
+    cdh_version, cluster_name, cluster_primary_version, kafka_parcel_url, admin_user_name, admin_password =\
     options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)

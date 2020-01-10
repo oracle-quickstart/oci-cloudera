@@ -28,7 +28,6 @@ module "bastion" {
 	subnet_id = "${var.useExistingVcn ? var.bastionSubnet : module.network.bastion-id}"
 	availability_domain = "${var.availability_domain}"	
 	image_ocid = "${var.InstanceImageOCID[var.region]}"
-        ssh_private_key = "${var.ssh_private_key}"
 	ssh_public_key = "${var.ssh_public_key}"
 	bastion_instance_shape = "${var.bastion_instance_shape}" 
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
@@ -47,7 +46,6 @@ module "utility" {
         subnet_id =  "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}"
 	availability_domain = "${var.availability_domain}"
 	image_ocid = "${var.InstanceImageOCID[var.region]}"
-	ssh_private_key = "${var.ssh_private_key}"
         ssh_public_key = "${var.ssh_public_key}"
         utility_instance_shape = "${var.utility_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
@@ -67,6 +65,8 @@ module "utility" {
 	bastion_subnet = "${data.oci_core_subnet.bastion_subnet.dns_label}"
 	utility_subnet = "${data.oci_core_subnet.utility_subnet.dns_label}"
         meta_db_type = "${var.meta_db_type}"
+	cm_username = "${var.cm_username}"
+	cm_password = "${var.cm_password}"
 }
 
 module "master" {
@@ -77,7 +77,6 @@ module "master" {
         subnet_id =  "${var.useExistingVcn ? var.clusterSubnet : module.network.private-id}"
 	availability_domain = "${var.availability_domain}"
         image_ocid = "${var.InstanceImageOCID[var.region]}"
-        ssh_private_key = "${var.ssh_private_key}"
         ssh_public_key = "${var.ssh_public_key}"
         master_instance_shape = "${var.master_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
@@ -96,7 +95,6 @@ module "worker" {
         subnet_id =  "${var.useExistingVcn ? var.clusterSubnet : module.network.private-id}"
 	availability_domain = "${var.availability_domain}"
 	image_ocid = "${var.InstanceImageOCID[var.region]}"
-        ssh_private_key = "${var.ssh_private_key}"
         ssh_public_key = "${var.ssh_public_key}"
         worker_instance_shape = "${var.worker_instance_shape}"
 	log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
