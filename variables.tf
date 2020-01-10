@@ -2,7 +2,9 @@
 # SSH Keys - Put this to top level because they are required
 # ---------------------------------------------------------------------------------------------------------------------
 
-variable "ssh_public_key" {}
+variable "ssh_provided_key" {
+  default = ""
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Network Settings
@@ -56,7 +58,11 @@ variable "cm_username" {
 }
 
 variable "cm_password" {
-  default = "changeme"
+   default = "changeme"
+}
+
+variable "provide_ssh_key" {
+  default = "true"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

@@ -1,11 +1,15 @@
 title: Sample input variable schema
-schemaVersion: 1.0.0
-version: "20200107"
+schemaVersion: 1.1.0
+version: "20200110"
 locale: "en"
 groupings:
+- title: "SSH Key"
+  variables:
+  - ${provide_ssh_key}
 - title: "SSH Configuration"
   variables:
-  - ${ssh_public_key}
+  - ${ssh_provided_key}
+  visible: ${provide_ssh_key} 
 - title: "Availabilty Domain"
   variables:
   - ${availability_domain}
@@ -23,8 +27,8 @@ groupings:
 - title: "Cloudera Options"
   variables:
   - ${cm_username}
-  - ${cm_password}
   - ${cm_version}
+  - ${cm_password}
   - ${cdh_version}
   - ${cluster_name}
   - ${log_volume_size_in_gbs}
@@ -284,11 +288,12 @@ variables:
     minimum: 0
     required: true
 
-  ssh_public_key:
+  ssh_provided_key:
     type: string
     title: "SSH Public Key"
     description: "Copy/Paste the contents of your SSH Public Key"
     required: true
+    default: ""
 
   data_blocksize_in_gbs:
     type: integer
@@ -378,3 +383,8 @@ variables:
     title: "Cloudera Manager Admin Password"
     description: "Set the Admin user default password, do not use spaces as this password is not sanitized.  This will be used for deployment, it is encouraged you change this after deployment is complete."
     required: true
+
+  provide_ssh_key:
+    type: boolean
+    title: "Provide SSH Key"
+    description: "Un-Check to generate SSH key as part of deployment process.  This is NOT recommended for persistent environments, you should provide your own key for any production deployment."

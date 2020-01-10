@@ -8,4 +8,3 @@ data "oci_core_vnic_attachments" "utility_node_vnics" {
 data "oci_core_vnic" "utility_node_vnic" {
   vnic_id = "${lookup(data.oci_core_vnic_attachments.utility_node_vnics.vnic_attachments[0],"vnic_id")}"
 }
-
