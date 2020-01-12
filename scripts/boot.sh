@@ -6,8 +6,8 @@ log() {
 cm_fqdn=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_manager`
 fqdn_fields=`echo -e $cm_fqdn | gawk -F '.' '{print NF}'`
 cluster_domain=`echo -e $cm_fqdn | cut -d '.' -f 3-${fqdn_fields}`
-cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
-cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
+cloudera_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_version`
+cloudera_major_version=`echo $cloudera_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 block_volume_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block_volume_count`

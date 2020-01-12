@@ -12,7 +12,7 @@ variable "subnet_id" {}
 variable "user_data" {}
 variable "image_ocid" {}
 variable "cm_version" {}
-variable "cdh_version" {}
+variable "cloudera_version" {}
 variable "worker_shape" {}
 variable "block_volume_count" {}
 variable "cloudera_manager" {}
@@ -30,6 +30,7 @@ variable "utility_subnet" {}
 variable "meta_db_type" {}
 variable "cm_username" {}
 variable "cm_password" {}
+variable "vcore_ratio" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

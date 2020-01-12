@@ -12,7 +12,7 @@ variable "subnet_id" {}
 variable "user_data" {}
 variable "image_ocid" {}
 variable "cm_version" {}
-variable "cdh_version" {}
+variable "cloudera_version" {}
 variable "cloudera_manager" {}
 variable "hide_public_subnet" {
   default = "true"

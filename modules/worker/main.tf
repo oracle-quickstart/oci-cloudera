@@ -3,7 +3,7 @@ resource "oci_core_instance" "Worker" {
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   shape               = "${var.worker_instance_shape}"
-  display_name        = "CDH Worker ${format("%01d", count.index+1)}"
+  display_name        = "Cloudera Worker ${format("%01d", count.index+1)}"
   fault_domain        = "FAULT-DOMAIN-${(count.index%3)+1}"
 
   source_details {
@@ -13,8 +13,8 @@ resource "oci_core_instance" "Worker" {
 
   create_vnic_details {
     subnet_id          = "${var.subnet_id}"
-    display_name        = "CDH Worker ${format("%01d", count.index+1)}"
-    hostname_label      = "CDH-Worker-${format("%01d", count.index+1)}"
+    display_name        = "Cloudera Worker ${format("%01d", count.index+1)}"
+    hostname_label      = "Cloudera-Worker-${format("%01d", count.index+1)}"
     assign_public_ip  = "${var.hide_public_subnet ? false : true}"
   }
 
@@ -22,7 +22,7 @@ resource "oci_core_instance" "Worker" {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}"
     cloudera_manager    = "${var.cloudera_manager}"
-    cdh_version         = "${var.cdh_version}"
+    cloudera_version    = "${var.cloudera_version}"
     cm_version          = "${var.cm_version}" 
     block_volume_count  = "${var.block_volume_count}"
     objectstoreRAID     = "${var.objectstoreRAID}"

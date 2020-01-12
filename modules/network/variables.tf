@@ -15,7 +15,7 @@ variable "custom_vcn" {
   default = [" "]
 }
 variable "vcn_dns_label" {
-  default = "cdhvcn"
+  default = "clouderavcn"
 }
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables

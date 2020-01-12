@@ -2,7 +2,7 @@ resource "oci_core_instance" "Utility" {
   availability_domain = "${var.availability_domain}"
   compartment_id      = "${var.compartment_ocid}"
   shape               = "${var.utility_instance_shape}"
-  display_name        = "CDH Utility-1"
+  display_name        = "Cloudera Utility-1"
   fault_domain	      = "FAULT-DOMAIN-3"
 
   source_details {
@@ -12,8 +12,8 @@ resource "oci_core_instance" "Utility" {
 
   create_vnic_details {
     subnet_id         = "${var.subnet_id}"
-    display_name      = "CDH Utility-1"
-    hostname_label    = "CDH-Utility-1"
+    display_name      = "Cloudera Utility-1"
+    hostname_label    = "Cloudera-Utility-1"
     assign_public_ip  = "${var.hide_private_subnet ? true : false}"
   }
 
@@ -21,7 +21,7 @@ resource "oci_core_instance" "Utility" {
     ssh_authorized_keys = "${var.ssh_public_key}"
     user_data		= "${var.user_data}" 
     cloudera_manager    = "${var.cloudera_manager}"
-    cdh_version         = "${var.cdh_version}"
+    cloudera_version    = "${var.cloudera_version}"
     cm_version          = "${var.cm_version}"  
     worker_shape        = "${var.worker_shape}"
     block_volume_count  = "${var.block_volume_count}"	
@@ -34,6 +34,7 @@ resource "oci_core_instance" "Utility" {
     meta_db_type        = "${var.meta_db_type}"
     cm_username		= "${var.cm_username}"
     cm_password		= "${var.cm_password}"
+    vcore_ratio		= "${var.vcore_ratio}"
   }
 
   extended_metadata = {

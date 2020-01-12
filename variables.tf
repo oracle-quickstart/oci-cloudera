@@ -38,7 +38,7 @@ variable "utilitySubnet" {
 }
 
 variable "vcn_dns_label" { 
-  default = "cdhvcn"
+  default = "clouderavcn"
 }
 
 variable "meta_db_type" {
@@ -65,6 +65,10 @@ variable "provide_ssh_key" {
   default = "true"
 }
 
+variable "vcore_ratio" {
+  default = "2"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Cloudera variables
 # You should modify these based on deployment requirements.
@@ -76,7 +80,7 @@ variable "cm_version" {
     default = "7.3.0" 
 }
 # Cloudera Enterprise Data Hub Version
-variable "cdh_version" { 
+variable "cloudera_version" { 
     default = "7.3.0.0" 
 }
 variable "secure_cluster" { 

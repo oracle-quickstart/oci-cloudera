@@ -11,8 +11,8 @@ cm_ip=`host ${cm_fqdn} | gawk '{print $4}'`
 cluster_subnet=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_subnet`
 bastion_subnet=`curl -L http://169.254.169.254/opc/v1/instance/metadata/bastion_subnet`
 utility_subnet=`curl -L http://169.254.169.254/opc/v1/instance/metadata/utility_subnet`
-cdh_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cdh_version`
-cdh_major_version=`echo $cdh_version | cut -d '.' -f1`
+cloudera_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cloudera_version`
+cloudera_major_version=`echo $cloudera_version | cut -d '.' -f1`
 cm_version=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_version`
 cm_major_version=`echo  $cm_version | cut -d '.' -f1`
 # Note that the AD detection depends on the subnet containing the AD as the last character in the name
@@ -23,6 +23,7 @@ hdfs_ha=`curl -L http://169.254.169.254/opc/v1/instance/metadata/hdfs_ha`
 cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_name`
 cm_username=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_username`
 cm_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_password`
+vcore_ratio=`curl -L http://169.254.169.254/opc/v1/instance/metadata/vcore_ratio`
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -405,16 +406,16 @@ log "-->Host Discovery"
 detection_flag="0"
 w=1
 while [ $detection_flag = "0" ]; do
-	worker_lookup=`host cdh-worker-$w.${cluster_subnet}.${cluster_domain}`
+	worker_lookup=`host cloudera-worker-$w.${cluster_subnet}.${cluster_domain}`
 	worker_check=`echo -e $?`
 	if [ $worker_check = "0" ]; then 
-		worker_fqdn[$w]="cdh-worker-$w.${cluster_subnet}.${cluster_domain}"
+		worker_fqdn[$w]="cloudera-worker-$w.${cluster_subnet}.${cluster_domain}"
 		w=$((w+1))
 	else
 		detection_flag="1"
 	fi
 done;
-fqdn_list="cdh-utility-1.${utility_subnet}.${cluster_domain},cdh-master-1.${cluster_subnet}.${cluster_domain},cdh-master-2.${cluster_subnet}.${cluster_domain}"
+fqdn_list="cloudera-utility-1.${utility_subnet}.${cluster_domain},cloudera-master-1.${cluster_subnet}.${cluster_domain},cloudera-master-2.${cluster_subnet}.${cluster_domain}"
 num_workers=${#worker_fqdn[@]}
 for w in `seq 1 $num_workers`; do 
 	fqdn_list=`echo "${fqdn_list},${worker_fqdn[$w]}"`
@@ -423,19 +424,19 @@ log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
 if [ $secure_cluster = "true" ]; then 
 	if [ $hdfs_ha = "true" ]; then 
-		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password}"
-		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} 2>&1 1>> $LOG_FILE	
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE	
 	else
-		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password}"
-		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} 2>&1 1>> $LOG_FILE
+		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
+		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE
 	fi
 else
         if [ $hdfs_ha = "true" ]; then
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE
         else
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cdh_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE
 	fi
 fi
 log "->DONE"

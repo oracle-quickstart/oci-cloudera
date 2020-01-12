@@ -27,9 +27,9 @@ groupings:
 - title: "Cloudera Options"
   variables:
   - ${cm_username}
-  - ${cm_version}
   - ${cm_password}
-  - ${cdh_version}
+  - ${cm_version}
+  - ${cloudera_version}
   - ${cluster_name}
   - ${log_volume_size_in_gbs}
   - ${cloudera_volume_size_in_gbs}
@@ -43,6 +43,7 @@ groupings:
   variables:
   - ${worker_instance_shape}
   - ${worker_node_count}
+  - ${vcore_ratio}
   - ${enable_block_volumes}
   - ${objectstoreRAID}
   - ${clusterSubnet}
@@ -96,7 +97,7 @@ variables:
     required: true
     default: "7.0.3"
 
-  cdh_version:
+  cloudera_version:
     type: enum
     enum:
     - "5.10.2.5"
@@ -211,9 +212,12 @@ variables:
     type: enum
     enum:
     - "VM.Standard2.8"
+    - "VM.Standard.E2.8"
     - "VM.Standard2.16"
     - "VM.Standard2.24"
+    - "BM.Standard.B1.44"
     - "BM.Standard2.52"
+    - "BM.Standard.E2.64"
     - "VM.DenseIO2.8"
     - "VM.DenseIO2.16"
     - "VM.DenseIO2.24"
@@ -233,13 +237,17 @@ variables:
     type: enum
     enum:
     - "VM.Standard2.8"
+    - "VM.Standard.E2.8"
     - "VM.Standard2.16"
     - "VM.Standard2.24"
+    - "BM.Standard.B1.44"
     - "BM.Standard2.52"
+    - "BM.Standard.E2.64" 
     - "VM.DenseIO2.8"
     - "VM.DenseIO2.16"
     - "VM.DenseIO2.24"
     - "BM.DenseIO2.52"
+    - "BM.HPC2.36"
     title: "Shape of Master Nodes"
     required: true
 
@@ -254,13 +262,17 @@ variables:
     type: enum
     enum:
     - "VM.Standard2.8"
+    - "VM.Standard.E2.8"
     - "VM.Standard2.16"
     - "VM.Standard2.24"
+    - "BM.Standard.B1.44"
     - "BM.Standard2.52"
+    - "BM.Standard.E2.64"
     - "VM.DenseIO2.8"
     - "VM.DenseIO2.16"
     - "VM.DenseIO2.24"
     - "BM.DenseIO2.52"
+    - "BM.HPC2.36"
     title: "Shape of Utility Node"
     required: true
 
@@ -268,9 +280,13 @@ variables:
     type: enum
     enum:
     - "VM.Standard2.1"
+    - "VM.Standard.E2.1"
     - "VM.Standard2.2"
+    - "VM.Standard.E2.2"
     - "VM.Standard2.4"
+    - "VM.Standard.E2.4"
     - "VM.Standard2.8"
+    - "VM.Standard.E2.8"
     - "VM.Standard2.16"
     - "VM.Standard2.24"
     - "BM.Standard2.52"
@@ -343,7 +359,7 @@ variables:
   vcn_dns_label:
     type: string
     title: "VCN DNS Label"
-    description: "Set the VCN DNS label to be used when creating VCN.  Default is 'cdhvcn' which sets the VCN domain to 'cdhvcn.oraclevcn.com'"
+    description: "Set the VCN DNS label to be used when creating VCN.  Default is 'clouderavcn' which sets the VCN domain to 'clouderavcn.oraclevcn.com'"
 
   objectstoreRAID:
     type: boolean
@@ -388,3 +404,12 @@ variables:
     type: boolean
     title: "Provide SSH Key"
     description: "Un-Check to generate SSH key as part of deployment process.  This is NOT recommended for persistent environments, you should provide your own key for any production deployment."
+
+  vcore_ratio:
+    type: int
+    title: "YARN VCore Ratio"
+    description: "Set the YARN VCore ratio.  This is typically between 1-4.  VMs benefit from a smaller VCore ratio, BMs benefit from a higher VCore ratio."
+    min: 1
+    max: 4
+    default: 2
+

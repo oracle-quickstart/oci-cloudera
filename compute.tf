@@ -16,7 +16,7 @@ data "oci_core_subnet" "utility_subnet" {
 
 data "null_data_source" "values" {
   inputs = {
-    cm_default = "cdh-utility-1.${data.oci_core_subnet.utility_subnet.dns_label}.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
+    cm_default = "cloudera-utility-1.${data.oci_core_subnet.utility_subnet.dns_label}.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
   }
 }
 
@@ -35,7 +35,7 @@ module "bastion" {
 	user_data = "${base64encode(file("scripts/boot.sh"))}"
 	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
 	cm_version = "${var.cm_version}"
-	cdh_version = "${var.cdh_version}"
+	cloudera_version = "${var.cloudera_version}"
 }
 
 module "utility" {
@@ -55,7 +55,7 @@ module "utility" {
 	deploy_on_oci = "${base64gzip(file("scripts/deploy_on_oci.py"))}"
 	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
-        cdh_version = "${var.cdh_version}"
+        cloudera_version = "${var.cloudera_version}"
 	worker_shape = "${var.worker_instance_shape}"
 	block_volume_count = "${var.block_volumes_per_worker}"
         hdfs_ha = "${var.hdfs_ha}"
@@ -67,6 +67,7 @@ module "utility" {
         meta_db_type = "${var.meta_db_type}"
 	cm_username = "${var.cm_username}"
 	cm_password = "${var.cm_password}"
+        vcore_ratio = "${var.vcore_ratio}"
 }
 
 module "master" {
@@ -84,7 +85,7 @@ module "master" {
         user_data = "${base64encode(file("scripts/boot.sh"))}"
 	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
-        cdh_version = "${var.cdh_version}"
+        cloudera_version = "${var.cloudera_version}"
 }
 
 module "worker" {
@@ -104,7 +105,7 @@ module "worker" {
         user_data = "${base64encode(file("scripts/boot.sh"))}"
 	cloudera_manager = "${data.null_data_source.values.outputs["cm_default"]}"
         cm_version = "${var.cm_version}"
-        cdh_version = "${var.cdh_version}"
+        cloudera_version = "${var.cloudera_version}"
 	block_volume_count = "${var.enable_block_volumes ? var.block_volumes_per_worker : 0}"
 	objectstoreRAID = "${var.objectstoreRAID}"
 }

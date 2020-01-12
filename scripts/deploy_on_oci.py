@@ -37,7 +37,7 @@ admin_user_name = 'cm_admin'  # type: str
 admin_password = 'changeme'  # type: str
 # Defaults
 cluster_name = 'TestCluster'  # type: str
-cdh_version = ' '  # type: str
+cloudera_version = ' '  # type: str
 cluster_primary_version = ' '
 kafka_parcel_url = ' '
 secure_cluster = 'False'  # type: bool
@@ -68,10 +68,10 @@ mgmt_roles_list = ['ACTIVITYMONITOR', 'ALERTPUBLISHER', 'EVENTSERVER', 'HOSTMONI
 
 # Cluster Host Mapping
 # Used to prescriptively generate a host topology, only modify if hostnames are altered from Terraform
-worker_hosts_prefix = 'cdh-worker'
-namenode_host = 'cdh-master-1'
-secondary_namenode_host = 'cdh-master-2'
-cloudera_manager_host = 'cdh-utility-1'
+worker_hosts_prefix = 'cloudera-worker'
+namenode_host = 'cloudera-master-1'
+secondary_namenode_host = 'cloudera-master-2'
+cloudera_manager_host = 'cloudera-utility-1'
 
 # Specify Log directory on cluster hosts - this is a separate block volume by default in Terraform
 LOG_DIR = '/var/log/cloudera'
@@ -110,36 +110,18 @@ java_home = '/usr/lib/jvm/' + java_version + '/jre/'  # type: str
 
 def get_parameter_value(worker_shape, parameter):
     switcher = {
-        "BM.DenseIO2.52:yarn_nodemanager_resource_cpu_vcores": "208",
-        "BM.DenseIO2.52:yarn_nodemanager_resource_memory_mb": "786432",
-        "BM.DenseIO2.52:impalad_memory_limit": "274877906944",
-        "BM.DenseIO2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "BM.DenseIO2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "BM.Standard2.52:yarn_nodemanager_resource_cpu_vcores": "208",
-        "BM.Standard2.52:yarn_nodemanager_resource_memory_mb": "786432",
-        "BM.Standard2.52:impalad_memory_limit": "274877906944",
-        "BM.Standard2.52:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "BM.Standard2.52:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2080m -Xmx2080m",
-        "VM.Standard2.24:yarn_nodemanager_resource_cpu_vcores": "80",
-        "VM.Standard2.24:yarn_nodemanager_resource_memory_mb": "308224",
-        "VM.Standard2.24:impalad_memory_limit": "122857142857",
-        "VM.Standard2.24:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
-        "VM.Standard2.24:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms3853m -Xmx3853m",
-        "VM.Standard2.16:yarn_nodemanager_resource_cpu_vcores": "48",
-        "VM.Standard2.16:yarn_nodemanager_resource_memory_mb": "237568",
-        "VM.Standard2.16:impalad_memory_limit": "42949672960",
-        "VM.Standard2.16:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard2.16:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms1984m -Xmx1984m",
-        "VM.Standard2.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.Standard2.8:yarn_nodemanager_resource_memory_mb": "114688",
-        "VM.Standard2.8:impalad_memory_limit": "21500000000",
-        "VM.Standard2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.Standard2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.DenseIO2.8:yarn_nodemanager_resource_cpu_vcores": "16",
-        "VM.DenseIO2.8:yarn_nodemanager_resource_memory_mb": "114688",
-        "VM.DenseIO2.8:impalad_memory_limit": "21500000000",
-        "VM.DenseIO2.8:mapreduce_map_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
-        "VM.DenseIO2.8:mapreduce_reduce_java_opts": "-Djava.net.preferIPv4Stack=true -Xms2368m -Xmx2368m",
+        "BM.DenseIO2.52:worker_memory_mb": "786432",
+        "BM.Standard.E2.64:worker_memory_mb": "524288",
+        "BM.Standard2.52:worker_memory_mb": "786432",
+        "BM.Standard.B1.44:worker_memory_mb": "524288",
+        "BM.HPC2.36:worker_memory_mb": "393216",
+        "VM.Standard2.24:worker_memory_mb": "327680",
+        "VM.Standard2.16:worker_memory_mb": "245760",
+        "VM.Standard2.8:worker_memory_mb": "122880",
+        "VM.Standard.E2.8:worker_memory_mb": "65536",
+        "VM.DenseIO2.8:worker_memory_mb": "122880",
+        "VM.DenseIO2.16:worker_memory_mb": "245760",
+        "VM.DenseIO2.24:worker_memory_mb": "327680",
     }
     return switcher.get(worker_shape + ":" + parameter, "NOT FOUND")
 
@@ -344,12 +326,12 @@ def delete_default_admin_user():
         print('Exception when calling UsersResourceApi->delete_user2: {}\n'.format(e))
 
 
-def init_cluster(cdh_version):
+def init_cluster(cloudera_version):
     """
     Initialize Cluster
     :return:
     """
-    cluster = [cm_client.ApiCluster(name=cluster_name, display_name=cluster_name, full_version=cdh_version)]
+    cluster = [cm_client.ApiCluster(name=cluster_name, display_name=cluster_name, full_version=cloudera_version)]
     body = cm_client.ApiClusterList(cluster)
 
     try:
@@ -1223,12 +1205,15 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     print('-->Updating RCG: %s' % rcg)
                     rcg_roletype = 'GATEWAY'  # type: str
                     mapred_submit_replication = [cm_client.ApiConfig(name='mapred_submit_replication', value='3')]
+                    java_memory_limit = int(round(float(worker_memory_mb)/float(worker_vcpu)))
                     mapreduce_map_java_opts = \
                         [cm_client.ApiConfig(name='mapreduce_map_java_opts',
-                                             value=get_parameter_value(worker_shape, 'mapreduce_map_java_opts'))]
+                                             value='-Djava.net.preferIPv4Stack=true -Xms' + str(java_memory_limit) + 'm -Xmx'
+                                             + str(java_memory_limit) + 'm')]
                     mapreduce_reduce_java_opts = \
                         [cm_client.ApiConfig(name='mapreduce_reduce_java_opts',
-                                             value=get_parameter_value(worker_shape, 'mapreduce_reduce_java_opts'))]
+                                             value='-Djava.net.preferIPv4Stack=true -Xms' + str(java_memory_limit) + 'm -Xmx'
+                                             + str(java_memory_limit) + 'm')]
                     io_file_buffer_size = [cm_client.ApiConfig(name='io_file_buffer_size', value='131072')]
                     io_sort_mb = [cm_client.ApiConfig(name='io_sort_mb', value='1024')]
                     yarn_app_mapreduce_am_max_heap = [cm_client.ApiConfig(name='yarn_app_mapreduce_am_max_heap',
@@ -1253,10 +1238,10 @@ def update_cluster_rcg_configuration(cluster_service_list):
                                                                        value=yarn_data_dir_list)]
                     yarn_nodemanager_resource_cpu_vcores = \
                         [cm_client.ApiConfig(name='yarn_nodemanager_resource_cpu_vcores',
-                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_resource_cpu_vcores'))]
+                                             value=worker_vcpu)]
                     yarn_nodemanager_resource_memory_mb = \
                         [cm_client.ApiConfig(name='yarn_nodemanager_resource_memory_mb',
-                                             value=get_parameter_value(worker_shape, 'yarn_nodemanager_resource_memory_mb'))]
+                                             value=int(round(int(worker_memory_mb)*0.8)))]
                     node_manager_log_dir = [cm_client.ApiConfig(name='node_manager_log_dir',
                                                                 value=LOG_DIR + '/hadoop-yarn')]
                     yarn_nodemanager_log_dirs = [cm_client.ApiConfig(name='yarn_nodemanager_log_dirs',
@@ -2012,11 +1997,8 @@ def options_parser(args=None):
     Parse command line options passed to the script, execute some actions here for now
     :return:
     """
-    global objects
-    global remote_parcel_url
-    global cdh_version
-    global admin_user_name
-    global admin_password
+    global objects, remote_parcel_url, cloudera_version, admin_user_name, admin_password, worker_memory_mb, worker_vcpu, \
+           worker_shape_length, vcore_ratio
     parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH Cluster on '
                                                                                  'OCI using cm_client with Cloudera '
                                                                                  'Manager API')
@@ -2033,23 +2015,24 @@ def options_parser(args=None):
     parser.add_argument('-w', '--worker_shape', metavar='worker_shape',
                         help='OCI Shape of Worker Instances in the Cluster')
     parser.add_argument('-n', '--num_workers', metavar='num_workers', help='Number of Workers in Cluster')
-    parser.add_argument('-cdh', '--cdh_version', metavar='cdh_version', help='Cloudera version to deploy')
+    parser.add_argument('-cdh', '--cloudera_version', metavar='cloudera_version', help='Cloudera version to deploy')
     parser.add_argument('-N', '--cluster_name', metavar='cluster_name', help='Cloudera Cluster Name')
     parser.add_argument('-a', '--admin_user_name', metavar='admin_user_name', help='Cloudera Manager admin username')
     parser.add_argument('-p', '--admin_password', metavar='admin_password', help='Cloudera Manager admin password')
+    parser.add_argument('-v', '--vcore_ratio', metavar='vcore_ratio', help='YARN VCORE Ratio')
     options = parser.parse_args(args)
-    cluster_primary_version = options.cdh_version.split('.')
+    cluster_primary_version = options.cloudera_version.split('.')
     cluster_primary_version = cluster_primary_version[0]
-    cdh_version = options.cdh_version
+    cloudera_version = options.cloudera_version
     if cluster_primary_version == '7':
-        remote_parcel_url = 'https://archive.cloudera.com/cdh7/' + options.cdh_version + '/parcels'  # type: str
+        remote_parcel_url = 'https://archive.cloudera.com/cdh7/' + options.cloudera_version + '/parcels'  # type: str
         kafka_parcel_url = ' '
     elif cluster_primary_version == '6':
-	remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + options.cdh_version + '/parcels'  # type: str
+	remote_parcel_url = 'https://archive.cloudera.com/cdh6/' + options.cloudera_version + '/parcels'  # type: str
 	kafka_parcel_url = ' '
     else:
-	remote_parcel_url = 'https://archive.cloudera.com/cdh5/parcels/' + options.cdh_version  #type: str
-        if options.cdh_version.split('.')[2] >= '13':
+	remote_parcel_url = 'https://archive.cloudera.com/cdh5/parcels/' + options.cloudera_version  #type: str
+        if options.cloudera_version.split('.')[2] >= '13':
                 kafka_version = '4.1.0.4'
 	else:
                 kafka_version = '2.2.0.68'
@@ -2082,9 +2065,12 @@ def options_parser(args=None):
         except:
             print('Cannot open license file, verify file exists and full path used: %s' % options.license_file)
             sys.exit()
-
+    worker_memory_mb = get_parameter_value(options.worker_shape, 'worker_memory_mb')
+    worker_vcpu = options.worker_shape.split(".")
+    worker_shape_length = len(worker_vcpu)
+    worker_vcpu = int(round(float(worker_vcpu[worker_shape_length-1])*float(options.vcore_ratio)))
     return (options.cm_server, options.input_host_list, options.disk_count, options.license_file, options.worker_shape,
-            options.num_workers, options.secure_cluster, options.hdfs_ha, options.cdh_version, options.cluster_name, 
+            options.num_workers, options.secure_cluster, options.hdfs_ha, options.cloudera_version, options.cluster_name, 
             cluster_primary_version, kafka_parcel_url, options.admin_user_name, options.admin_password)
 
 #
@@ -2117,7 +2103,7 @@ def build_cloudera_cluster(cluster_primary_version):
     build_success = 'False'
     while build_success == 'False':
         print('->Initializing Cluster %s' % cluster_name)
-        init_cluster(cdh_version)
+        init_cluster(cloudera_version)
         build_host_list(input_host_list)
         if len(host_fqdn_list) < 6:
             print('Error - %d hosts found, Minimum 6 required to build %s!' % (len(host_fqdn_list), cluster_name))
@@ -2278,7 +2264,7 @@ def enable_kerberos():
 
 if __name__ == '__main__':
     cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, secure_cluster, hdfs_ha, \
-    cdh_version, cluster_name, cluster_primary_version, kafka_parcel_url, admin_user_name, admin_password =\
+    cloudera_version, cluster_name, cluster_primary_version, kafka_parcel_url, admin_user_name, admin_password =\
     options_parser(sys.argv[1:])
     if debug == 'True':
         print('cm_server = %s' % cm_server)
