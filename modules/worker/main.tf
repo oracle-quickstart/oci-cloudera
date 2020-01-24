@@ -92,6 +92,7 @@ resource "oci_core_volume" "WorkerDataVolume" {
   compartment_id      = "${var.compartment_ocid}"
   display_name        = "Cloudera Worker ${format("%01d", floor((count.index / var.block_volumes_per_worker)+1))} HDFS Data ${format("%01d", floor((count.index%(var.block_volumes_per_worker))+1))}"
   size_in_gbs         = "${var.data_blocksize_in_gbs}"
+  vpus_per_gb         = "${var.vpus_per_gb}"
 }
 
 resource "oci_core_volume_attachment" "WorkerDataAttachment" {

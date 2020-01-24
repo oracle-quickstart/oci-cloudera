@@ -107,6 +107,22 @@ variable "block_volumes_per_worker" {
    default = "3"
 }
 
+variable "customize_block_volume_performance" {
+   default = "false"
+}
+
+variable "block_volume_high_performance" {
+   default = "false"
+}
+
+variable "block_volume_cost_savings" {
+   default = "false"
+}
+
+variable "vpus_per_gb" {
+   default = "10"
+}
+
 variable "utility_instance_shape" {
   default = "VM.Standard2.16"
 }
@@ -156,6 +172,70 @@ variable "cluster_name" {
 
 variable "objectstoreRAID" {
   default = "false" 
+}
+
+variable "AdvancedOptions" {
+  default = "false"
+}
+
+variable "svc_ATLAS" { 
+  default = "false"
+}
+
+variable "svc_HBASE" {
+  default = "true"
+}
+
+variable "svc_HDFS" {
+  default = "true"
+}
+
+variable "svc_HIVE" {
+  default = "true" 
+}
+
+variable "svc_IMPALA" {
+  default = "true" 
+}
+
+variable "svc_KAFKA" {
+  default = "true"
+}
+
+variable "svc_KNOX" {
+  default = "false"
+}
+
+variable "svc_OOZIE" {
+  default = "true" 
+}
+
+variable "svc_RANGER" {
+  default = "false"
+}
+
+variable "svc_SOLR" {
+  default = "true" 
+}
+
+variable "svc_SPARK_ON_YARN" {
+  default = "true"
+}
+
+variable "svc_SQOOP_CLIENT" {
+  default = "true"
+}
+
+variable "svc_YARN" {
+  default = "true"
+}
+
+variable "rangeradmin_password" {
+  default = "Test123!"
+}
+
+variable "enable_debug" {
+  default = "false"
 }
 # ---------------------------------------------------------------------------------------------------------------------
 # Environmental variables

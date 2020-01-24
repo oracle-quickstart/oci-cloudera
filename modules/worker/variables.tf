@@ -61,6 +61,10 @@ variable "block_volumes_per_worker" {
    default = "3"
 }
 
+variable "vpus_per_gb" {
+   default = "10" 
+}
+
 # Size for Cloudera Log Volumes across all hosts deployed to /var/log/cloudera
 
 variable "log_volume_size_in_gbs" {

@@ -31,8 +31,90 @@ groupings:
   - ${cm_version}
   - ${cloudera_version}
   - ${cluster_name}
+  - ${AdvancedOptions}
+  - ${enable_debug}
   - ${log_volume_size_in_gbs}
   - ${cloudera_volume_size_in_gbs}
+  - ${svc_HBASE}
+  - ${svc_HDFS}
+  - ${svc_HIVE}
+  - ${svc_IMPALA}
+  - ${svc_KAFKA}
+  - ${svc_OOZIE}
+  - ${svc_SOLR}
+  - ${svc_SPARK_ON_YARN}
+  - ${svc_SQOOP_CLIENT}
+  - ${svc_YARN}
+- title: "Advanced CDP Options"
+  variables: 
+  - ${svc_ATLAS}
+  - ${svc_KNOX}
+  - ${svc_RANGER}
+  - ${rangeradmin_password} 
+  visible: 
+    and:
+      - ${AdvancedOptions}
+      - and:
+        - eq:
+          - ${cloudera_version}
+          - "7.0.3.0"
+        - and:
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.10.2.5"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.11.2.4"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.12.2.4"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.13.3.2"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.14.4.3"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.15.2.3"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "5.16.2.8"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.0.0"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.0.1"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.1.0"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.1.1"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.2.0"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.2.1"
+          - not:
+            - eq:
+              - ${cloudera_version}
+              - "6.3.2"
 - title: "Security"
   variables:
   - ${secure_cluster}
@@ -44,14 +126,14 @@ groupings:
   - ${worker_instance_shape}
   - ${worker_node_count}
   - ${vcore_ratio}
-  - ${enable_block_volumes}
   - ${objectstoreRAID}
-  - ${clusterSubnet}
-- title: "HDFS Block Volume Configuration"
-  variables:
+  - ${enable_block_volumes}
   - ${block_volumes_per_worker}
   - ${data_blocksize_in_gbs}
-  visible: ${enable_block_volumes}
+  - ${customize_block_volume_performance}
+  - ${block_volume_high_performance}
+  - ${block_volume_cost_savings}
+  - ${clusterSubnet}
 - title: "Master Node Options"
   variables:
   - ${master_instance_shape}
@@ -79,6 +161,7 @@ groupings:
   - ${InstanceImageOCID}
   - ${oci_service_gateway}
   - ${AD}
+  - ${vpus_per_gb}
   visible: false
 
 variables:
@@ -318,6 +401,7 @@ variables:
     minimum: 700
     maximum: 32768
     required: true
+    visible: ${enable_block_volumes}
 
   block_volumes_per_worker:
     type: integer
@@ -326,6 +410,34 @@ variables:
     minimum: 0
     maximum: 29
     required: true
+    visible: ${enable_block_volumes} 
+
+  customize_block_volume_performance:
+    type: boolean
+    title: "Custom Block Volume Performance"
+    description: "Click to customize Block Volume performance.  Default profile is Balanced. When enabled, only select one sub-option."
+    default: false
+    visible: ${enable_block_volumes}
+
+  block_volume_high_performance:
+    type: boolean
+    title: "High Performance Block Volumes"
+    description: "Click to enable High Performance for HDFS Block Volumes.  This comes at a higher cost per GB."
+    default: false
+    visible: 
+      and:
+        - ${enable_block_volumes}
+        - ${customize_block_volume_performance}
+
+  block_volume_cost_savings:
+    type: boolean
+    title: "Lower Cost Block Volumes"
+    description: "Click to enable Lower Cost for HDFS Block Volumes.  This lowers performance for cost savings per GB."
+    default: false
+    visible:
+      and:
+        - ${enable_block_volumes}
+        - ${customize_block_volume_performance}
 
   nn_volume_size_in_gbs:
     type: integer
@@ -334,6 +446,7 @@ variables:
     minimum: 500
     maximum: 32768
     required: true
+    visible: ${enable_block_volumes}
 
   log_volume_size_in_gbs:
     type: integer
@@ -342,6 +455,7 @@ variables:
     minimum: 50
     maximum: 32768
     required: true
+    visible: ${AdvancedOptions}
 
   cloudera_volume_size_in_gbs:
     type: integer
@@ -350,7 +464,8 @@ variables:
     minimum: 150
     maximum: 32768
     required: true
-
+    visible: ${AdvancedOptions}
+  
   VPC_CIDR:
     type: string
     title: "VPC CIDR for VCN"
@@ -373,7 +488,7 @@ variables:
     description: "Pick which database to use for Cloudera Manager.   Note that Postgresql is not recommended for production clusters."
     enum:
     - "mysql"
-    - "postgresql"
+    - "postgres"
     required: true
 
   use_edge_nodes:
@@ -385,7 +500,7 @@ variables:
   enable_block_volumes:
     type: boolean
     title: "Enable Block Volumes for HDFS"
-    description: "Check to enable Block Volumes for use with HDFS."
+    description: "Check to enable Block Volumes for use with HDFS. This is optional for BM.Dense hosts, required for all others."
     default: false
 
   cm_username:
@@ -412,4 +527,96 @@ variables:
     min: 1
     max: 4
     default: 2
+
+  AdvancedOptions:
+    type: boolean
+    title: "Advanced Options" 
+    description: "Enable Advanced Cluster Configuration Options.  For advanced users only, changing service parameters may have a negative impact on cluster deployment, modify at your own risk.  These parameters only affect initial cluster build, once the cluster is deployed Cloudera Manager must be used for service administration."
+
+  svc_ATLAS:
+    type: boolean
+    title: "Atlas Service"
+    description: "Enable Atlas Service, CDP ONLY"
+ 
+  svc_HBASE:
+    type: boolean
+    title: "HBase Service"
+    description: "Enable HBase Service"
+    visible: ${AdvancedOptions}
+
+  svc_HDFS:
+    type: boolean
+    title: "HDFS Service"
+    description: "Enable HDFS Service"
+    visible: ${AdvancedOptions}
+
+  svc_HIVE:
+    type: boolean
+    title: "Hive Service"
+    description: "Enable Hive Service"
+    visible: ${AdvancedOptions}
+
+  svc_IMPALA:
+    type: boolean
+    title: "Impala Service"
+    description: "Enable Impala Service"
+    visible: ${AdvancedOptions}
+
+  svc_KAFKA:
+    type: boolean
+    title: "Kafka Service"
+    description: "Enable Kafa Service"
+    visible: ${AdvancedOptions}
+
+  svc_KNOX:
+    type: boolean
+    title: "Knox Service"
+    description: "Enable Knox Service, CDP ONLY - CURRENTLY IN DEVELOPMENT - NOT FUNCTIONAL"
+
+  svc_OOZIE:
+    type: boolean
+    title: "Oozie Service"
+    description: "Enable Oozie Service"
+    visible: ${AdvancedOptions}
+
+  svc_RANGER:
+    type: boolean
+    title: "Ranger Service"
+    description: "Enable Ranger Service, CDP ONLY"
+
+  rangeradmin_password:
+    type: string
+    title: "Password for Ranger"
+    description: "Sets default deployment password for rangeradmin, usersync, tagsync, and keystore.  Password requires upper case, numbers  and special character, if this is not set properly then deployment may fail."
+    visible: ${svc_RANGER}
+
+  svc_SOLR:
+    type: boolean
+    title: "SOLR Service"
+    description: "Enable SOLR Service"
+    visible: ${AdvancedOptions}
+
+  svc_SPARK_ON_YARN:
+    type: boolean
+    title: "Spark on YARN Service"
+    description: "Enable Spark on YARN Service"
+    visible: ${AdvancedOptions}
+
+  svc_SQOOP_CLIENT:
+    type: boolean
+    title: "Sqoop Client"
+    description: "Enable Sqoop Client"
+    visible: ${AdvancedOptions}
+
+  svc_YARN:
+    type: boolean
+    title: "YARN Service"
+    description: "Enable YARN Service"
+    visible: ${AdvancedOptions}
+
+  enable_debug:
+    type: boolean
+    title: "Enable debug Output"
+    description: "Enable debug output for python deployment script.  Output is found in /var/log/cloudera-OCI-initialize.log"
+    visible: ${AdvancedOptions}
 

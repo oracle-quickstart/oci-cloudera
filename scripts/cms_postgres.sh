@@ -20,6 +20,21 @@ worker_disk_count=`curl -L http://169.254.169.254/opc/v1/instance/metadata/block
 secure_cluster=`curl -L http://169.254.169.254/opc/v1/instance/metadata/secure_cluster`
 hdfs_ha=`curl -L http://169.254.169.254/opc/v1/instance/metadata/hdfs_ha`
 cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_name`
+cm_username=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_username`
+cm_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_password`
+vcore_ratio=`curl -L http://169.254.169.254/opc/v1/instance/metadata/vcore_ratio`
+full_service_list=(ATLAS HBASE HDFS HIVE IMPALA KAFKA KNOX OOZIE RANGER SOLR SPARK_ON_YARN SQOOP_CLIENT YARN)
+service_list="ZOOKEEPER"
+rangeradmin_password='ChangeMe!'
+for service in ${full_service_list[@]}; do
+        svc_check=`curl -L http://169.254.169.254/opc/v1/instance/metadata/svc_${service}`
+        if [ $svc_check  = "true" ]; then
+                service_list=`echo -e "${service_list},${service}"`
+                if [ $service = "RANGER" ]; then
+                        rangeradmin_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/rangeradmin_password`
+                fi
+        fi
+done;
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -639,19 +654,19 @@ log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
 if [ $secure_cluster = "true" ]; then
         if [ $hdfs_ha = "true" ]; then
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres 2>&1 1>> $LOG_FILE
         else
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres 2>&1 1>> $LOG_FILE
         fi
 else
         if [ $hdfs_ha = "true" ]; then
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres 2>&1 1>> $LOG_FILE
         else
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} 2>&1 1>> $LOG_FILE
+                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres"
+                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -R ${rangeradmin_password} -M postgres 2>&1 1>> $LOG_FILE
         fi
 fi
 log "->DONE"

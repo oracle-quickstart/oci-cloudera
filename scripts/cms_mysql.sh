@@ -24,6 +24,26 @@ cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_na
 cm_username=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_username`
 cm_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_password`
 vcore_ratio=`curl -L http://169.254.169.254/opc/v1/instance/metadata/vcore_ratio`
+debug=`curl -L http://169.254.169.254/opc/v1/instance/metadata/enable_debug`
+full_service_list=(ATLAS HBASE HDFS HIVE IMPALA KAFKA KNOX OOZIE RANGER SOLR SPARK_ON_YARN SQOOP_CLIENT YARN)
+service_list="ZOOKEEPER"
+rangeradmin_password=''
+for service in ${full_service_list[@]}; do
+        svc_check=`curl -L http://169.254.169.254/opc/v1/instance/metadata/svc_${service}`
+        if [ $svc_check  = "true" ]; then
+		if [ $service = "RANGER" ]; then 
+			rangeradmin_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/rangeradmin_password`
+			ranger_enabled="true"
+			service_list=`echo -e "${service_list},${service}"`
+		elif [ $service = "ATLAS" ]; then 
+			atlas_enabled="true"
+			service_list=`echo -e "${service_list},${service}"`
+		else
+			service_list=`echo -e "${service_list},${service}"`
+		fi
+		
+        fi
+done;
 EXECNAME="TUNING"
 log "-> START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
@@ -208,6 +228,7 @@ innodb_thread_concurrency = 8\n\
 innodb_buffer_pool_size = 4G\n\
 innodb_flush_method = O_DIRECT\n\
 innodb_log_file_size = 512M\n\
+innodb_large_prefix = 1\n\
 \n\
 [mysqld_safe]\n\
 log-error=/var/log/mysqld.log
@@ -222,17 +243,30 @@ log "->Bootstrap Databases"
 mysql -e "UPDATE mysql.user SET Password = PASSWORD('SOMEPASSWORD') WHERE User = 'root'"
 mysql -e "DROP USER ''@'localhost'"
 mysql -e "DROP USER ''@'$(hostname)'"
+mysql -e "SET GLOBAL log_bin_trust_function_creators = 1"
 mkdir -p /etc/mysql
-for DATABASE in "scm" "amon" "rman" "hue" "metastore" "sentry" "nav" "navms" "oozie"; do
+for DATABASE in "scm" "amon" "rman" "hue" "metastore" "sentry" "nav" "navms" "oozie" "ranger" "atlas"; do
 	pw=$(create_random_password)
 	if [ ${DATABASE} = "metastore" ]; then
 		USER="hive"
+	elif [ ${DATABASE} = "ranger" ]; then
+		if [ ${ranger_enabled} = "true" ]; then
+			USER="rangeradmin"
+		else
+			continue;
+		fi
+	elif [ ${DATABASE} = "atlas" ]; then 
+		if [ ${atlas_enabled} = "true" ]; then
+			USER="atlas"
+		else
+			continue
+		fi
 	else
 		USER=${DATABASE}
 	fi
-	echo -e "CREATE DATABASE ${DATABASE} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;" >> /etc/mysql/cloudera.sql
+	echo -e "CREATE DATABASE ${DATABASE};" >> /etc/mysql/cloudera.sql
 	echo -e "GRANT ALL ON ${DATABASE}.* TO \'${USER}\'@'%' IDENTIFIED BY \'${pw}\';" >> /etc/mysql/cloudera.sql
-	echo "${USER}:${pw}" >> /etc/mysql/mysql.pw
+        echo "${USER}:${pw}" >> /etc/mysql/mysql.pw
 done;
 sed -i 's/\\//g' /etc/mysql/cloudera.sql
 mysql -u root < /etc/mysql/cloudera.sql
@@ -249,6 +283,8 @@ for user in `cat /etc/mysql/mysql.pw | gawk -F ':' '{print $1}'`; do
 	pw=`cat /etc/mysql/mysql.pw | grep -w $user | cut -d ':' -f 2`
 	if [ $user = "hive" ]; then 
 		database="metastore"
+	elif [ $user = "rangeradmin" ]; then
+		database="ranger"
 	else
 		database=${user}
 	fi
@@ -396,7 +432,7 @@ EXECNAME="Cloudera Manager"
 log "->Starting Cloudera Manager"
 chown -R cloudera-scm:cloudera-scm /etc/cloudera-scm-server
 systemctl start cloudera-scm-server
-EXECNAME="Cloudera Enterprise Data Hub"
+EXECNAME="Cloudera ${cloudera_version}"
 log "->Installing Python Pre-reqs"
 sudo yum install python python-pip -y >> $LOG_FILE
 sudo pip install --upgrade pip >> $LOG_FILE
@@ -422,21 +458,19 @@ for w in `seq 1 $num_workers`; do
 done;
 log "-->Host List: ${fqdn_list}"
 log "-->Cluster Build"
-if [ $secure_cluster = "true" ]; then 
-	if [ $hdfs_ha = "true" ]; then 
-		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
-		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE	
-	else
-		log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
-		python /var/lib/cloud/instance/scripts/deploy_on_oci.py -S -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE
-	fi
-else
-        if [ $hdfs_ha = "true" ]; then
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -H -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE
-        else
-                log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio}"
-                python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} 2>&1 1>> $LOG_FILE
-	fi
+XOPTS=''
+if [ ${ranger_enabled} = "true" ]; then
+	XOPTS="-R ${rangeradmin_password}"
 fi
+if [ ${secure_cluster} = "true" ]; then 
+	XOPTS="${XOPTS} -S"
+fi
+if [ ${hdfs_ha} = "true" ]; then
+	XOPTS="${XOPTS} -H"
+fi
+if [ ${debug} = "true" ]; then
+	XOPTS="${XOPTS} -D"
+fi
+log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list}  -M mysql ${XOPTS}"
+python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -M mysql ${XOPTS} 2>&1 1>> $LOG_FILE	
 log "->DONE"

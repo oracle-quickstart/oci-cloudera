@@ -20,6 +20,12 @@ data "null_data_source" "values" {
   }
 }
 
+data "null_data_source" "vpus" {
+  inputs = {
+    block_vpus = "${var.block_volume_high_performance ? 20 : 0}"
+  }
+}
+
 module "bastion" {
 	source	= "./modules/bastion"
 	instances = "${var.use_edge_nodes ? var.bastion_node_count : 0}"
@@ -68,6 +74,21 @@ module "utility" {
 	cm_username = "${var.cm_username}"
 	cm_password = "${var.cm_password}"
         vcore_ratio = "${var.vcore_ratio}"
+	svc_ATLAS = "${var.svc_ATLAS}"
+	svc_HBASE = "${var.svc_HBASE}"
+	svc_HDFS = "${var.svc_HDFS}"
+	svc_HIVE = "${var.svc_HIVE}"
+	svc_IMPALA = "${var.svc_IMPALA}"
+	svc_KAFKA = "${var.svc_KAFKA}"
+	svc_KNOX = "${var.svc_KNOX}"
+	svc_OOZIE = "${var.svc_OOZIE}"
+	svc_RANGER = "${var.svc_RANGER}"
+	svc_SOLR = "${var.svc_SOLR}"
+	svc_SPARK_ON_YARN = "${var.svc_SPARK_ON_YARN}"
+	svc_SQOOP_CLIENT = "${var.svc_SQOOP_CLIENT}"
+	svc_YARN = "${var.svc_YARN}"
+	enable_debug = "${var.enable_debug}"
+        rangeradmin_password = "${var.rangeradmin_password}"
 }
 
 module "master" {
@@ -107,5 +128,6 @@ module "worker" {
         cm_version = "${var.cm_version}"
         cloudera_version = "${var.cloudera_version}"
 	block_volume_count = "${var.enable_block_volumes ? var.block_volumes_per_worker : 0}"
+	vpus_per_gb = "${var.customize_block_volume_performance ? data.null_data_source.vpus.outputs["block_vpus"] : 10}" 
 	objectstoreRAID = "${var.objectstoreRAID}"
 }
