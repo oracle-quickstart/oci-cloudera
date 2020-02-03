@@ -46,7 +46,6 @@ resource "oci_core_instance" "Utility" {
     svc_HIVE            = "${var.svc_HIVE}"
     svc_IMPALA          = "${var.svc_IMPALA}"
     svc_KAFKA           = "${var.svc_KAFKA}"
-    svc_KNOX            = "${var.svc_KNOX}"
     svc_OOZIE           = "${var.svc_OOZIE}"
     svc_RANGER          = "${var.svc_RANGER}"
     svc_SOLR            = "${var.svc_SOLR}"

@@ -23,7 +23,7 @@ cluster_name=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cluster_na
 cm_username=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_username`
 cm_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_password`
 vcore_ratio=`curl -L http://169.254.169.254/opc/v1/instance/metadata/vcore_ratio`
-full_service_list=(ATLAS HBASE HDFS HIVE IMPALA KAFKA KNOX OOZIE RANGER SOLR SPARK_ON_YARN SQOOP_CLIENT YARN)
+full_service_list=(ATLAS HBASE HDFS HIVE IMPALA KAFKA OOZIE RANGER SOLR SPARK_ON_YARN SQOOP_CLIENT YARN)
 service_list="ZOOKEEPER"
 rangeradmin_password='ChangeMe!'
 for service in ${full_service_list[@]}; do

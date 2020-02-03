@@ -48,7 +48,6 @@ groupings:
 - title: "Advanced CDP Options"
   variables: 
   - ${svc_ATLAS}
-  - ${svc_KNOX}
   - ${svc_RANGER}
   - ${rangeradmin_password} 
   visible: 
@@ -490,6 +489,7 @@ variables:
     - "mysql"
     - "postgres"
     required: true
+    visible: ${AdvancedOptions}
 
   use_edge_nodes:
     type: boolean
@@ -567,11 +567,6 @@ variables:
     title: "Kafka Service"
     description: "Enable Kafa Service"
     visible: ${AdvancedOptions}
-
-  svc_KNOX:
-    type: boolean
-    title: "Knox Service"
-    description: "Enable Knox Service, CDP ONLY - CURRENTLY IN DEVELOPMENT - NOT FUNCTIONAL"
 
   svc_OOZIE:
     type: boolean

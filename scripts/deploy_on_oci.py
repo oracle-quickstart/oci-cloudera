@@ -819,9 +819,6 @@ def update_cluster_rcg_configuration(cluster_service_list):
                 if rcg == 'ATLAS-ATLAS_SERVER-BASE':
                     p_rcg(rcg)
                     rcg_roletype = 'ATLAS_SERVER'
-                    atlas_database_password = [cm_client.ApiConfig(name='atlas_database_password', 
-                                               value=atlas_password)]
-                    push_rcg_config(atlas_database_password)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
 
                 if rcg == 'ATLAS-GATEWAY':

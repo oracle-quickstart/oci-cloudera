@@ -37,7 +37,6 @@ variable "svc_HDFS" {}
 variable "svc_HIVE" {}
 variable "svc_IMPALA" {}
 variable "svc_KAFKA" {}
-variable "svc_KNOX" {}
 variable "svc_OOZIE" {}
 variable "svc_RANGER" {}
 variable "svc_SOLR" {}

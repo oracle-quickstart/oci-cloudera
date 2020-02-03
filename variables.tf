@@ -202,10 +202,6 @@ variable "svc_KAFKA" {
   default = "true"
 }
 
-variable "svc_KNOX" {
-  default = "false"
-}
-
 variable "svc_OOZIE" {
   default = "true" 
 }
