@@ -406,7 +406,7 @@ variables:
     type: integer
     title: "Number of Block Volumes for HDFS"
     description: "0 to 29"
-    minimum: 0
+    minimum: 0 
     maximum: 29
     required: true
     visible: ${enable_block_volumes} 
@@ -501,7 +501,7 @@ variables:
     type: boolean
     title: "Enable Block Volumes for HDFS"
     description: "Check to enable Block Volumes for use with HDFS. This is optional for BM.Dense hosts, required for all others."
-    default: false
+    default: true 
 
   cm_username:
     type: string

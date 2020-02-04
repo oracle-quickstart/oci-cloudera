@@ -1071,8 +1071,12 @@ def update_cluster_rcg_configuration(cluster_service_list):
                 if rcg == 'IMPALA-IMPALAD-BASE':
                     p_rcg(rcg)
                     rcg_roletype = 'IMPALAD'
+                    impalad_memory_limit = [cm_client.ApiConfig(name='impalad_memory_limit', 
+                                                                value='4294967296')]
+                    update_service_config(service_name=service, api_config_items=impalad_memory_limit)
                     n = 0
                     for host_id in worker_host_ids:
+                        push_rcg_config(impalad_memory_limit)
                         create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
                         n = n + 1
 
@@ -1276,7 +1280,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     yarn_scheduler_minimum_allocation_mb = \
                         [cm_client.ApiConfig(name='yarn_scheduler_minimum_allocation_mb', value='1024')]
                     yarn_scheduler_maximum_allocation_mb = \
-                        [cm_client.ApiConfig(name='yarn_scheduler_maximum_allocation_mb', value='8192')]
+                        [cm_client.ApiConfig(name='yarn_scheduler_maximum_allocation_mb', value='10240')]
                     yarn_scheduler_maximum_allocation_vcores = \
                         [cm_client.ApiConfig(name='yarn_scheduler_maximum_allocation_vcores', value='2')]
                     resource_manager_log_dir = \

@@ -50,7 +50,7 @@ variable "use_edge_nodes" {
 }
 
 variable "enable_block_volumes" {
-  default = "false"
+  default = "true"
 }
 
 variable "cm_username" {
@@ -92,11 +92,11 @@ variable "hdfs_ha" {
 }
 
 variable "worker_instance_shape" {
-  default = "BM.DenseIO2.52"
+  default = "VM.Standard2.16"
 }
 
 variable "worker_node_count" {
-  default = "3"
+  default = "5"
 }
 
 variable "data_blocksize_in_gbs" {
@@ -124,11 +124,11 @@ variable "vpus_per_gb" {
 }
 
 variable "utility_instance_shape" {
-  default = "VM.Standard2.16"
+  default = "VM.Standard2.8"
 }
 
 variable "master_instance_shape" {
-  default = "VM.Standard2.16"
+  default = "VM.Standard2.8"
 }
 
 variable "master_node_count" {
