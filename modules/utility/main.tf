@@ -54,6 +54,7 @@ resource "oci_core_instance" "Utility" {
     svc_YARN            = "${var.svc_YARN}"
     enable_debug	= "${var.enable_debug}"
     rangeradmin_password = "${var.rangeradmin_password}"
+    yarn_scheduler	= "${var.yarn_scheduler}"
   }
 
   timeouts {

@@ -41,8 +41,8 @@ sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 setenforce 0
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
-echo vm.swappiness=0 | tee -a /etc/sysctl.conf
-echo 0 | tee /proc/sys/vm/swappiness
+echo vm.swappiness=1 | tee -a /etc/sysctl.conf
+echo 1 | tee /proc/sys/vm/swappiness
 echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
 echo net.ipv4.tcp_sack=1 >> /etc/sysctl.conf
 echo net.core.rmem_max=4194304 >> /etc/sysctl.conf

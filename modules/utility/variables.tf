@@ -45,6 +45,7 @@ variable "svc_SQOOP_CLIENT" {}
 variable "svc_YARN" {}
 variable "rangeradmin_password" {}
 variable "enable_debug" {}
+variable "yarn_scheduler" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

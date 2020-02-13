@@ -25,6 +25,7 @@ cm_username=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_username
 cm_password=`curl -L http://169.254.169.254/opc/v1/instance/metadata/cm_password`
 vcore_ratio=`curl -L http://169.254.169.254/opc/v1/instance/metadata/vcore_ratio`
 debug=`curl -L http://169.254.169.254/opc/v1/instance/metadata/enable_debug`
+yarn_scheduler=`curl -L http://169.254.169.254/opc/v1/instance/metadata/yarn_scheduler`
 full_service_list=(ATLAS HBASE HDFS HIVE IMPALA KAFKA OOZIE RANGER SOLR SPARK_ON_YARN SQOOP_CLIENT YARN)
 service_list="ZOOKEEPER"
 rangeradmin_password=''
@@ -50,8 +51,8 @@ sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 setenforce 0
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
-echo vm.swappiness=0 | tee -a /etc/sysctl.conf
-echo 0 | tee /proc/sys/vm/swappiness
+echo vm.swappiness=1 | tee -a /etc/sysctl.conf
+echo 1 | tee /proc/sys/vm/swappiness
 echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
 echo net.ipv4.tcp_sack=1 >> /etc/sysctl.conf
 echo net.core.rmem_max=4194304 >> /etc/sysctl.conf
@@ -180,7 +181,7 @@ else
 	rpm --import https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/RPM-GPG-KEY-cloudera
 	wget http://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager.repo -O /etc/yum.repos.d/cloudera-manager.repo
 fi
-yum install cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip -y >> $LOG_FILE
+yum install cloudera-manager-server java-1.8.0-openjdk.x86_64 python-pip nscd -y >> $LOG_FILE
 pip install psycopg2==2.7.5 --ignore-installed >> $LOG_FILE
 yum install oracle-j2sdk1.8.x86_64 cloudera-manager-daemons cloudera-manager-agent -y >> $LOG_FILE
 cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
@@ -188,6 +189,7 @@ sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.in
 #export JDK=`ls /usr/lib/jvm | head -n 1`
 #sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
 chown -R cloudera-scm:cloudera-scm /var/lib/cloudera-scm-agent/
+systemctl start nscd.service
 systemctl start cloudera-scm-agent
 
 create_random_password()
@@ -471,6 +473,6 @@ fi
 if [ ${debug} = "true" ]; then
 	XOPTS="${XOPTS} -D"
 fi
-log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list}  -M mysql ${XOPTS}"
-python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -M mysql ${XOPTS} 2>&1 1>> $LOG_FILE	
+log "---> python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -M mysql -Y ${yarn_scheduler} ${XOPTS}"
+python /var/lib/cloud/instance/scripts/deploy_on_oci.py -m ${cm_ip} -i ${fqdn_list} -d ${worker_disk_count} -w ${worker_shape} -n ${num_workers} -cdh ${cloudera_version} -N ${cluster_name} -a ${cm_username} -p ${cm_password} -v ${vcore_ratio} -C ${service_list} -M mysql -Y ${yarn_scheduler} ${XOPTS} 2>&1 1>> $LOG_FILE	
 log "->DONE"

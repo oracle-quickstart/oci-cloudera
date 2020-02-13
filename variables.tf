@@ -41,6 +41,12 @@ variable "vcn_dns_label" {
   default = "clouderavcn"
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# ORM Schema variables
+# You should modify these based on deployment requirements.
+# These default to recommended values
+# --------------------------------------------------------------------------------------------------------------------- 
+
 variable "meta_db_type" {
   default = "mysql"
 }
@@ -67,6 +73,10 @@ variable "provide_ssh_key" {
 
 variable "vcore_ratio" {
   default = "2"
+}
+
+variable "yarn_scheduler" {
+  default = "fair"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -251,25 +261,50 @@ variable "region" {}
 # You probably don't need to change these.
 # ---------------------------------------------------------------------------------------------------------------------
 
-// See https://docs.us-phoenix-1.oraclecloud.com/images/
-// Oracle-provided image "Oracle-Linux-7.7-2019.11.12-0"
-// Kernel Version: 4.14.35-1902.7.3
-variable "InstanceImageOCID" {
+// See https://docs.cloud.oracle.com/en-us/iaas/images/image/f53b2e1c-a21c-41ab-96b1-18896bdec16f/
+// Oracle-provided image "CentOS-7-2019.07.18-0"
+// Kernel Version: 3.10.0-957.21.3.el7.x86_64
+variable "CentOSImageOCID" {
   type = "map"
   default = {
-    ap-mumbai-1 = "ocid1.image.oc1.ap-mumbai-1.aaaaaaaa46gx23hrdtxenjyt4p5cc3c4mbvyiqxcb3mmrxnmjn3rfxgvqcma"
-    ap-seoul-1 = "ocid1.image.oc1.ap-seoul-1.aaaaaaaavwjewurl3nvcyq6bgpbrapk4wfwu6qz2ljlrj2yk3cfqexeq64na"
-    ap-sydney-1 = "ocid1.image.oc1.ap-sydney-1.aaaaaaaae5qy5o6s2ve2lt4aetmd7s4ydpupowhs6fdl25w4qpkdidbuva5q"
-    ap-tokyo-1 = "ocid1.image.oc1.ap-tokyo-1.aaaaaaaa54xb7m4f42vckxkrmtlpys32quyjfldbkhq5zsbmw2r6v5hzgvkq"
-    ca-toronto-1 = "ocid1.image.oc1.ca-toronto-1.aaaaaaaagupuj5dfue6gvpmlzzppvwryu4gjatkn2hedocbxbvrtrsmnc5oq"
-    eu-frankfurt-1 = "ocid1.image.oc1.eu-frankfurt-1.aaaaaaaa3bu75jht762mfvwroa2gdck6boqwyktztyu5dfhftcycucyp63ma"
-    eu-zurich-1 = "ocid1.image.oc1.eu-zurich-1.aaaaaaaadx6lizhaqdnuabw4m5dvutmh5hkzoih373632egxnitybcripb2a"
-    sa-saopaulo-1 = "ocid1.image.oc1.sa-saopaulo-1.aaaaaaaa3ke6hsjwdshzoh4mtjq3m6f7rhv4c4dkfljr53kjppvtiio7nv3q"
-    uk-london-1 = "ocid1.image.oc1.uk-london-1.aaaaaaaasutdhza5wtsrxa236ewtmfa6ixezlaxwxbw7vti2wyi5oobsgoeq"
-    us-ashburn-1 = "ocid1.image.oc1.iad.aaaaaaaaox73mjjcopg6damp7tssjccpp5opktr3hwgr63u2lacdt2nver5a"
-    us-langley-1 = "ocid1.image.oc2.us-langley-1.aaaaaaaaxyipolnyhfw3t34nparhtlez5cbslyzbvlwxky6ph4mh4s22zmnq"
-    us-luke-1 = "ocid1.image.oc2.us-luke-1.aaaaaaaa5dtevrzzxk35dwslew5e6zcqljtfu5hzolcedr467gzuqdg3ls5a"
-    us-phoenix-1 = "ocid1.image.oc1.phx.aaaaaaaauuj2b3bvpbtpcyrfdvxu7tuajrwsmajhn6uhvx4oquecap63jywa"
+    ap-mumbai-1 = "ocid1.image.oc1.ap-mumbai-1.aaaaaaaaojdjmlt7hhhyu6ev77fptrpcjza2elnhubmhauxx7ik53g3k4clq"
+    ap-seoul-1 = "ocid1.image.oc1.ap-seoul-1.aaaaaaaa2liqaihg2b3dlxl54zqyt7zjvmxdunp6buivbtqhhvurnpepbvta"
+    ap-tokyo-1 = "ocid1.image.oc1.ap-tokyo-1.aaaaaaaa7cjkigefv2b3hi32ku4yhwvbtlbn6ektgy25xuopekbcfltequxq"
+    ca-toronto-1 = "ocid1.image.oc1.ca-toronto-1.aaaaaaaapgumj7xlcpfqugii7i7y722rfaib7xsc4tnoeikwwtsrrqxzf5qq"
+    eu-frankfurt-1 = "ocid1.image.oc1.eu-frankfurt-1.aaaaaaaassfjfflfwty6c24gxoou224djh7rfm3cdnnq5v2jcx6eslwx4fpa"
+    eu-zurich-1 = "ocid1.image.oc1.eu-zurich-1.aaaaaaaaqsi7yuqw7jk3wslena3lvpaxrtzpvoz7kelomvpwpdly7me3sixq"
+    sa-saopaulo-1 = "ocid1.image.oc1.sa-saopaulo-1.aaaaaaaaanlyfas5floju6eiggf5jqh5oxsaoyjtlziaygabwnklh3gypfva"
+    uk-london-1 = "ocid1.image.oc1.uk-london-1.aaaaaaaajyqa7buxw3jkgs5krmxmlnsek24dpby52scb7wsfln55cixusooa"
+    us-ashburn-1 = "ocid1.image.oc1.iad.aaaaaaaatp4lxfmhmzebvfsw54tttkiv4jarrohqykbtmee5x2smxlqnr75a"
+    us-phoenix-1 = "ocid1.image.oc1.phx.aaaaaaaava2go3l5jvj2ypu6poqgvhzypdwg6qbhkcs5etxewvulgizxy6fa"
+  }
+}
+
+
+// See https://docs.cloud.oracle.com/en-us/iaas/images/image/0a72692a-bdbb-46fc-b17b-6e0a3fedeb23/
+// Oracle-provided image "Oracle-Linux-7.7-2020.01.28-0"
+// Kernel Version: 4.14.35-1902.10.4.el7uek.x86_64 
+variable "OELImageOCID" {
+  type = "map"
+  default = {
+    ap-melbourne-1 = "ocid1.image.oc1.ap-melbourne-1.aaaaaaaa3fvafraincszwi36zv2oeangeitnnj7svuqjbm2agz3zxhzozadq"
+    ap-mumbai-1 = "ocid1.image.oc1.ap-mumbai-1.aaaaaaaabyd7swhvmsttpeejgksgx3faosizrfyeypdmqdghgn7wzed26l3q"
+    ap-osaka-1 = "ocid1.image.oc1.ap-osaka-1.aaaaaaaa7eec33y25cvvanoy5kf5udu3qhheh3kxu3dywblwqerui3u72nua"
+    ap-seoul-1 = "ocid1.image.oc1.ap-seoul-1.aaaaaaaai233ko3wxveyibsjf5oew4njzhmk34e42maetaynhbljbvkzyqqa"
+    ap-sydney-1 = "ocid1.image.oc1.ap-sydney-1.aaaaaaaaeb3c3kmd3yfaqc3zu6ko2q6gmg6ncjvvc65rvm3aqqzi6xl7hluq"
+    ap-tokyo-1 = "ocid1.image.oc1.ap-tokyo-1.aaaaaaaattpocc2scb7ece7xwpadvo4c5e7iuyg7p3mhbm554uurcgnwh5cq"
+    ca-toronto-1 = "ocid1.image.oc1.ca-toronto-1.aaaaaaaa4u2x3aofmhogbw6xsckha6qdguiwqvh5ibnbuskfo2k6e3jhdtcq"
+    eu-amsterdam-1 = "ocid1.image.oc1.eu-amsterdam-1.aaaaaaaan5tbzuvtyd5lwxj66zxc7vzmpvs5axpcxyhoicbr6yxgw2s7nqvq"
+    eu-frankfurt-1 = "ocid1.image.oc1.eu-frankfurt-1.aaaaaaaa4xluwijh66fts4g42iw7gnixntcmns73ei3hwt2j7lihmswkrada"
+    eu-zurich-1 = "ocid1.image.oc1.eu-zurich-1.aaaaaaaagj2saw4bisxyfe5joary52bpggvpdeopdocaeu2khpzte6whpksq"
+    me-jeddah-1 = "ocid1.image.oc1.me-jeddah-1.aaaaaaaaczhhskrjad7l3vz2u3zyrqs4ys4r57nrbxgd2o7mvttzm4jryraa"
+    sa-saopaulo-1 = "ocid1.image.oc1.sa-saopaulo-1.aaaaaaaabm464lilgh2nqw2vpshvc2cgoeuln5wgrfji5dafbiyi4kxtrmwa"
+    uk-gov-london-1 = "ocid1.image.oc4.uk-gov-london-1.aaaaaaaa3badeua232q6br2srcdbjb4zyqmmzqgg3nbqwvp3ihjfac267glq"
+    uk-london-1 = "ocid1.image.oc1.uk-london-1.aaaaaaaa2jxzt25jti6n64ks3hqbqbxlbkmvel6wew5dc2ms3hk3d3bdrdoa"
+    us-ashburn-1 = "ocid1.image.oc1.iad.aaaaaaaamspvs3amw74gzpux4tmn6gx4okfbe3lbf5ukeheed6va67usq7qq"
+    us-langley-1 = "ocid1.image.oc2.us-langley-1.aaaaaaaawzkqcffiqlingild6jqdnlacweni7ea2rm6kylar5tfc3cd74rcq"
+    us-luke-1 = "ocid1.image.oc2.us-luke-1.aaaaaaaawo4qfu7ibanw2zwefm7q7hqpxsvzrmza4uwfqvtqg2quk6zghqia"
+    us-phoenix-1 = "ocid1.image.oc1.phx.aaaaaaaamff6sipozlita6555ypo5uyqo2udhjqwtrml2trogi6vnpgvet5q"
   }
 }
 

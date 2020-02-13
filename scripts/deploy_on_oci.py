@@ -109,8 +109,6 @@ def build_api_endpoints(user_name, password):
     api_host = 'http://' + cm_server
     global api_url, api_client
     api_url = api_host + ':' + cm_port + '/api/' + api_version
-    if debug is True:
-        print("->API URL: " + api_url)
     api_client = cm_client.ApiClient(api_url)
     global clusters_api, users_api, cloudera_manager_api, parcels_api, parcel_api, \
         cluster_services_api, auth_roles_api, roles_config_api, all_hosts_api, \
@@ -150,8 +148,6 @@ def wait_for_active_cluster_commands(active_command):
         try:
             api_response = cloudera_manager_api.list_active_commands(view=view)
             if not api_response.items:
-                if debug is True:
-                    pprint(api_response)
                 done = '1'
                 sys.stdout.write(']\n')
                 break
@@ -178,8 +174,6 @@ def wait_for_active_cluster_service_commands(active_command):
         try:
             api_response = clusters_api.list_active_commands(cluster_name, view=view)
             if not api_response.items:
-                if debug is True:
-                    pprint(api_response)
                 done = '1'
                 sys.stdout.write(']\n')
                 break
@@ -206,8 +200,6 @@ def wait_for_active_service_commands(active_command, service_name):
         try:
             api_response = services_api.list_active_commands(cluster_name, service_name, view=view)
             if not api_response.items:
-                if debug is True:
-                    pprint(api_response)
                 done = '1'
                 sys.stdout.write(']\n')
                 break
@@ -263,8 +255,6 @@ def init_admin_user():
     roles = cm_client.AuthRolesResourceApi(api_client).read_auth_roles().items
     for role in roles:
         if role.display_name == role_display_name:
-            if debug is True:
-                print('role.display_name matches role_display_name')
             custom_role_uuid = role.uuid
 
     users_api = cm_client.UsersResourceApi(api_client)
@@ -274,8 +264,6 @@ def init_admin_user():
 
     try:
         api_response = users_api.create_users2(body=body)
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception when calling UsersResourceApi->create_users2_with_http_info: {}\n'.format(e))
 
@@ -288,8 +276,6 @@ def delete_default_admin_user():
     delete_user_name = "admin"
     try:
         api_response = users_api.delete_user2(delete_user_name)
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception when calling UsersResourceApi->delete_user2: {}\n'.format(e))
 
@@ -320,9 +306,6 @@ def read_cluster():
         api_response = clusters_api.read_cluster(cluster_name)
         global cluster_uuid
         cluster_uuid = api_response.uuid
-        if debug is True:
-            pprint(api_response)
-            print('Cluster UUID: ', cluster_uuid)
     except ApiException as e:
         print('Exception while calling ClustersResourceAPI->read_cluster: {}\n'.format(e))
 
@@ -375,7 +358,7 @@ def build_disk_lists(disk_count, data_tiering, nvme_disks):
     Build Disk Lists for use with HDFS and YARN
     :return:
     """
-    global dfs_data_dir_list
+    global dfs_data_dir_list, half_disk_count
     dfs_data_dir_list = ''
     global yarn_data_dir_list
     yarn_data_dir_list = ''
@@ -390,8 +373,12 @@ def build_disk_lists(disk_count, data_tiering, nvme_disks):
             nvme_disks = 2
         if worker_shape == 'VM.DenseIO2.8':
             nvme_disks = 1
-        if worker_shape == 'BM.HPC2.36':
-            nvme_disks = 1
+	half_disk_count=int(round(float(int(nvme_disks)/2)))
+    else:
+        half_disk_count=int(round(float(int(disk_count)/2)))
+
+    if worker_shape == 'BM.HPC2.36':
+        nvme_disks = 1
 
     if data_tiering == 'False':
         if nvme_disks >= 1:
@@ -445,8 +432,6 @@ def list_hosts():
         api_response = clusters_api.list_hosts(cluster_name)
         global cluster_host_list
         cluster_host_list = api_response
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception when calling ClustersResourceApi->list_hosts: {}\n'.format(e))
 
@@ -476,8 +461,6 @@ def update_parcel_repo(remote_parcel_url, parcel_distribution_rate):
     phone_home = cm_client.ApiConfig(name='PHONE_HOME', value='false')
     new_cm_configs = cm_client.ApiConfigList([repo_cm_config, distribute_cm_config, phone_home])
     updated_cm_configs = cloudera_manager_api.update_config(body=new_cm_configs)
-    if debug is True:
-        pprint(updated_cm_configs)
     time.sleep(10)
 
 
@@ -672,8 +655,6 @@ def begin_trial():
     """
     try:
         api_response = cloudera_manager_api.begin_trial()
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception calling ClouderaManagerResourceApi -> begin_trial: {}\n'.format(e))
 
@@ -897,7 +878,7 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     dfs_datanode_du_reserved = [cm_client.ApiConfig(name='dfs_datanode_du_reserved',
                                                                     value='3508717158')]
                     dfs_datanode_failed_volumes_tolerated = [cm_client.ApiConfig(
-                        name='dfs_datanode_failed_volumes_tolerated', value='0')]
+                        name='dfs_datanode_failed_volumes_tolerated', value=half_disk_count)]
                     dfs_datanode_max_locked_memory = [cm_client.ApiConfig(name='dfs_datanode_max_locked_memory',
                                                                           value='1257242624')]
                     dfs_datanode_max_xcievers = [cm_client.ApiConfig(name='dfs_datanode_max_xcievers', value='16384')]
@@ -912,8 +893,6 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     if s3_compat_enable == 'True':
                         update_service_config(service_name=service, api_config_items=core_site_safety_valve)
                     n = 0
-                    if debug is True:
-                        print('->DEBUG - Number of Workers: ' + str(len(worker_host_ids)))
                     for host_id in worker_host_ids:
                         create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
                         n = n + 1
@@ -1174,7 +1153,10 @@ def update_cluster_rcg_configuration(cluster_service_list):
                 if rcg == 'SOLR-SOLR_SERVER-BASE':
                     p_rcg(rcg)
                     rcg_roletype = 'SOLR_SERVER'
-                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
+                    n = 0
+                    for host_id in worker_host_ids:
+                        create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+                        n = n + 1
 
         if service == 'SPARK':
             for rcg in role_config_group_list:
@@ -1198,6 +1180,10 @@ def update_cluster_rcg_configuration(cluster_service_list):
                 if rcg == 'SPARK_ON_YARN-GATEWAY-BASE':
                     p_rcg(rcg)
                     rcg_roletype = 'GATEWAY'
+                    max_executors = int(round(float(int(num_workers)*int(worker_vcpu))))
+                    spark_dynamic_allocation_max_executors = [cm_client.ApiConfig(name='spark_dynamic_allocation_max_executors', \
+                                                                                  value=max_executors)]
+                    push_rcg_config(spark_dynamic_allocation_max_executors)
                     n = 0
                     for host_id in worker_host_ids:
                         create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
@@ -1239,6 +1225,8 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     for config in gw_config_list:
                         push_rcg_config(config)
                     create_role(rcg, rcg_roletype, service, cm_host_id, cm_hostname, 1)
+                    create_role(rcg, rcg_roletype, service, nn_host_id, nn_hostname, 2)
+                    create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 3)
 
                 if rcg == 'YARN-NODEMANAGER-BASE':
                     p_rcg(rcg)
@@ -1266,8 +1254,6 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     for config in nm_config_list:
                         push_rcg_config(config)
                     n = 0
-                    if debug is True:
-                        print('Number of Workers: ' + str(len(worker_host_ids)))
                     for host_id in worker_host_ids:
                         create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
                         n = n + 1
@@ -1285,11 +1271,18 @@ def update_cluster_rcg_configuration(cluster_service_list):
                         [cm_client.ApiConfig(name='yarn_scheduler_maximum_allocation_vcores', value='2')]
                     resource_manager_log_dir = \
                         [cm_client.ApiConfig(name='resource_manager_log_dir', value=LOG_DIR + '/hadoop-yarn')]
+                    yarn_resourcemanager_scheduler_class= \
+                        [cm_client.ApiConfig(name='yarn_resourcemanager_scheduler_class', value=yarn_scheduler)]
                     rm_config_list = [resource_manager_java_heapsize, yarn_scheduler_maximum_allocation_mb,
                                       yarn_scheduler_maximum_allocation_vcores, yarn_scheduler_minimum_allocation_mb,
-                                      resource_manager_log_dir]
+                                      resource_manager_log_dir, yarn_resourcemanager_scheduler_class]
                     for config in rm_config_list:
                         push_rcg_config(config)
+                    yarn_resourcemanager_scheduler_monitor_enable = \
+                        [cm_client.ApiConfig(name='yarn_resourcemanager_scheduler_monitor_enable', \
+                                             value=yarn_rm_preemption)]
+                    update_service_config(service_name=service, \
+                                          api_config_items=yarn_resourcemanager_scheduler_monitor_enable)
                     create_role(rcg, rcg_roletype, service, snn_host_id, snn_hostname, 1)
 
                 if rcg == 'YARN-JOBHISTORY-BASE':
@@ -1337,8 +1330,6 @@ def build_role_config_group_list(service_name):
     role_config_group_list = []
     for x in range(0, len(api_response.items)):
         rcg_name = api_response.items[x].name
-        if debug is True:
-            print('Service %s - Role Config Group Found: %s' % (service_name, rcg_name))
         role_config_group_list.append(rcg_name)
     if debug is True:
         print('Full Role Config Group List: %s' % role_config_group_list)
@@ -1384,17 +1375,6 @@ def cluster_host_id_map():
         if worker_hosts_prefix in cluster_host_list.items[x].hostname:
             worker_hostnames.append(cluster_host_list.items[x].hostname)
             worker_host_ids.append(cluster_host_list.items[x].host_id)
-    x = 0
-    for worker in worker_hostnames:
-        if debug is True:
-            print('Cluster Map - Worker Name: %s - ID: %s' % (worker, worker_host_ids[x]))
-        x = x + 1
-    if debug is True:
-        print('NameNode : %s - %s' % (nn_hostname, nn_host_id))
-        print('Secondary NameNode: %s - %s' % (snn_hostname, snn_host_id))
-        print('Cloudera Manager: %s - %s' % (cm_hostname, cm_host_id))
-        print('Worker Hostnames: %s' % worker_hostnames)
-        print('Worker IDs: %s' % worker_host_ids)
 
 
 def create_role(rcg, rcg_roletype, service, host_id, hostname, rc):
@@ -1449,8 +1429,6 @@ def cluster_action(action, *kwargs):
         body = cm_client.ApiRestartClusterArgs(restart_only_stale_services=0, redeploy_client_configuration=1)
         try:
             api_response = clusters_api.restart_command(cluster_name, body=body)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->restart_command {}\n'.format(e))
 
@@ -1458,8 +1436,6 @@ def cluster_action(action, *kwargs):
         body = cm_client.ApiRestartClusterArgs(restart_only_stale_services=1, redeploy_client_configuration=1)
         try:
             api_response = clusters_api.restart_command(cluster_name, body=body)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->restart_command {}\n'.format(e))
 
@@ -1468,40 +1444,30 @@ def cluster_action(action, *kwargs):
                                                stale_configs_only=0)
         try:
             api_response = clusters_api.rolling_restart(cluster_name, body=body)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->rolling_restart {}\n'.format(e))
 
     if action == 'mgmt_restart':
         try:
             api_response = mgmt_service_api.restart_command()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running MgmtServiceResourceApi->restart_command {}\n'.format(e))
 
     if action == 'first_run':
         try:
             api_response = services_api.first_run(cluster_name, str(kwargs))
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ServicesResourceApi->first_run {}\n'.format(e))
 
     if action == 'start_command':
         try:
             api_response = clusters_api.start_command(cluster_name)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->start_command {}\n'.format(e))
 
     if action == 'stop_command':
         try:
             api_response = clusters_api.stop_command(cluster_name)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->stop_command {}\n'.format(e))
 
@@ -1509,16 +1475,12 @@ def cluster_action(action, *kwargs):
         try:
             list_hosts()
             api_response = clusters_api.deploy_cluster_client_config(cluster_name, body=cluster_host_list)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->deploy_cluster_client_config {}\n'.format(e))
 
     if action == 'deploy_client_config':
         try:
             api_response = clusters_api.deploy_client_config(cluster_name)
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception running ClustersResourceApi->deploy_client_config {}\n'.format(e))
 
@@ -1551,8 +1513,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.restart_command(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->restart_command {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1564,8 +1524,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.start_command(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->start_command {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1577,8 +1535,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.stop_command(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->stop_command {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1590,8 +1546,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.jmap_dump(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->jmap_dump {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1603,8 +1557,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.jmap_histo(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->jmap_history {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1616,8 +1568,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.jstack(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->jstack {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1629,8 +1579,6 @@ def mgmt_role_commands(action):
             body = cm_client.ApiRoleNameList(api_role_name_list)
             try:
                 api_response = mgmt_role_commands_api.lsof(body=body)
-                if debug is True:
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception running MgmtRoleCommandsResourceApi->lsof {}\n'.format(e))
             active_command = '\t' + action + ' ' + role
@@ -1689,8 +1637,6 @@ def mgmt_service(action):
     if action == 'start_command':
         try:
             api_response = mgmt_service_api.start_command()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> start_command {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1699,8 +1645,6 @@ def mgmt_service(action):
     if action == 'restart_command':
         try:
             api_response = mgmt_service_api.restart_command()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> restart_command {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1709,8 +1653,6 @@ def mgmt_service(action):
     if action == 'stop_command':
         try:
             api_response = mgmt_service_api.stop_command()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> stop_command {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1719,8 +1661,6 @@ def mgmt_service(action):
     if action == 'auto_assign_roles':
         try:
             api_response = mgmt_service_api.auto_assign_roles()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> auto_assign_roles {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1729,8 +1669,6 @@ def mgmt_service(action):
     if action == 'auto_configure_roles':
         try:
             api_response = mgmt_service_api.auto_configure()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> auto_configure_roles {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1739,8 +1677,6 @@ def mgmt_service(action):
     if action == 'delete_cms':
         try:
             api_response = mgmt_service_api.delete_cms()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> delete_cms {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1749,8 +1685,6 @@ def mgmt_service(action):
     if action == 'enter_maintenance_mode':
         try:
             api_response = mgmt_service_api.enter_maintenance_mode()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> enter_maintenance_mode {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1759,8 +1693,6 @@ def mgmt_service(action):
     if action == 'exit_maintenance_mode':
         try:
             api_response = mgmt_service_api.exit_maintenance_mode()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> exit_maintenance_mode {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1769,8 +1701,6 @@ def mgmt_service(action):
     if action == 'auto_configure_roles':
         try:
             api_response = mgmt_service_api.auto_configure()
-            if debug is True:
-                pprint(api_response)
         except ApiException as e:
             print('Exception calling MgmtServiceResourceApi -> auto_configure {}\n'.format(e))
         active_command = '\tMGMT ' + action
@@ -1831,8 +1761,6 @@ def import_admin_credentials():
 
     try:
         api_response = cloudera_manager_api.import_admin_credentials(password=kdc_password, username=kdc_admin)
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception calling ClouderaManagerResourceApi->import_admin_credentials: {}\n'.format(e))
 
@@ -1880,8 +1808,6 @@ def generate_kerberos_credentials():
     """
     try:
         api_response = cloudera_manager_api.generate_credentials_command()
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception calling ClouderaManagerResourceApi->generate_credentials_command: {}'.format(e))
 
@@ -1897,9 +1823,6 @@ def update_license():
             body = license_file
             try:
                 api_response = cloudera_manager_api.update_license(body=body)
-                if debug is True:
-                    print('License File Content: \n%s' % license_data)
-                    pprint(api_response)
             except ApiException as e:
                 print('Exception calling Cloudera Manager Resource API -> update_license {}'.format(e))
     except:
@@ -1918,8 +1841,6 @@ def hdfs_enable_nn_ha(snn_host_id):
                                             nameservice='HDFS-HA-%s' % cluster_name)
     try:
         api_response = services_api.hdfs_enable_nn_ha_command(cluster_name=cluster_name, service_name='HDFS', body=body)
-        if debug is True:
-            pprint(api_response)
     except ApiException as e:
         print('Exception calling ServicesResourceApi -> hdfs_enable_ha_command {}'.format(e))
 
@@ -1934,9 +1855,6 @@ def update_clients_config(clients_config, commit_message):
 
     try:
         api_response = clients_api_instance.update_config(message=commit_message, body=body)
-        if debug is True:
-            pprint(api_response)
-
     except ApiException as e:
         print('Exception calling AllHostsResourceApi -> update_clients_config {}'.format(e))
 
@@ -1947,7 +1865,7 @@ def options_parser(args=None):
     """
     global objects, remote_parcel_url, cloudera_version, admin_user_name, admin_password, worker_memory_mb, worker_vcpu, \
            worker_shape_length, vcore_ratio, cluster_services, cluster_service_list, api_version, rangeradmin_password, \
-           meta_db_type, meta_db_port, ranger_db_type, ranger_service
+           meta_db_type, meta_db_port, ranger_db_type, ranger_service, yarn_scheduler, yarn_rm_preemption
     parser = argparse.ArgumentParser(prog='python deploy_on_oci.py', description='Deploy a Cloudera EDH Cluster on '
                                                                                  'OCI using cm_client with Cloudera '
                                                                                  'Manager API')
@@ -1973,12 +1891,23 @@ def options_parser(args=None):
     parser.add_argument('-R', '--rangeradmin_password', metavar='rangeradmin_password', help='Admin passwords for Ranger UI')
     parser.add_argument('-M', '--meta_db_type', metavar='meta_db_type', help='Metadata database type')
     parser.add_argument('-D', '--debug', action='store_true')
+    parser.add_argument('-Y', '--yarn_scheduler', metavar='yarn_scheduler', help='Yarn Scheduler - fair, fifo  or capacity')
     options = parser.parse_args(args)
     cluster_primary_version = options.cloudera_version.split('.')
     cluster_primary_version = cluster_primary_version[0]
     cloudera_version = options.cloudera_version
     rangeradmin_password = options.rangeradmin_password
     meta_db_type = options.meta_db_type
+    yarn_scheduler = options.yarn_scheduler
+    if yarn_scheduler == 'fair':
+	yarn_scheduler = 'org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler'
+        yarn_rm_preemption = 'false'
+    elif yarn_scheduler == 'fifo':
+        yarn_scheduler = 'org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler'
+        yarn_rm_preemption = 'true'
+    else:
+        yarn_scheduler = 'org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler'
+
     if meta_db_type == 'mysql':
         meta_db_port = '3306'
         ranger_db_type = 'MySQL'
@@ -2225,15 +2154,6 @@ if __name__ == '__main__':
     cm_server, input_host_list, disk_count, license_file, worker_shape, num_workers, secure_cluster, hdfs_ha, \
     cloudera_version, cluster_name, cluster_primary_version, kafka_parcel_url, admin_user_name, admin_password, \
     debug = options_parser(sys.argv[1:])
-    if debug is True:
-        print('cm_server = %s' % cm_server)
-        print('input_host_list = %s' % input_host_list)
-        print('disk_count = %s' % disk_count)
-        print('license_file = %s' % license_file)
-        print('worker_shape = %s' % worker_shape)
-        print('cluster_name = %s' % cluster_name)
-        print('secure_cluster = %s' % secure_cluster)
-        print('hdfs_ha = %s' % hdfs_ha)
     user_name = 'admin'
     password = 'admin'
     print('->Building API Endpoints')

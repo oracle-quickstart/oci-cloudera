@@ -22,6 +22,10 @@ setenforce 0
 EXECNAME="JAVA"
 log "->INSTALL"
 yum install java-1.8.0-openjdk.x86_64 -y >> $LOG_FILE
+EXECNAME="NSCD"
+log "->INSTALL"
+yum install nscd -y >> $LOG_FILE
+systemctl start nscd.service
 EXECNAME="KERBEROS"
 log "->INSTALL"
 yum install krb5-workstation -y >> $LOG_FILE
@@ -89,8 +93,8 @@ EXECNAME="TUNING"
 log "->OS"
 echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled
 echo "echo never | tee -a /sys/kernel/mm/transparent_hugepage/enabled" | tee -a /etc/rc.local
-echo vm.swappiness=0 | tee -a /etc/sysctl.conf
-echo 0 | tee /proc/sys/vm/swappiness
+echo vm.swappiness=1 | tee -a /etc/sysctl.conf
+echo 1 | tee /proc/sys/vm/swappiness
 echo net.ipv4.tcp_timestamps=0 >> /etc/sysctl.conf
 echo net.ipv4.tcp_sack=1 >> /etc/sysctl.conf
 echo net.core.rmem_max=4194304 >> /etc/sysctl.conf

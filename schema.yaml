@@ -120,11 +120,15 @@ groupings:
 - title: "High Availability"
   variables:
   - ${hdfs_ha}
+- title: "YARN Options"
+  variables:
+  - ${vcore_ratio}
+  - ${yarn_scheduler}
+  visible: ${AdvancedOptions}
 - title: "Worker Node Options"
   variables:
   - ${worker_instance_shape}
   - ${worker_node_count}
-  - ${vcore_ratio}
   - ${objectstoreRAID}
   - ${enable_block_volumes}
   - ${block_volumes_per_worker}
@@ -157,7 +161,8 @@ groupings:
   - ${region}
   - ${compartment_ocid}
   - ${tenancy_ocid}
-  - ${InstanceImageOCID}
+  - ${CentOSImageOCID}
+  - ${OELImageOCID}
   - ${oci_service_gateway}
   - ${AD}
   - ${vpus_per_gb}
@@ -615,3 +620,12 @@ variables:
     description: "Enable debug output for python deployment script.  Output is found in /var/log/cloudera-OCI-initialize.log"
     visible: ${AdvancedOptions}
 
+  yarn_scheduler:
+    type: enum
+    enum:
+    - "fair"
+    - "fifo"
+    - "capacity"
+    title: "YARN Scheduler"
+    description: "Select YARN Scheduler type"
+    visible: ${AdvancedOptions}
