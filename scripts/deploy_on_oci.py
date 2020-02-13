@@ -374,11 +374,11 @@ def build_disk_lists(disk_count, data_tiering, nvme_disks):
         if worker_shape == 'VM.DenseIO2.8':
             nvme_disks = 1
 	half_disk_count=int(round(float(int(nvme_disks)/2)))
+    elif 'HPC' in worker_shape:
+        nvme_disks = 1
+        half_disk_count = 0
     else:
         half_disk_count=int(round(float(int(disk_count)/2)))
-
-    if worker_shape == 'BM.HPC2.36':
-        nvme_disks = 1
 
     if data_tiering == 'False':
         if nvme_disks >= 1:
@@ -1907,7 +1907,7 @@ def options_parser(args=None):
         yarn_rm_preemption = 'true'
     else:
         yarn_scheduler = 'org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler'
-        yarn_rm_preemption = 'true'
+        yarn_rm-preemption = 'true'
 
     if meta_db_type == 'mysql':
         meta_db_port = '3306'
