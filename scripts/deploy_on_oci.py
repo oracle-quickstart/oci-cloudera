@@ -1907,7 +1907,7 @@ def options_parser(args=None):
         yarn_rm_preemption = 'true'
     else:
         yarn_scheduler = 'org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler'
-        yarn_rm-preemption = 'true'
+        yarn_rm_preemption = 'true'
 
     if meta_db_type == 'mysql':
         meta_db_port = '3306'
