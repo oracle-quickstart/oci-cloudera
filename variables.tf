@@ -87,11 +87,11 @@ variable "yarn_scheduler" {
 
 # Cloudera Manager Version
 variable "cm_version" { 
-    default = "7.3.0" 
+    default = "7.0.3" 
 }
 # Cloudera Enterprise Data Hub Version
 variable "cloudera_version" { 
-    default = "7.3.0.0" 
+    default = "7.0.3.0" 
 }
 variable "secure_cluster" { 
     default = "True" 
