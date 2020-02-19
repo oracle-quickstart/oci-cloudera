@@ -1,5 +1,5 @@
 data "oci_core_vcn" "vcn_info" {
-  vcn_id = "${var.useExistingVcn ? var.myVcn : module.network.vcn-id}" 
+  vcn_id = "${var.useExistingVcn ? var.myVcn : module.network.vcn-id}"
 }
 
 data "oci_core_subnet" "cluster_subnet" {
@@ -11,7 +11,7 @@ data "oci_core_subnet" "bastion_subnet" {
 }
 
 data "oci_core_subnet" "utility_subnet" {
-  subnet_id = "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}" 
+  subnet_id = "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}"
 }
 
 data "null_data_source" "values" {
@@ -32,10 +32,10 @@ module "bastion" {
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
 	subnet_id = "${var.useExistingVcn ? var.bastionSubnet : module.network.bastion-id}"
-	availability_domain = "${var.availability_domain}"	
-	image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
+	availability_domain = "${var.availability_domain}"
+	image_ocid = "${var.mp_listing_resource_id}"
 	ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"
-	bastion_instance_shape = "${var.bastion_instance_shape}" 
+	bastion_instance_shape = "${var.bastion_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
         cloudera_volume_size_in_gbs = "${var.cloudera_volume_size_in_gbs}"
 	user_data = "${base64encode(file("scripts/boot.sh"))}"
@@ -51,7 +51,7 @@ module "utility" {
 	compartment_ocid = "${var.compartment_ocid}"
         subnet_id =  "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}"
 	availability_domain = "${var.availability_domain}"
-	image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
+	image_ocid = "${var.mp_listing_resource_id}"
         ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"
 	utility_instance_shape = "${var.utility_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
@@ -98,7 +98,7 @@ module "master" {
 	compartment_ocid = "${var.compartment_ocid}"
         subnet_id =  "${var.useExistingVcn ? var.clusterSubnet : module.network.private-id}"
 	availability_domain = "${var.availability_domain}"
-        image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
+        image_ocid = "${var.mp_listing_resource_id}"
         ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"
 	master_instance_shape = "${var.master_instance_shape}"
         log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
@@ -116,7 +116,7 @@ module "worker" {
 	compartment_ocid = "${var.compartment_ocid}"
         subnet_id =  "${var.useExistingVcn ? var.clusterSubnet : module.network.private-id}"
 	availability_domain = "${var.availability_domain}"
-	image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
+	image_ocid = "${var.mp_listing_resource_id}"
         ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"
 	worker_instance_shape = "${var.worker_instance_shape}"
 	log_volume_size_in_gbs = "${var.log_volume_size_in_gbs}"
@@ -128,6 +128,6 @@ module "worker" {
         cm_version = "${var.cm_version}"
         cloudera_version = "${var.cloudera_version}"
 	block_volume_count = "${var.enable_block_volumes ? var.block_volumes_per_worker : 0}"
-	vpus_per_gb = "${var.customize_block_volume_performance ? data.null_data_source.vpus.outputs["block_vpus"] : 10}" 
+	vpus_per_gb = "${var.customize_block_volume_performance ? data.null_data_source.vpus.outputs["block_vpus"] : 10}"
 	objectstoreRAID = "${var.objectstoreRAID}"
 }

@@ -9,7 +9,7 @@ groupings:
 - title: "SSH Configuration"
   variables:
   - ${ssh_provided_key}
-  visible: ${provide_ssh_key} 
+  visible: ${provide_ssh_key}
 - title: "Availabilty Domain"
   variables:
   - ${availability_domain}
@@ -28,8 +28,6 @@ groupings:
   variables:
   - ${cm_username}
   - ${cm_password}
-  - ${cm_version}
-  - ${cloudera_version}
   - ${cluster_name}
   - ${AdvancedOptions}
   - ${enable_debug}
@@ -46,11 +44,11 @@ groupings:
   - ${svc_SQOOP_CLIENT}
   - ${svc_YARN}
 - title: "Advanced CDP Options"
-  variables: 
+  variables:
   - ${svc_ATLAS}
   - ${svc_RANGER}
-  - ${rangeradmin_password} 
-  visible: 
+  - ${rangeradmin_password}
+  visible:
     and:
       - ${AdvancedOptions}
       - and:
@@ -146,7 +144,6 @@ groupings:
   variables:
   - ${utility_instance_shape}
   - ${utilitySubnet}
-  - ${meta_db_type}
 - title: "Edge Nodes"
   variables:
   - ${use_edge_nodes}
@@ -161,11 +158,15 @@ groupings:
   - ${region}
   - ${compartment_ocid}
   - ${tenancy_ocid}
-  - ${CentOSImageOCID}
-  - ${OELImageOCID}
-  - ${oci_service_gateway}
   - ${AD}
   - ${vpus_per_gb}
+  - ${cm_version}
+  - ${cloudera_version}
+  - ${meta_db_type}
+  - ${mp_listing_id}
+  - ${mp_listing_resource_id}
+  - ${mp_listing_resource_version}
+  - ${use_marketplace_image}
   visible: false
 
 variables:
@@ -214,7 +215,7 @@ variables:
     required: true
 
   useExistingVcn:
-    type: boolean 
+    type: boolean
     title: "Use Existing VCN"
     description: "Click to use existing VCN, otherwise VCN and Subnets will be created"
     required: true
@@ -227,7 +228,7 @@ variables:
       compartmentId: ${compartment_ocid}
     visible: ${useExistingVcn}
     required: true
-     
+
   utilitySubnet:
     type: oci:core:subnet:id
     title: "Utility Subnet"
@@ -259,7 +260,7 @@ variables:
       vcnId: ${myVcn}
       hidePrivateSubnet: ${hide_private_subnet}
     visible: ${useExistingVcn}
-    required: true 
+    required: true
 
   hide_private_subnet:
     type: boolean
@@ -276,7 +277,7 @@ variables:
     visible: ${useExistingVcn}
 
   availability_domain:
-    type: oci:identity:availabilitydomain:name 
+    type: oci:identity:availabilitydomain:name
     title: "Availability Domain"
     description: "Select AD"
     dependsOn:
@@ -290,93 +291,62 @@ variables:
     required: true
 
   hdfs_ha:
-    type: boolean 
+    type: boolean
     title: "High Availability"
     description: "Click to Enable HDFS High Availability"
     required: true
 
   worker_instance_shape:
-    type: enum
-    enum:
-    - "VM.Standard2.8"
-    - "VM.Standard2.16"
-    - "VM.Standard2.24"
-    - "BM.Standard2.52"
-    - "BM.Standard.E2.64"
-    - "VM.DenseIO2.8"
-    - "VM.DenseIO2.16"
-    - "VM.DenseIO2.24"
-    - "BM.DenseIO2.52"
-    - "BM.HPC2.36"
+    type: oci:core:instanceshape:name
     title: "Shape of Worker Nodes"
     required: true
+    default: "VM.Standard2.16"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      imageId: ${mp_listing_resource_id}
 
   worker_node_count:
     type: integer
     minimum: 3
     title: "Number of Worker Nodes"
     description: "3 is the minimum requirement"
+    default: 5
     required: true
 
   master_instance_shape:
-    type: enum
-    enum:
-    - "VM.Standard2.8"
-    - "VM.Standard2.16"
-    - "VM.Standard2.24"
-    - "BM.Standard2.52"
-    - "BM.Standard.E2.64" 
-    - "VM.DenseIO2.8"
-    - "VM.DenseIO2.16"
-    - "VM.DenseIO2.24"
-    - "BM.DenseIO2.52"
-    - "BM.HPC2.36"
+    type: oci:core:instanceshape:name
     title: "Shape of Master Nodes"
     required: true
+    default: "VM.Standard2.8"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      imageId: ${mp_listing_resource_id}
 
   master_node_count:
     type: integer
     minimum: 2
     title: "Number of Master Nodes"
     description: "2 is the minimum requirement"
+    default: 2
     required: true
 
   utility_instance_shape:
-    type: enum
-    enum:
-    - "VM.Standard2.8"
-    - "VM.Standard2.16"
-    - "VM.Standard2.24"
-    - "BM.Standard2.52"
-    - "BM.Standard.E2.64"
-    - "VM.DenseIO2.8"
-    - "VM.DenseIO2.16"
-    - "VM.DenseIO2.24"
-    - "BM.DenseIO2.52"
-    - "BM.HPC2.36"
+    type: oci:core:instanceshape:name
     title: "Shape of Utility Node"
+    default: "VM.Standard2.8"
     required: true
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      imageId: ${mp_listing_resource_id}
 
   bastion_instance_shape:
-    type: enum
-    enum:
-    - "VM.Standard2.1"
-    - "VM.Standard.E2.1"
-    - "VM.Standard2.2"
-    - "VM.Standard.E2.2"
-    - "VM.Standard2.4"
-    - "VM.Standard.E2.4"
-    - "VM.Standard2.8"
-    - "VM.Standard.E2.8"
-    - "VM.Standard2.16"
-    - "VM.Standard2.24"
-    - "BM.Standard2.52"
-    - "VM.DenseIO2.8"
-    - "VM.DenseIO2.16"
-    - "VM.DenseIO2.24"
-    - "BM.DenseIO2.52"
+    type: oci:core:instanceshape:name
     title: "Shape of Edge Nodes"
+    default: "VM.Standard2.1"
     required: true
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      imageId: ${mp_listing_resource_id}
 
   bastion_node_count:
     type: integer
@@ -405,10 +375,10 @@ variables:
     type: integer
     title: "Number of Block Volumes for HDFS"
     description: "0 to 29"
-    minimum: 0 
+    minimum: 0
     maximum: 29
     required: true
-    visible: ${enable_block_volumes} 
+    visible: ${enable_block_volumes}
 
   customize_block_volume_performance:
     type: boolean
@@ -422,7 +392,7 @@ variables:
     title: "High Performance Block Volumes"
     description: "Click to enable High Performance for HDFS Block Volumes.  This comes at a higher cost per GB."
     default: false
-    visible: 
+    visible:
       and:
         - ${enable_block_volumes}
         - ${customize_block_volume_performance}
@@ -463,7 +433,7 @@ variables:
     maximum: 32768
     required: true
     visible: ${AdvancedOptions}
-  
+
   VPC_CIDR:
     type: string
     title: "VPC CIDR for VCN"
@@ -500,7 +470,7 @@ variables:
     type: boolean
     title: "Enable Block Volumes for HDFS"
     description: "Check to enable Block Volumes for use with HDFS. This is optional for BM.Dense hosts, required for all others."
-    default: true 
+    default: true
 
   cm_username:
     type: string
@@ -511,7 +481,9 @@ variables:
   cm_password:
     type: password
     title: "Cloudera Manager Admin Password"
-    description: "Set the Admin user default password, do not use spaces as this password is not sanitized.  This will be used for deployment, it is encouraged you change this after deployment is complete."
+    description: "Required Admin user default password, alphanumeric 6-12 characters.  This will be used for deployment, it is encouraged you change this after deployment is complete."
+    default: ""
+    pattern: "^[a-zA-Z0-9]{6,12}$"
     required: true
 
   provide_ssh_key:
@@ -529,14 +501,14 @@ variables:
 
   AdvancedOptions:
     type: boolean
-    title: "Advanced Options" 
+    title: "Advanced Options"
     description: "Enable Advanced Cluster Configuration Options.  For advanced users only, changing service parameters may have a negative impact on cluster deployment, modify at your own risk.  These parameters only affect initial cluster build, once the cluster is deployed Cloudera Manager must be used for service administration."
 
   svc_ATLAS:
     type: boolean
     title: "Atlas Service"
     description: "Enable Atlas Service, CDP ONLY"
- 
+
   svc_HBASE:
     type: boolean
     title: "HBase Service"
