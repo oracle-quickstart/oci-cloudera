@@ -10,7 +10,7 @@ The following table shows Recommended and Minimum supported OCI shapes for each 
 | Minimum     | VM.Standard2.8 | VM.Standard2.1   | VM.Standard2.8               |
 
 ## Resource Manager Deployment
-This Quick Start uses [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) to make deployment quite easy.  Simply [download the latest .zip](https://github.com/oracle-quickstart/oci-cloudera/archive/master.zip) and follow the [Resource Manager instructions](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/usingconsole.htm) for how to build a stack.  Prior to building the Stack, you may want to modify some parts of the deployment detailed in the sections below.
+This Quick Start uses [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) to make deployment quite easy.  Simply [download the latest .zip](archive/master.zip) and follow the [Resource Manager instructions](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Tasks/usingconsole.htm) for how to build a stack.  Prior to building the Stack, you may want to modify some parts of the deployment detailed in the sections below.
 
 It is highly suggested you use the included schema file to make deployment even easier.   In order to leverage this feature, the GitHub zip must be repackaged so that it's contents are top-level prior to creating the ORM Stack.  This is a straight forward process:
 
@@ -26,11 +26,11 @@ If you deploy Cloudera Manager to a private subnet, you will require a VPN or SS
 
 Once the deployment is complete you can access Cloudera manager at `http://<some IP address>:7180/cmf/login`.  
 
-![](./images/01%20-%20manager.png)
+![](images/01%20-%20manager.png)
 
 The default username is `cm_admin` and the default password is `changeme`.  You should see a cluster up and running like this:
 
-![](./images/02%20-%20home.png)
+![](images/02%20-%20home.png)
 
 ## Python Deployment using cm_client
 The deployment script `deploy_on_oci.py` uses cm_client against Cloudera Manager API v31.  This script can be customized before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
@@ -67,4 +67,4 @@ Object Storage can also be leveraged by setting S3 compatability paramaters in t
 ## Architecture Diagram
 Here is a diagram showing what is typically deployed using this template.   Note that resources are automatically distributed among Fault Domains in an Availability Domain to ensure fault tolerance.   Additional workers deployed will stripe between the 3 fault domains in sequence starting with the Fault Domain 1 and incrementing sequentially.
 
-![Deployment Architecture Diagram](https://github.com/oracle/oci-quickstart-cloudera/blob/master/images/deployment_architecture.png)
+![Deployment Architecture Diagram](images/deployment_architecture.png)
