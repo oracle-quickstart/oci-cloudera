@@ -314,7 +314,7 @@ variable "oci_service_gateway" {
     ap-mumbai-1 = "all-bom-services-in-oracle-services-network"
     ap-seoul-1 = "all-icn-services-in-oracle-services-network"
     ap-sydney-1 = "all-syd-services-in-oracle-services-network"
-    ap-tokyo-1 = "all-nrt-services-in-oracle-serviecs-network"
+    ap-tokyo-1 = "all-nrt-services-in-oracle-services-network"
     ca-toronto-1 = "all-yyz-services-in-oracle-services-network"
     eu-frankfurt-1 = "all-fra-services-in-oracle-services-network"
     eu-zurich-1 = "all-zrh-services-in-oracle-services-network"
