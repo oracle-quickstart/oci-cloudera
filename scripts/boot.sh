@@ -342,7 +342,7 @@ fi
 EXECNAME="Cloudera Agent Install"
 if [ ${cm_major_version} = "7" ]; then
         log "-->CDP install detected - CM $cm_version"
-        rpm --import https://archive.cloudera.com/cm${cm_major_version}/${c_version}/redhat7/yum/RPM-GPG-KEY-cloudera
+        rpm --import https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/RPM-GPG-KEY-cloudera
         wget https://archive.cloudera.com/cm${cm_major_version}/${cm_version}/redhat7/yum/cloudera-manager-trial.repo -O /etc/yum.repos.d/cloudera-manager.repo
 else
         log "-->Setup GPG Key & CM ${cm_version} repo"
