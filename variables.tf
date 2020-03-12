@@ -57,6 +57,10 @@ variable "utilitySubnet" {
   default = " "
 }
 
+variable "blockvolumeSubnet" {
+  default = " "
+}
+
 variable "vcn_dns_label" { 
   default = "clouderavcn"
 }

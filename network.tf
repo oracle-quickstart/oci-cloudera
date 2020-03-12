@@ -25,5 +25,7 @@ module "network" {
   edge_cidr = "${var.edge_cidr}"
   public_cidr = "${var.public_cidr}"
   private_cidr = "${var.private_cidr}"
+  blockvolume_cidr = "${var.blockvolume_cidr}"
   custom_vcn = ["${var.myVcn}"]
+  enable_secondary_vnic = "${var.enable_secondary_vnic}"
 }

@@ -22,6 +22,7 @@ groupings:
   - ${edge_cidr}
   - ${public_cidr}
   - ${private_cidr}
+  - ${blockvolume_cidr}
 - title: "Cloudera Options"
   variables:
   - ${cm_username}
@@ -129,6 +130,7 @@ groupings:
   - ${block_volume_cost_savings}
   - ${clusterSubnet}
   - ${enable_secondary_vnic}
+  - ${blockvolumeSubnet}
 - title: "Master Node Options"
   variables:
   - ${master_instance_shape}
@@ -258,6 +260,20 @@ variables:
       hidePrivateSubnet: ${hide_private_subnet}
     visible: ${useExistingVcn}
     required: true 
+
+  blockvolumeSubnet:
+    type: oci:core:subnet:id
+    title: "BlockVolume Subnet"
+    description: "Select Subnet - Ensure the Subnet is in the same Availability Domain selected above"
+    dependsOn:
+      compartmentId: ${compartment_ocid}
+      vcnId: ${myVcn}
+      hidePublicSubnet: ${hide_public_subnet}
+    visible:
+      and:
+        - ${useExistingVcn}
+        - ${enable_secondary_vnic}
+    required: true
 
   hide_private_subnet:
     type: boolean
@@ -488,6 +504,15 @@ variables:
     title: "Private Subnet CIDR"
     description: "Customize Private Subnet CIDR, ensure this fits in VCN CIDR range."
     visible: ${custom_cidrs}
+
+  blockvolume_cidr:
+    type: string
+    title: "BlockVolume Subnet CIDR"
+    description: "Customize BlockVolume Subnet CIDR, ensure this fits in VCN CIDR range.  This subnet is used on BM hosts to segregate storage network traffic from cluster traffic."
+    visible:
+      and:
+        - ${custom_cidrs}
+        - ${enable_secondary_vnic}
 
   vcn_dns_label:
     type: string

@@ -12,7 +12,7 @@ resource "oci_core_instance" "Worker" {
   }
 
   create_vnic_details {
-    subnet_id          = "${var.enable_secondary_vnic ? var.bv_subnet_id : var.subnet_id}"
+    subnet_id          = "${var.enable_secondary_vnic ? var.blockvolume_subnet_id : var.subnet_id}"
     display_name        = "Cloudera Worker ${format("%01d", count.index+1)}"
     hostname_label      = "${var.enable_secondary_vnic ? data.null_data_source.hostname_labels[count.index].outputs["secondary_label"] : data.null_data_source.hostname_labels[count.index].outputs["primary_label"]}"
     hostname_label      = "Cloudera-Worker-${format("%01d", count.index+1)}"

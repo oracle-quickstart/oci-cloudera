@@ -50,6 +50,7 @@ module "utility" {
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
         subnet_id =  "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}"
+        blockvolume_subnet_id = "${var.useExistingVcn ? var.blockvolumeSubnet : module.network.blockvolume-id}"
 	availability_domain = "${var.availability_domain}"
 	image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
         ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"

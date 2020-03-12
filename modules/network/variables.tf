@@ -23,6 +23,8 @@ variable "vcn_dns_label" {
 variable "edge_cidr" {}
 variable "public_cidr" {}
 variable "private_cidr" {}
+variable "blockvolume_cidr" {}
+variable "enable_secondary_vnic" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

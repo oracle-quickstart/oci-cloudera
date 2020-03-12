@@ -13,3 +13,7 @@ output "public-id" {
 output "bastion-id" {
         value = "${oci_core_subnet.bastion.0.id}"
 }
+
+output "blockvolume-id" {
+	value = "${oci_core_subnet.blockvolume.0.id}"
+}
