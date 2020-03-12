@@ -13,6 +13,7 @@ groupings:
 - title: "VCN Options"
   variables:
   - ${useExistingVcn}
+  - ${myVcn}
   - ${hide_public_subnet}
   - ${hide_private_subnet}
   - ${vcn_dns_label}
@@ -21,10 +22,6 @@ groupings:
   - ${edge_cidr}
   - ${public_cidr}
   - ${private_cidr}
-- title: "Custom VCN"
-  variables:
-  - ${myVcn}
-  visibility: ${useExistingVcn}
 - title: "Cloudera Options"
   variables:
   - ${cm_username}
