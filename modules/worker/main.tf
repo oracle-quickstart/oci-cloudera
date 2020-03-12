@@ -12,8 +12,9 @@ resource "oci_core_instance" "Worker" {
   }
 
   create_vnic_details {
-    subnet_id          = "${var.subnet_id}"
+    subnet_id          = "${var.enable_secondary_vnic ? var.bv_subnet_id : var.subnet_id}"
     display_name        = "Cloudera Worker ${format("%01d", count.index+1)}"
+    hostname_label      = "${var.enable_secondary_vnic ? data.null_data_source.hostname_labels[count.index].outputs["secondary_label"] : data.null_data_source.hostname_labels[count.index].outputs["primary_label"]}"
     hostname_label      = "Cloudera-Worker-${format("%01d", count.index+1)}"
     assign_public_ip  = "${var.hide_public_subnet ? false : true}"
   }
@@ -32,6 +33,35 @@ resource "oci_core_instance" "Worker" {
     create = "30m"
   }
 }
+
+data "null_data_source" "hostname_labels" {
+  count = "${var.instances}"
+  inputs = {
+    primary_label = "Cloudera-Worker-${format("%01d", count.index+1)}"
+    secondary_label = "Cloudera-Worker-primary-${format("%01d", count.index+1)}"
+  }
+}
+
+data "oci_core_vnic" "secondary_vnic" {
+  count = "${var.secondary_vnic_count * var.instances}"
+  vnic_id = "${element(oci_core_vnic_attachment.secondary_vnic_attachment.*.vnic_id, count.index)}"
+}
+
+resource "oci_core_vnic_attachment" "secondary_vnic_attachment" {
+  count = "${var.secondary_vnic_count * var.instances}"
+  instance_id  = "${oci_core_instance.Worker[count.index].id}"
+  display_name = "SecondaryVnicAttachment_${count.index}"
+
+  create_vnic_details {
+    subnet_id              = "${var.subnet_id}"
+    display_name           = "SecondaryVnic_${count.index}"
+    assign_public_ip       = "${var.hide_public_subnet ? false : true}"
+    hostname_label      = "Cloudera-Worker-${format("%01d", count.index+1)}"
+    assign_public_ip    = "${var.hide_public_subnet ? false : true}"
+  }
+  nic_index     = "1"
+}
+
 // Block Volume Creation for Worker 
 
 # Log Volume for /var/log/cloudera

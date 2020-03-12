@@ -15,6 +15,19 @@ objectstoreRAID=`curl -L http://169.254.169.254/opc/v1/instance/metadata/objects
 if [ $objectstoreRAID = "true" ]; then 
 	block_volume_count=$((block_volume_count+4))
 fi
+enable_secondary_vnic=`curl -L http://169.254.169.254/opc/v1/instance/metadata/enable_secondary_vnic`
+if [ $enable_secondary_vnic = "true" ]; then
+        EXECNAME="SECONDARY VNIC"
+        log "->Download setup script"
+        wget https://docs.cloud.oracle.com/en-us/iaas/Content/Resources/Assets/secondary_vnic_all_configure.sh
+        mkdir -p /opt/oci/
+	mv secondary_vnic_all_configure.sh /opt/oci/
+	chmod +x /opt/oci/secondary_vnic_all_configure.sh
+        log "->Configure"
+        /opt/oci/secondary_vnic_all_configure.sh -c >> $LOG_FILE
+        log "->rc.local enable"
+        echo "/opt/oci/secondary_vnic_all_configure.sh -c" >> /etc/rc.local
+fi
 EXECNAME="TUNING"
 log "->TUNING START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config

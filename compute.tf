@@ -130,4 +130,6 @@ module "worker" {
 	block_volume_count = "${var.enable_block_volumes ? var.block_volumes_per_worker : 0}"
 	vpus_per_gb = "${var.customize_block_volume_performance ? data.null_data_source.vpus.outputs["block_vpus"] : 10}" 
 	objectstoreRAID = "${var.objectstoreRAID}"
+        enable_secondary_vnic = "${var.enable_secondary_vnic}"
+        secondary_vnic_count = "${var.enable_secondary_vnic ? 1 : 0}"
 }

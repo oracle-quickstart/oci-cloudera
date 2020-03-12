@@ -61,6 +61,10 @@ variable "vcn_dns_label" {
   default = "clouderavcn"
 }
 
+variable "secondary_vnic_count" {
+  default = "0"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # ORM Schema variables
 # You should modify these based on deployment requirements.
@@ -97,6 +101,10 @@ variable "vcore_ratio" {
 
 variable "yarn_scheduler" {
   default = "fair"
+}
+
+variable "enable_secondary_vnic" {
+  default = "false"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

@@ -21,6 +21,12 @@ variable "hide_public_subnet" {
 variable "objectstoreRAID" {
   default = "false"
 }
+variable "secondary_vnic_count" {
+  default = "0"
+}
+variable "enable_secondary_vnic" {
+  default = "false"
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

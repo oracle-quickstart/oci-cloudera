@@ -128,6 +128,7 @@ groupings:
   - ${block_volume_high_performance}
   - ${block_volume_cost_savings}
   - ${clusterSubnet}
+  - ${enable_secondary_vnic}
 - title: "Master Node Options"
   variables:
   - ${master_instance_shape}
@@ -154,6 +155,7 @@ groupings:
   - ${oci_service_gateway}
   - ${AD}
   - ${vpus_per_gb}
+  - ${secondary_vnic_count}
   visible: false
 
 variables:
@@ -642,3 +644,26 @@ variables:
     title: "YARN Scheduler"
     description: "Select YARN Scheduler type"
     visible: ${AdvancedOptions}
+
+  enable_secondary_vnic:
+    type: boolean
+    title: "Enable Secondary VNIC"
+    description: "Enable a second VNIC on the second physical interface for BM hosts.   This will be used for cluster traffic, allowing the primary interface to be used for storage."
+    visible:
+      and:
+        - ${AdvancedOptions}
+        - or:
+          - or:
+            - eq:
+              - ${worker_instance_shape}
+              - "BM.Standard2.52"
+            - eq:
+              - ${worker_instance_shape}
+              - "BM.DenseIO2.52"
+          - or:
+            - eq:
+              - ${worker_instance_shape}
+              - "BM.HPC2.36"
+            - eq:
+              - ${worker_instance_shape}
+              - "BM.Standard.E2.64"
