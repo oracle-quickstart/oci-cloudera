@@ -14,9 +14,15 @@ variable "custom_vcn" {
   type = list(string)
   default = [" "]
 }
+variable "custom_cidrs" {
+  default = "false"
+}
 variable "vcn_dns_label" {
   default = "clouderavcn"
 }
+variable "edge_cidr" {}
+variable "public_cidr" {}
+variable "private_cidr" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

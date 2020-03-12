@@ -1,25 +1,26 @@
 title: Sample input variable schema
 schemaVersion: 1.1.0
-version: "20200110"
+version: "2020311"
 locale: "en"
 groupings:
 - title: "SSH Key"
   variables:
   - ${provide_ssh_key}
-- title: "SSH Configuration"
-  variables:
   - ${ssh_provided_key}
-  visible: ${provide_ssh_key} 
 - title: "Availabilty Domain"
   variables:
   - ${availability_domain}
 - title: "VCN Options"
   variables:
-  - ${VPC_CIDR}
-  - ${vcn_dns_label}
   - ${useExistingVcn}
   - ${hide_public_subnet}
   - ${hide_private_subnet}
+  - ${vcn_dns_label}
+  - ${custom_cidrs}
+  - ${VPC_CIDR}
+  - ${edge_cidr}
+  - ${public_cidr}
+  - ${private_cidr}
 - title: "Custom VCN"
   variables:
   - ${myVcn}
@@ -147,15 +148,12 @@ groupings:
   - ${utility_instance_shape}
   - ${utilitySubnet}
   - ${meta_db_type}
-- title: "Edge Nodes"
-  variables:
-  - ${use_edge_nodes}
 - title: "Edge Node Options"
   variables:
+  - ${use_edge_nodes}
   - ${bastion_instance_shape}
   - ${bastion_node_count}
   - ${bastionSubnet}
-  visible: ${use_edge_nodes}
 - title: "Pre-Defined"
   variables:
   - ${region}
@@ -218,6 +216,7 @@ variables:
     title: "Use Existing VCN"
     description: "Click to use existing VCN, otherwise VCN and Subnets will be created"
     required: true
+    default: false
 
   myVcn:
     type: oci:core:vcn:id
@@ -227,6 +226,13 @@ variables:
       compartmentId: ${compartment_ocid}
     visible: ${useExistingVcn}
     required: true
+
+  custom_cidrs:
+    type: boolean
+    title: "Customize Network CIDRS"
+    description: "Click to customize CIDR ranges, only applicable when creating VCN as part of deployment"
+    required: true
+    default: false
      
   utilitySubnet:
     type: oci:core:subnet:id
@@ -377,6 +383,7 @@ variables:
     - "BM.DenseIO2.52"
     title: "Shape of Edge Nodes"
     required: true
+    visible: ${use_edge_nodes}
 
   bastion_node_count:
     type: integer
@@ -384,6 +391,7 @@ variables:
     description: "Enter a number, 0 to service limit of shape"
     minimum: 0
     required: true
+    visible: ${use_edge_nodes}
 
   ssh_provided_key:
     type: string
@@ -391,6 +399,7 @@ variables:
     description: "Copy/Paste the contents of your SSH Public Key"
     required: true
     default: ""
+    visible: ${provide_ssh_key}
 
   data_blocksize_in_gbs:
     type: integer
@@ -468,6 +477,25 @@ variables:
     type: string
     title: "VPC CIDR for VCN"
     description: "Customize VCN top level CIDR"
+    visible: ${custom_cidrs}
+
+  edge_cidr:
+    type: string
+    title: "Edge Subnet CIDR"
+    description: "Customize Edge Subnet CIDR, ensure this fits in VCN CIDR range."
+    visible: ${custom_cidrs}
+
+  public_cidr:
+    type: string
+    title: "Public Subnet CIDR"
+    description: "Customize Public Subnet CIDR (Master instance), ensure this fits in VCN CIDR range."
+    visible: ${custom_cidrs}
+
+  private_cidr:
+    type: string
+    title: "Private Subnet CIDR"
+    description: "Customize Private Subnet CIDR (Segment instances), ensure this fits in VCN CIDR range."
+    visible: ${custom_cidrs}
 
   vcn_dns_label:
     type: string

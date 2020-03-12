@@ -165,7 +165,7 @@ resource "oci_core_security_list" "BastionSubnet" {
 resource "oci_core_subnet" "public" {
   count = var.useExistingVcn ? 0 : 1
   availability_domain = "${var.availability_domain}"
-  cidr_block          = "${cidrsubnet(var.VPC_CIDR, 8, 1)}"
+  cidr_block          = "${var.custom_cidrs ? var.public_cidr : cidrsubnet(var.VPC_CIDR, 8, 1)}"
   display_name        = "public"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${var.useExistingVcn ? var.custom_vcn[0] : oci_core_vcn.cloudera_vcn.0.id}"
@@ -178,7 +178,7 @@ resource "oci_core_subnet" "public" {
 resource "oci_core_subnet" "private" {
   count = var.useExistingVcn ? 0 : 1
   availability_domain = "${var.availability_domain}"
-  cidr_block          = "${cidrsubnet(var.VPC_CIDR, 8, 2)}"
+  cidr_block          = "${var.custom_cidrs ? var.private_cidr : cidrsubnet(var.VPC_CIDR, 8, 2)}"
   display_name        = "private"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${var.useExistingVcn ? var.custom_vcn[0] : oci_core_vcn.cloudera_vcn.0.id}"
@@ -192,7 +192,7 @@ resource "oci_core_subnet" "private" {
 resource "oci_core_subnet" "bastion" {
   count = var.useExistingVcn ? 0 : 1
   availability_domain = "${var.availability_domain}"
-  cidr_block          = "${cidrsubnet(var.VPC_CIDR, 8, 3)}"
+  cidr_block          = "${var.custom_cidrs ? var.edge_cidr : cidrsubnet(var.VPC_CIDR, 8, 3)}"
   display_name        = "bastion"
   compartment_id      = "${var.compartment_ocid}"
   vcn_id              = "${var.useExistingVcn ? var.custom_vcn[0] : oci_core_vcn.cloudera_vcn.0.id}"
