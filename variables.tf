@@ -73,6 +73,14 @@ variable "secondary_vnic_count" {
   default = "0"
 }
 
+variable "blockvolume_subnet_id" {
+  default = " "
+}
+
+variable "worker_domain" {
+  default = " "
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # ORM Schema variables
 # You should modify these based on deployment requirements.

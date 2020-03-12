@@ -17,6 +17,7 @@ data "oci_core_subnet" "utility_subnet" {
 data "null_data_source" "values" {
   inputs = {
     cm_default = "cloudera-utility-1.${data.oci_core_subnet.utility_subnet.dns_label}.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
+    worker_domain = "${data.oci_core_subnet.cluster_subnet.dns_label}.${data.oci_core_vcn.vcn_info.vcn_domain_name}"
   }
 }
 
@@ -50,7 +51,6 @@ module "utility" {
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
         subnet_id =  "${var.useExistingVcn ? var.utilitySubnet : module.network.public-id}"
-        blockvolume_subnet_id = "${var.useExistingVcn ? var.blockvolumeSubnet : module.network.blockvolume-id}"
 	availability_domain = "${var.availability_domain}"
 	image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
         ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"
@@ -116,6 +116,7 @@ module "worker" {
 	region = "${var.region}"
 	compartment_ocid = "${var.compartment_ocid}"
         subnet_id =  "${var.useExistingVcn ? var.clusterSubnet : module.network.private-id}"
+	blockvolume_subnet_id = "${var.useExistingVcn ? var.blockvolumeSubnet : module.network.blockvolume-id}"
 	availability_domain = "${var.availability_domain}"
 	image_ocid = "${var.cloudera_version == "7.0.3.0" ? var.CentOSImageOCID[var.region] : var.OELImageOCID[var.region]}"
         ssh_public_key = "${var.provide_ssh_key ? var.ssh_provided_key : tls_private_key.key.public_key_openssh}"
@@ -133,4 +134,5 @@ module "worker" {
 	objectstoreRAID = "${var.objectstoreRAID}"
         enable_secondary_vnic = "${var.enable_secondary_vnic}"
         secondary_vnic_count = "${var.enable_secondary_vnic ? 1 : 0}"
+	worker_domain = "${data.null_data_source.values.outputs["worker_domain"]}"
 }

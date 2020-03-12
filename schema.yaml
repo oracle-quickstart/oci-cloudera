@@ -22,7 +22,6 @@ groupings:
   - ${edge_cidr}
   - ${public_cidr}
   - ${private_cidr}
-  - ${blockvolume_cidr}
 - title: "Cloudera Options"
   variables:
   - ${cm_username}
@@ -130,6 +129,7 @@ groupings:
   - ${block_volume_cost_savings}
   - ${clusterSubnet}
   - ${enable_secondary_vnic}
+  - ${blockvolume_cidr}
   - ${blockvolumeSubnet}
 - title: "Master Node Options"
   variables:
@@ -158,6 +158,8 @@ groupings:
   - ${AD}
   - ${vpus_per_gb}
   - ${secondary_vnic_count}
+  - ${blockvolume_subnet_id}
+  - ${worker_domain}
   visible: false
 
 variables:
@@ -675,20 +677,18 @@ variables:
     title: "Enable Secondary VNIC"
     description: "Enable a second VNIC on the second physical interface for BM hosts.   This will be used for cluster traffic, allowing the primary interface to be used for storage."
     visible:
-      and:
-        - ${AdvancedOptions}
+      or:
         - or:
-          - or:
-            - eq:
-              - ${worker_instance_shape}
-              - "BM.Standard2.52"
-            - eq:
-              - ${worker_instance_shape}
-              - "BM.DenseIO2.52"
-          - or:
-            - eq:
-              - ${worker_instance_shape}
-              - "BM.HPC2.36"
-            - eq:
-              - ${worker_instance_shape}
-              - "BM.Standard.E2.64"
+          - eq:
+            - ${worker_instance_shape}
+            - "BM.Standard2.52"
+          - eq:
+            - ${worker_instance_shape}
+            - "BM.DenseIO2.52"
+        - or:
+          - eq:
+            - ${worker_instance_shape}
+            - "BM.HPC2.36"
+          - eq:
+            - ${worker_instance_shape}
+            - "BM.Standard.E2.64"

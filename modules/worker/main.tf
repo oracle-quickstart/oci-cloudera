@@ -26,6 +26,8 @@ resource "oci_core_instance" "Worker" {
     cm_version          = "${var.cm_version}" 
     block_volume_count  = "${var.block_volume_count}"
     objectstoreRAID     = "${var.objectstoreRAID}"
+    enable_secondary_vnic = "${var.enable_secondary_vnic}"
+    agent_hostname      = "cloudera-worker-${count.index+1}.${var.worker_domain}"
   }
 
   timeouts {

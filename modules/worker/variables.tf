@@ -9,6 +9,7 @@ variable "compartment_ocid" {}
 variable "ssh_public_key" {}
 variable "instances" {}
 variable "subnet_id" {}
+variable "blockvolume_subnet_id" {}
 variable "user_data" {}
 variable "image_ocid" {}
 variable "cm_version" {}
@@ -27,6 +28,7 @@ variable "secondary_vnic_count" {
 variable "enable_secondary_vnic" {
   default = "false"
 }
+variable "worker_domain" {}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.

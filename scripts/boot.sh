@@ -367,6 +367,10 @@ export JDK=`ls /usr/lib/jvm | head -n 1`
 sudo JAVA_HOME=/usr/lib/jvm/$JDK/jre/ /opt/cloudera/cm-agent/bin/certmanager setup --configure-services
 cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
 sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.ini
+if [ ${enable_secondary_vnic} = "true" ]; then 
+	agent_hostname=`curl -L http://169.254.169.254/opc/v1/instance/metadata/agent_hostname`
+	echo "listening_hostname=${agent_hostname}" >> /etc/cloudera-scm-agent/config.ini
+fi
 systemctl start cloudera-scm-agent
 EXECNAME="END"
 log "->DONE"
