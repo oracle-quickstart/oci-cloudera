@@ -485,13 +485,13 @@ variables:
   public_cidr:
     type: string
     title: "Public Subnet CIDR"
-    description: "Customize Public Subnet CIDR (Master instance), ensure this fits in VCN CIDR range."
+    description: "Customize Public Subnet CIDR, ensure this fits in VCN CIDR range."
     visible: ${custom_cidrs}
 
   private_cidr:
     type: string
     title: "Private Subnet CIDR"
-    description: "Customize Private Subnet CIDR (Segment instances), ensure this fits in VCN CIDR range."
+    description: "Customize Private Subnet CIDR, ensure this fits in VCN CIDR range."
     visible: ${custom_cidrs}
 
   vcn_dns_label:
