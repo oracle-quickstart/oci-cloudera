@@ -29,6 +29,8 @@ groupings:
   - ${cm_version}
   - ${cloudera_version}
   - ${cluster_name}
+  - ${secure_cluster}
+  - ${hdfs_ha}
   - ${AdvancedOptions}
   - ${enable_debug}
   - ${log_volume_size_in_gbs}
@@ -43,6 +45,8 @@ groupings:
   - ${svc_SPARK_ON_YARN}
   - ${svc_SQOOP_CLIENT}
   - ${svc_YARN}
+  - ${vcore_ratio}
+  - ${yarn_scheduler}
 - title: "Advanced CDP Options"
   variables: 
   - ${svc_ATLAS}
@@ -112,17 +116,6 @@ groupings:
             - eq:
               - ${cloudera_version}
               - "6.3.2"
-- title: "Security"
-  variables:
-  - ${secure_cluster}
-- title: "High Availability"
-  variables:
-  - ${hdfs_ha}
-- title: "YARN Options"
-  variables:
-  - ${vcore_ratio}
-  - ${yarn_scheduler}
-  visible: ${AdvancedOptions}
 - title: "Worker Node Options"
   variables:
   - ${worker_instance_shape}
@@ -551,6 +544,7 @@ variables:
     min: 1
     max: 4
     default: 2
+    visible: ${AdvancedOptions}
 
   AdvancedOptions:
     type: boolean
