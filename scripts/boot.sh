@@ -370,6 +370,8 @@ sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.in
 if [ ${enable_secondary_vnic} = "true" ]; then 
 	agent_hostname=`curl -L http://169.254.169.254/opc/v1/instance/metadata/agent_hostname`
 	echo "listening_hostname=${agent_hostname}" >> /etc/cloudera-scm-agent/config.ini
+	agent_ip=`host ${agent_hostname} | gawk '{print $4}'`
+	echo "listening_ip=${agent_ip}" >> /etc/cloudera-scm-agent/config.ini
 fi
 systemctl start cloudera-scm-agent
 EXECNAME="END"
