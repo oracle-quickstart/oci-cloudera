@@ -41,6 +41,10 @@ variable "private_cidr" {
   default = "10.0.3.0/24"
 }
 
+variable "blockvolume_cidr" {
+  default = "10.0.4.0/24"
+}
+
 variable "myVcn" {
   default = " "
 }
