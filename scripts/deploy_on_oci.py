@@ -114,7 +114,7 @@ def build_api_endpoints(user_name, password):
         cluster_services_api, auth_roles_api, roles_config_api, all_hosts_api, \
         roles_api, mgmt_service_api, services_api, \
         mgmt_role_commands_api, mgmt_role_config_groups_api, \
-        mgmt_roles_api, external_accounts_api
+        mgmt_roles_api, external_accounts_api, hr_api
     clusters_api = cm_client.ClustersResourceApi(api_client)
     users_api = cm_client.UsersResourceApi(api_client)
     cloudera_manager_api = cm_client.ClouderaManagerResourceApi(api_client)
@@ -131,6 +131,7 @@ def build_api_endpoints(user_name, password):
     mgmt_role_config_groups_api = cm_client.MgmtRoleConfigGroupsResourceApi(api_client)
     mgmt_roles_api = cm_client.MgmtRolesResourceApi(api_client)
     external_accounts_api = cm_client.ExternalAccountsResourceApi(api_client)
+    hr_api = cm_client.HostsResourceApi(api_client)
 
 
 def wait_for_active_cluster_commands(active_command):
@@ -893,8 +894,23 @@ def update_cluster_rcg_configuration(cluster_service_list):
                     if s3_compat_enable == 'True':
                         update_service_config(service_name=service, api_config_items=core_site_safety_valve)
                     n = 0
+                    r = 1
                     for host_id in worker_host_ids:
                         create_role(rcg, rcg_roletype, service, host_id, worker_hostnames[n], (n + 1))
+			r_id = '/rack' + str(r)
+                        body = cm_client.ApiHost(host_id, rack_id=r_id)
+                        try:
+                            api_response = hr_api.update_host(host_id, body=body)
+                            if debug is True:
+                                pprint(api_response)
+
+                        except ApiException as e:
+                            print("Exception when calling HostsResourceApi->update_host: %s\n" % e)
+                            
+			if r == 3:
+                            r = 1
+                        else:
+                            r = r + 1
                         n = n + 1
 
                 if rcg == 'HDFS-SECONDARYNAMENODE-BASE':
