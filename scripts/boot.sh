@@ -18,15 +18,24 @@ fi
 enable_secondary_vnic=`curl -L http://169.254.169.254/opc/v1/instance/metadata/enable_secondary_vnic`
 if [ $enable_secondary_vnic = "true" ]; then
         EXECNAME="SECONDARY VNIC"
-        log "->Download setup script"
-        wget https://docs.cloud.oracle.com/en-us/iaas/Content/Resources/Assets/secondary_vnic_all_configure.sh
-        mkdir -p /opt/oci/
-	mv secondary_vnic_all_configure.sh /opt/oci/
-	chmod +x /opt/oci/secondary_vnic_all_configure.sh
-        log "->Configure"
-        /opt/oci/secondary_vnic_all_configure.sh -c >> $LOG_FILE
-        log "->rc.local enable"
-        echo "/opt/oci/secondary_vnic_all_configure.sh -c" >> /etc/rc.local
+	host_shape=` curl -L http://169.254.169.254/opc/v1/instance/shape`
+	case ${host_shape} in 
+		BM.HPC2.36)
+		log "-> Skipping setup, RDMA setup not implemented"
+		;;
+
+		*) 
+	        log "->Download setup script"
+	        wget https://docs.cloud.oracle.com/en-us/iaas/Content/Resources/Assets/secondary_vnic_all_configure.sh
+	        mkdir -p /opt/oci/
+		mv secondary_vnic_all_configure.sh /opt/oci/
+		chmod +x /opt/oci/secondary_vnic_all_configure.sh
+	        log "->Configure"
+	        /opt/oci/secondary_vnic_all_configure.sh -c >> $LOG_FILE
+	        log "->rc.local enable"
+	        echo "/opt/oci/secondary_vnic_all_configure.sh -c" >> /etc/rc.local
+		;;
+	esac
 fi
 EXECNAME="TUNING"
 log "->TUNING START"
@@ -369,9 +378,9 @@ cp /etc/cloudera-scm-agent/config.ini /etc/cloudera-scm-agent/config.ini.orig
 sed -e "s/\(server_host=\).*/\1${cm_fqdn}/" -i /etc/cloudera-scm-agent/config.ini
 if [ ${enable_secondary_vnic} = "true" ]; then 
 	agent_hostname=`curl -L http://169.254.169.254/opc/v1/instance/metadata/agent_hostname`
-	echo "listening_hostname=${agent_hostname}" >> /etc/cloudera-scm-agent/config.ini
+	sed -i 's,# listening_hostname=,'"listening_hostname=${agent_hostname}"',g' /etc/cloudera-scm-agent/config.ini
 	agent_ip=`host ${agent_hostname} | gawk '{print $4}'`
-	echo "listening_ip=${agent_ip}" >> /etc/cloudera-scm-agent/config.ini
+	sed -i 's,# listening_ip=,'"listening_ip=${agent_ip}"',g' /etc/cloudera-scm-agent/config.ini
 fi
 systemctl start cloudera-scm-agent
 EXECNAME="END"
