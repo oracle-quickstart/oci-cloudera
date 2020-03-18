@@ -1,5 +1,12 @@
-# oci-quickstart-cloudera
+<p float="left">
+  <img align="left" width="240" src="./images/cloudera_logo.png">
+  <br/>
+  <h1>Cloudera on Oracle Cloud Infrastructure</h1>
+  <br/>
+</p>
+
 ![cloudera-stack](https://github.com/oracle-quickstart/oci-cloudera/workflows/cloudera-stack/badge.svg)
+
 This is a Terraform module that deploys [Cloudera Data Platform (CDP) Data Center](https://www.cloudera.com/products/cloudera-data-platform.html) on [Oracle Cloud Infrastructure (OCI)](https://cloud.oracle.com/en_US/cloud-infrastructure).  It is developed jointly by Oracle and Cloudera.
 
 ## Deployment Information
