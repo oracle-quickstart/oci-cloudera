@@ -1,5 +1,5 @@
 <p float="left">
-  <img align="left" width="240" src="./images/cloudera_logo.png">
+  <img align="left" width="120" src="./images/cloudera_logo.png">
   <br/>
   <h1>Cloudera on Oracle Cloud Infrastructure</h1>
   <br/>
