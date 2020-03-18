@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   terraform_generate_packages:
     name: Generate Stack Packages
-    runs-on: oracle-linux-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Terraform Init
