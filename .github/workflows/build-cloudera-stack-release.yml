@@ -1,0 +1,41 @@
+name: 'cloudera-stack-release'
+  
+on:
+  release:
+    types:
+    - published
+
+jobs:
+  terraform_generate_packages:
+    name: Generate Stack Packages
+    runs-on: oel-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Terraform Init
+      uses: hashicorp/terraform-github-actions@master
+      with:
+        tf_actions_version: 0.12.17
+        tf_actions_subcommand: 'init'
+        tf_actions_working_dir: terraform
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: 'Terraform Validate'
+      uses: hashicorp/terraform-github-actions@master
+      with:
+        tf_actions_version: 0.12.17
+        tf_actions_subcommand: 'validate'
+        tf_actions_working_dir: terraform
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build artifacts
+      run: |
+        /bin/bash -e build.sh
+    - name: Upload BYOL stack
+      uses: actions/upload-release-asset@v1.0.1
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./build/cloudera-stack-byol.zip
+        asset_name: cloudera-stack-${{ github.event.release.tag_name }}-byol.zip
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
