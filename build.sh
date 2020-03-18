@@ -11,7 +11,7 @@ folder=$(mktemp -d "cloudera-XXXXX")
 mkdir -p $folder
 cd $folder
 echo "-->Copying Terraform stack"
-rsync -apxrv $SCRIPT_DIR/ --exclude=build --exclude=.github .
+rsync -apxrv $SCRIPT_DIR/ --exclude=build --exclude=.github --exclude=.git --exclude=$folder .
 echo "-->Cleanup .terraform"
 rm -rf .terraform
 echo "-->Showing contents of build root:"
