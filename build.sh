@@ -11,7 +11,10 @@ folder=$(mktemp -d "cloudera-XXXXX")
 
 mkdir -p $folder
 cd $folder
-cp -R $SCRIPT_DIR/* .
+cp $SCRIPT_DIR/*.tf .
+cp $SCRIPT_DIR/*.yaml .
+cp -R $SCRIPT_DIR/modules/ .
+cp -R $SCRIPT_DIR/scripts/ .
 rm -rf .terraform
 ls -la
 zip -r $SCRIPT_DIR/build/cloudera-byol.zip *
