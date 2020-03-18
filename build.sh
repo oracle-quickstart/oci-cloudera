@@ -10,13 +10,9 @@ echo "-->Creating BYOL stack"
 folder=$(mktemp -d "cloudera-XXXXX")
 mkdir -p $folder
 cd $folder
-echo "-->Copying top level Terraform"
-cp $SCRIPT_DIR/*.tf .
-cp $SCRIPT_DIR/*.yaml .
-echo "-->Copying Modules"
-rsync -apxr $SCRIPT_DIR/modules/ .
-echo "-->Copying Scripts"
-cp -R $SCRIPT_DIR/scripts/ .
+echo "-->Copying Terraform stack"
+rsync -apxrv $SCRIPT_DIR/ --exclude=build --exclude=.github .
+echo "-->Cleanup .terraform"
 rm -rf .terraform
 echo "-->Showing contents of build root:"
 ls -la
