@@ -40,6 +40,8 @@ The default username is `cm_admin` and the default password is `changeme`.  You 
 
 ![](images/02%20-%20home.png)
 
+If upon login you are presenetd with a licensing prompt, please wait, do not interact, and allow additional time for the automated cluster provisioning process to complete.   Refresh the page after a few minutes to check on deployment.
+
 ## Python Deployment using cm_client
 The deployment script `deploy_on_oci.py` uses cm_client against Cloudera Manager API v31.  This script can be customized before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
 
