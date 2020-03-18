@@ -8,7 +8,7 @@ on:
 jobs:
   terraform_generate_packages:
     name: Generate Stack Packages
-    runs-on: oel-latest
+    runs-on: oracle-linux-latest
     steps:
     - uses: actions/checkout@v2
     - name: Terraform Init
