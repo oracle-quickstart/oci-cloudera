@@ -48,6 +48,8 @@ The deployment script `deploy_on_oci.py` uses cm_client against Cloudera Manager
 		admin_user_name
 		admin_password
 
+When using ORM schema, these values are put into Utility instance metadata.   It is highly encouraged to modify the admin password in Cloudera Manager after deployment is complete.
+
 In addition, advanced customization of the cluster deployment can be done by modification of the following functions:
 
 		setup_mgmt_rcg
