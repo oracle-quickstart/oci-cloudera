@@ -43,12 +43,11 @@ The default username is `cm_admin` and the default password is `changeme`.  You 
 If upon login you are presenetd with a licensing prompt, please wait, do not interact, and allow additional time for the automated cluster provisioning process to complete.   Refresh the page after a few minutes to check on deployment.
 
 ## Python Deployment using cm_client
-The deployment script `deploy_on_oci.py` uses cm_client against Cloudera Manager API v31.  This script can be customized before execution.  Reference the header section in the script, it is highly encouraged you modify the following variables before deployment:
+The deployment script `deploy_on_oci.py` uses cm_client against Cloudera Manager API v31.  This script can be customized before execution.  Reference the header section in the script, the following parameters are passed at deployment time either manually or via ORM schema:
 
 		admin_user_name
 		admin_password
 
-These variables are not passed to instance metadata for security purposes, as such they are only present in the CloudInit python deployment script.  You can sanitize these after deployment by removing the contents of `/var/lib/cloud/instance/scripts/`.
 In addition, advanced customization of the cluster deployment can be done by modification of the following functions:
 
 		setup_mgmt_rcg
