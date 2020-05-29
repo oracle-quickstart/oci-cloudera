@@ -189,7 +189,6 @@ iscsi_detection() {
 	else
 		volume_count="${#iqn[@]}"
 		log "--> Discovery Complete - ${#iqn[@]} volumes found"
-		detection_done="1"
 	fi
 }
 iscsi_setup() {
@@ -205,10 +204,9 @@ EXECNAME="DISK DETECTION"
 log "->Begin Block Volume Detection Loop"
 detection_flag="0"
 while [ "$detection_flag" = "0" ]; do
-        detection_done="0"
         log "-- Detecting Block Volumes --"
         for i in `seq 2 33`; do
-                if [ $detection_done = "0" ]; then
+                if [ -z $volume_count ]; then
 			iscsi_detection
 		fi
         done;
@@ -221,24 +219,26 @@ while [ "$detection_flag" = "0" ]; do
         else
                 total_volume_count=$((block_volume_count+2))
         fi
+	log "-- $total_volume_count volumes expected $volume_count volumes found --"
         if [ "$volume_count" = "0" ]; then
                 log "-- $volume_count Block Volumes detected, sleeping 15 then retry --"
+		unset volume_count
+		unset iqn
                 sleep 15
                 continue
         elif [ "$volume_count" != "$total_volume_count" ]; then
                 log "-- Sanity Check Failed - $volume_count Volumes found, $total_volume_count expected.  Re-running --"
+		unset volume_count
+		unset iqn
                 sleep 15
                 continue
-        elif [ "$volume_count" = "$total_volume_count" ]; then
+	else
                 log "-- Setup for ${#iqn[@]} Block Volumes --"
                 for i in `seq 1 ${#iqn[@]}`; do
                         n=$((i+1))
                         iscsi_setup
                 done;
                 detection_flag="1"
-        else
-                log "-- Repeating Detection --"
-                continue
         fi
 done;
 
@@ -247,7 +247,7 @@ data_mount () {
   log "-->Mounting /dev/$disk to /data$dcount"
   mkdir -p /data$dcount
   mount -o noatime,barrier=1 -t ext4 /dev/$disk /data$dcount
-  UUID=`lsblk -no UUID /dev/$disk`
+  UUID=`blkid /dev/$disk | cut -d '"' -f2`
   echo "UUID=$UUID   /data$dcount    ext4   defaults,noatime,discard,barrier=0 0 1" | tee -a /etc/fstab
 }
 
@@ -255,7 +255,7 @@ block_data_mount () {
   log "-->Mounting /dev/oracleoci/$disk to /data$dcount"
   mkdir -p /data$dcount
   mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /data$dcount
-  UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+  UUID=`blkid /dev/oracleoci/$disk | cut -d '"' -f 2`
   if [ ! -z $UUID ]; then 
   	echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
   fi
@@ -295,10 +295,7 @@ for i in `seq 1 ${#iqn[@]}`; do
                                 log "--->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
                                 mkdir -p /var/log/cloudera
                                 mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
-                                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-				if [ ! -z $UUID ]; then 
-	                                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-				fi
+	                        echo "/dev/oracleoci/oraclevdb   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
                                 mkdir -p /var/log/cloudera/cloudera-scm-agent
                                 ln -s /var/log/cloudera/cloudera-scm-agent /var/log/cloudera-scm-agent
                                 ;;
@@ -307,10 +304,7 @@ for i in `seq 1 ${#iqn[@]}`; do
                                 log "--->Mounting /dev/oracleoci/$disk to /opt/cloudera"
                                 mkdir -p /opt/cloudera
                                 mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
-                                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-				if [ ! -z $UUID ]; then 
-	                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
-				fi
+	                        echo "/dev/oracleoci/oraclevdc   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
                                 ;;
 				oraclevdd|oraclevde|oraclevdf|oraclevdg)
 				if [ $objectstoreRAID = "true" ]; then 
@@ -340,8 +334,8 @@ for i in `seq 1 ${#iqn[@]}`; do
 		                        iscsi_detection
                 		fi
 		        done;
-			for i in `seq 1 ${#iqn[@]}`; do
-				n=$((i+1))
+			for j in `seq 1 ${#iqn[@]}`; do
+				n=$((j+1))
 	                        iscsi_setup
 			done
                 fi

@@ -369,14 +369,14 @@ data_mount () {
   log "-->Mounting /dev/$disk to /data$dcount"
   mkdir -p /data$dcount
   mount -o noatime,barrier=1 -t ext4 /dev/$disk /data$dcount
-  UUID=`lsblk -no UUID /dev/$disk`
+  UUID=`blkid /dev/$disk | cut -d '"' -f 2`
   echo "UUID=$UUID   /data$dcount    ext4   defaults,noatime,discard,barrier=0 0 1" | tee -a /etc/fstab
 }
 block_data_mount () {
   log "-->Mounting /dev/oracleoci/$disk to /data$dcount"
   mkdir -p /data$dcount
   mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /data$dcount
-  UUID=`lsblk -no UUID /dev/oracleoci/$disk`
+  UUID=`blkid /dev/oracleoci/$disk | cut -d '"' -f 2`
   echo "UUID=$UUID   /data$dcount    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
 }
 log "->Checking for disks..."
@@ -400,8 +400,7 @@ for i in `seq 1 ${#iqn[@]}`; do
                                 log "--->Mounting /dev/oracleoci/$disk to /var/log/cloudera"
                                 mkdir -p /var/log/cloudera
                                 mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /var/log/cloudera
-                                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                                echo "UUID=$UUID   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+                                echo "/dev/oracleoci/oraclevdb   /var/log/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
                         elif [ $disk = "oraclevdc" ]; then
                                 log "--->Mounting /dev/oracleoci/$disk to /opt/cloudera"
 				if [ -d /opt/cloudera ]; then
@@ -414,8 +413,7 @@ for i in `seq 1 ${#iqn[@]}`; do
                 		        mkdir -p /opt/cloudera
 		                        mount -o noatime,barrier=1 -t ext4 /dev/oracleoci/$disk /opt/cloudera
 		                fi
-                                UUID=`lsblk -no UUID /dev/oracleoci/$disk`
-                                echo "UUID=$UUID   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
+                                echo "/dev/oracleoci/oraclevdc   /opt/cloudera    ext4   defaults,_netdev,nofail,noatime,discard,barrier=0 0 2" | tee -a /etc/fstab
                         else
                                 block_data_mount
                                 dcount=$((dcount+1))
