@@ -28,4 +28,9 @@ module "network" {
   blockvolume_cidr = "${var.blockvolume_cidr}"
   custom_vcn = ["${var.myVcn}"]
   enable_secondary_vnic = "${var.enable_secondary_vnic}"
+  clusterSubnet = "${var.clusterSubnet}"
+  bastionSubnet = "${var.bastionSubnet}"
+  utilitySubnet = "${var.utilitySubnet}"
+  blockvolumeSubnet = "${var.blockvolumeSubnet}"
+  myVcn = "${var.myVcn}"
 }

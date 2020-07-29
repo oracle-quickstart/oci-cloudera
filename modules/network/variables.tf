@@ -25,6 +25,19 @@ variable "public_cidr" {}
 variable "private_cidr" {}
 variable "blockvolume_cidr" {}
 variable "enable_secondary_vnic" {}
+variable "myVcn" {}
+variable "clusterSubnet" {
+  default = " "
+}
+variable "bastionSubnet" {
+  default = " "
+}
+variable "utilitySubnet" {
+  default = " "
+}
+variable "blockvolumeSubnet" {
+  default = " "
+}
 # ---------------------------------------------------------------------------------------------------------------------
 # Optional variables
 # You can modify these.
