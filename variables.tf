@@ -131,11 +131,11 @@ variable "enable_secondary_vnic" {
 
 # Cloudera Manager Version
 variable "cm_version" { 
-    default = "7.1.3" 
+    default = "7.1.4" 
 }
 # Cloudera Enterprise Data Hub Version
 variable "cloudera_version" { 
-    default = "7.1.3.0" 
+    default = "7.1.4.0" 
 }
 variable "secure_cluster" { 
     default = "True" 
