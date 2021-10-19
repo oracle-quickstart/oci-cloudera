@@ -201,51 +201,49 @@ log "->Install"
 wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
 rpm -ivh mysql-community-release-el7-5.noarch.rpm
 yum install mysql-server -y
-log "->Tuning"
-head -n -6 /etc/my.cnf >> /etc/my.cnf.new
-mv /etc/my.cnf /etc/my.cnf.rpminstall
-mv /etc/my.cnf.new /etc/my.cnf
-echo -e "transaction_isolation = READ-COMMITTED\n\
-read_buffer_size = 2M\n\
-read_rnd_buffer_size = 16M\n\
-sort_buffer_size = 8M\n\
-join_buffer_size = 8M\n\
-query_cache_size = 64M\n\
-query_cache_limit = 8M\n\
-query_cache_type = 1\n\
-thread_stack = 256K\n\
-thread_cache_size = 64\n\
-max_connections = 700\n\
-key_buffer_size = 32M\n\
-max_allowed_packet = 32M\n\
-log_bin=/var/lib/mysql/mysql_binary_log\n\
-server_id=1\n\
-binlog_format = mixed\n\
-\n\
-# InnoDB Settings\n\
-innodb_file_per_table = 1\n\
-innodb_flush_log_at_trx_commit = 2\n\
-innodb_log_buffer_size = 64M\n\
-innodb_thread_concurrency = 8\n\
-innodb_buffer_pool_size = 4G\n\
-innodb_flush_method = O_DIRECT\n\
-innodb_log_file_size = 512M\n\
-innodb_large_prefix = 1\n\
-\n\
-[mysqld_safe]\n\
-log-error=/var/log/mysqld.log
-pid-file=/var/run/mysqld/mysqld.pid \n\
-\n\
-sql_mode=STRICT_ALL_TABLES\n\
-" >> /etc/my.cnf
+#log "->Tuning"
+#head -n -6 /etc/my.cnf >> /etc/my.cnf.new
+#mv /etc/my.cnf /etc/my.cnf.rpminstall
+#mv /etc/my.cnf.new /etc/my.cnf
+#echo -e "transaction_isolation = READ-COMMITTED\n\
+#read_buffer_size = 2M\n\
+#read_rnd_buffer_size = 16M\n\
+#sort_buffer_size = 8M\n\
+#join_buffer_size = 8M\n\
+#thread_stack = 256K\n\
+#thread_cache_size = 64\n\
+#max_connections = 700\n\
+#key_buffer_size = 32M\n\
+#max_allowed_packet = 32M\n\
+#log_bin=/var/lib/mysql/mysql_binary_log\n\
+#server_id=1\n\
+#binlog_format = mixed\n\
+#\n\
+## InnoDB Settings\n\
+#innodb_file_per_table = 1\n\
+#innodb_flush_log_at_trx_commit = 2\n\
+#innodb_log_buffer_size = 64M\n\
+#innodb_thread_concurrency = 8\n\
+#innodb_buffer_pool_size = 4G\n\
+#innodb_flush_method = O_DIRECT\n\
+#innodb_log_file_size = 512M\n\
+#\n\
+#[mysqld_safe]\n\
+#log-error=/var/log/mysqld.log
+#pid-file=/var/run/mysqld/mysqld.pid \n\
+#\n\
+#sql_mode=STRICT_ALL_TABLES\n\
+#" >> /etc/my.cnf
 log "->Start"
 systemctl enable mysqld
 systemctl start mysqld
 log "->Bootstrap Databases"
-mysql -e "UPDATE mysql.user SET Password = PASSWORD('SOMEPASSWORD') WHERE User = 'root'"
-mysql -e "DROP USER ''@'localhost'"
-mysql -e "DROP USER ''@'$(hostname)'"
-mysql -e "SET GLOBAL log_bin_trust_function_creators = 1"
+mysql_pw=` cat /var/log/mysqld.log | grep root@localhost | gawk '{print $13}'`
+mysql -u root -p${mysql_pw} -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'S0m3p@ssw1234';"
+mysql -u root -p${mysql_pw} -e "FLUSH PRIVILEGES;"
+mysql_pw="S0m3p@ssw1234"
+mysql -u root -p${mysql_pw} -e "SET GLOBAL validate_password.policy=LOW;"
+mysql -u root -p${mysql_pw} -e "SET GLOBAL log_bin_trust_function_creators = 1;"
 mkdir -p /etc/mysql
 for DATABASE in "scm" "amon" "rman" "hue" "metastore" "sentry" "nav" "navms" "oozie" "ranger" "atlas"; do
 	pw=$(create_random_password)
@@ -267,12 +265,13 @@ for DATABASE in "scm" "amon" "rman" "hue" "metastore" "sentry" "nav" "navms" "oo
 		USER=${DATABASE}
 	fi
 	echo -e "CREATE DATABASE ${DATABASE};" >> /etc/mysql/cloudera.sql
-	echo -e "GRANT ALL ON ${DATABASE}.* TO \'${USER}\'@'%' IDENTIFIED BY \'${pw}\';" >> /etc/mysql/cloudera.sql
+	echo -e "CREATE USER \'${USER}\'@'%' IDENTIFIED BY \'${pw}\';" >> /etc/mysql/cloudera.sql
+	echo -e "GRANT ALL on ${DATABASE}.* to \'${USER}\'@'%';" >> /etc/mysql/cloudera.sql
         echo "${USER}:${pw}" >> /etc/mysql/mysql.pw
 done;
 sed -i 's/\\//g' /etc/mysql/cloudera.sql
-mysql -u root < /etc/mysql/cloudera.sql
-mysql -e "FLUSH PRIVILEGES"
+mysql -u root -p${mysql_pw} < /etc/mysql/cloudera.sql
+mysql -u root -p${mysql_pw} -e "FLUSH PRIVILEGES"
 log "->Java Connector"
 wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.tar.gz
 tar zxvf mysql-connector-java-5.1.46.tar.gz
