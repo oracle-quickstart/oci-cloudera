@@ -21,7 +21,7 @@ The following table shows Recommended and Minimum supported OCI shapes for each 
 This Quick Start uses [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) to make deployment quite easy.  
 
 Simply click this button to deploy to OCI.
-[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://console.us-ashburn-1.oraclecloud.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/oracle-quickstart/oci-cloudera/archive/3.3.0.zip)
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://console.us-ashburn-1.oraclecloud.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/oracle-quickstart/oci-cloudera/archive/v3.3.0.zip)
 
 This template uses Terraform v0.12, and has support to target existing VCN/Subnets for cluster deployment.   To engage this functionality, just use the Schema menu system to select an existing VCN target, then select appropriate Subnets for each cluster host type.
 
