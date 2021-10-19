@@ -202,9 +202,6 @@ wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
 rpm -ivh mysql-community-release-el7-5.noarch.rpm
 yum install mysql-server -y
 log "->Tuning"
-head -n -6 /etc/my.cnf >> /etc/my.cnf.new
-mv /etc/my.cnf /etc/my.cnf.rpminstall
-mv /etc/my.cnf.new /etc/my.cnf
 echo -e "transaction_isolation = READ-COMMITTED\n\
 read_buffer_size = 2M\n\
 read_rnd_buffer_size = 16M\n\
@@ -239,6 +236,7 @@ systemctl enable mysqld
 systemctl start mysqld
 log "->Bootstrap Databases"
 mysql_pw=` cat /var/log/mysqld.log | grep root@localhost | gawk '{print $13}'`
+echo -e "$mysql_pw" >> /etc/mysql/mysql_root.pw
 mysql -u root --connect-expired-password -p${mysql_pw} -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'S0m3p@ssw1234';"
 mysql -u root --connect-expired-password -p${mysql_pw} -e "FLUSH PRIVILEGES;"
 mysql_pw="S0m3p@ssw1234"
