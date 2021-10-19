@@ -131,7 +131,7 @@ variable "enable_secondary_vnic" {
 
 # Cloudera Manager Version
 variable "cm_version" { 
-    default = "7.5.1" 
+    default = "7.4.4" 
 }
 # Cloudera Enterprise Data Hub Version
 variable "cloudera_version" { 
