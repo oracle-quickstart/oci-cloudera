@@ -202,7 +202,7 @@ wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
 rpm -ivh mysql-community-release-el7-5.noarch.rpm
 yum install mysql-server -y
 log "->Tuning"
-wget https://github.com/oracle-quickstart/oci-cloudera/blob/master/scripts/my.cnf
+wget https://raw.githubusercontent.com/oracle-quickstart/oci-cloudera/master/scripts/my.cnf
 mv my.cnf /etc/my.cnf
 log "->Start"
 systemctl enable mysqld
