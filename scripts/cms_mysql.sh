@@ -202,35 +202,8 @@ wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
 rpm -ivh mysql-community-release-el7-5.noarch.rpm
 yum install mysql-server -y
 log "->Tuning"
-echo -e "transaction_isolation = READ-COMMITTED\n\
-read_buffer_size = 2M\n\
-read_rnd_buffer_size = 16M\n\
-sort_buffer_size = 8M\n\
-join_buffer_size = 8M\n\
-thread_stack = 256K\n\
-thread_cache_size = 64\n\
-max_connections = 700\n\
-key_buffer_size = 32M\n\
-max_allowed_packet = 32M\n\
-log_bin=/var/lib/mysql/mysql_binary_log\n\
-server_id=1\n\
-binlog_format = mixed\n\
-\n\
-# InnoDB Settings\n\
-innodb_file_per_table = 1\n\
-innodb_flush_log_at_trx_commit = 2\n\
-innodb_log_buffer_size = 64M\n\
-innodb_thread_concurrency = 8\n\
-innodb_buffer_pool_size = 4G\n\
-innodb_flush_method = O_DIRECT\n\
-innodb_log_file_size = 512M\n\
-\n\
-[mysqld_safe]\n\
-log-error=/var/log/mysqld.log
-pid-file=/var/run/mysqld/mysqld.pid \n\
-\n\
-sql_mode=STRICT_ALL_TABLES\n\
-" >> /etc/my.cnf
+wget https://github.com/oracle-quickstart/oci-cloudera/blob/master/scripts/my.cnf
+mv my.cnf /etc/my.cnf
 log "->Start"
 systemctl enable mysqld
 systemctl start mysqld
@@ -262,7 +235,7 @@ for DATABASE in "scm" "amon" "rman" "hue" "metastore" "sentry" "nav" "navms" "oo
 	else
 		USER=${DATABASE}
 	fi
-	echo -e "CREATE DATABASE ${DATABASE};" >> /etc/mysql/cloudera.sql
+	echo -e "CREATE DATABASE ${DATABASE} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;" >> /etc/mysql/cloudera.sql
 	echo -e "CREATE USER \'${USER}\'@'%' IDENTIFIED BY \'${pw}\';" >> /etc/mysql/cloudera.sql
 	echo -e "GRANT ALL on ${DATABASE}.* to \'${USER}\'@'%';" >> /etc/mysql/cloudera.sql
         echo "${USER}:${pw}" >> /etc/mysql/mysql.pw
