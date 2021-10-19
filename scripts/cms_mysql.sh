@@ -201,39 +201,39 @@ log "->Install"
 wget http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
 rpm -ivh mysql-community-release-el7-5.noarch.rpm
 yum install mysql-server -y
-#log "->Tuning"
-#head -n -6 /etc/my.cnf >> /etc/my.cnf.new
-#mv /etc/my.cnf /etc/my.cnf.rpminstall
-#mv /etc/my.cnf.new /etc/my.cnf
-#echo -e "transaction_isolation = READ-COMMITTED\n\
-#read_buffer_size = 2M\n\
-#read_rnd_buffer_size = 16M\n\
-#sort_buffer_size = 8M\n\
-#join_buffer_size = 8M\n\
-#thread_stack = 256K\n\
-#thread_cache_size = 64\n\
-#max_connections = 700\n\
-#key_buffer_size = 32M\n\
-#max_allowed_packet = 32M\n\
-#log_bin=/var/lib/mysql/mysql_binary_log\n\
-#server_id=1\n\
-#binlog_format = mixed\n\
-#\n\
-## InnoDB Settings\n\
-#innodb_file_per_table = 1\n\
-#innodb_flush_log_at_trx_commit = 2\n\
-#innodb_log_buffer_size = 64M\n\
-#innodb_thread_concurrency = 8\n\
-#innodb_buffer_pool_size = 4G\n\
-#innodb_flush_method = O_DIRECT\n\
-#innodb_log_file_size = 512M\n\
-#\n\
-#[mysqld_safe]\n\
-#log-error=/var/log/mysqld.log
-#pid-file=/var/run/mysqld/mysqld.pid \n\
-#\n\
-#sql_mode=STRICT_ALL_TABLES\n\
-#" >> /etc/my.cnf
+log "->Tuning"
+head -n -6 /etc/my.cnf >> /etc/my.cnf.new
+mv /etc/my.cnf /etc/my.cnf.rpminstall
+mv /etc/my.cnf.new /etc/my.cnf
+echo -e "transaction_isolation = READ-COMMITTED\n\
+read_buffer_size = 2M\n\
+read_rnd_buffer_size = 16M\n\
+sort_buffer_size = 8M\n\
+join_buffer_size = 8M\n\
+thread_stack = 256K\n\
+thread_cache_size = 64\n\
+max_connections = 700\n\
+key_buffer_size = 32M\n\
+max_allowed_packet = 32M\n\
+log_bin=/var/lib/mysql/mysql_binary_log\n\
+server_id=1\n\
+binlog_format = mixed\n\
+\n\
+# InnoDB Settings\n\
+innodb_file_per_table = 1\n\
+innodb_flush_log_at_trx_commit = 2\n\
+innodb_log_buffer_size = 64M\n\
+innodb_thread_concurrency = 8\n\
+innodb_buffer_pool_size = 4G\n\
+innodb_flush_method = O_DIRECT\n\
+innodb_log_file_size = 512M\n\
+\n\
+[mysqld_safe]\n\
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid \n\
+\n\
+sql_mode=STRICT_ALL_TABLES\n\
+" >> /etc/my.cnf
 log "->Start"
 systemctl enable mysqld
 systemctl start mysqld
