@@ -18,21 +18,18 @@ The following table shows Recommended and Minimum supported OCI shapes for each 
 | Minimum     | VM.Standard2.8 | VM.Standard2.1   | VM.Standard2.8               |
 
 ## Resource Manager Deployment
-This Quick Start uses [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) to make deployment quite easy.  Simply [download the latest .zip](https://github.com/oracle-quickstart/oci-cloudera/archive/master.zip) and follow the [Resource Manager instructions](https://docs.cloud.oracle.com/en-us/iaas/Content/ResourceManager/Tasks/managingstacksandjobs.htm) for how to build a stack.  Prior to building the Stack, you may want to modify some parts of the deployment detailed in the sections below.
+This Quick Start uses [OCI Resource Manager](https://docs.cloud.oracle.com/iaas/Content/ResourceManager/Concepts/resourcemanager.htm) to make deployment quite easy.  
 
-It is highly suggested you use the included schema file to make deployment even easier.   In order to leverage this feature, the GitHub zip must be repackaged so that it's contents are top-level prior to creating the ORM Stack.  This is a straight forward process:
-
-		unzip oci-cloudera-master.zip
-		cd oci-cloudera-master
-		zip -r oci-cloudera-orm.zip *
-
-Use the `oci-cloudera-orm.zip` file created in the last step to create the ORM Stack.  The schema file can even be customized for your use, enabling you to build a set of approved variables for deployment.
+Simply click this button to deploy to OCI.
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://console.us-ashburn-1.oraclecloud.com/resourcemanager/stacks/create?region=home&zipUrl=https://github.com/oracle-quickstart/oci-cloudera/archive/3.3.0.zip)
 
 This template uses Terraform v0.12, and has support to target existing VCN/Subnets for cluster deployment.   To engage this functionality, just use the Schema menu system to select an existing VCN target, then select appropriate Subnets for each cluster host type.
 
 If you deploy Cloudera Manager to a private subnet, you will require a VPN or SSH Tunnel through an edge node to access cluster management.
 
 Once the deployment is complete you can access Cloudera manager at `http://<some IP address>:7180/cmf/login`.  
+
+Cluster Provisioning is executed on the Utility host using CloudInit.   That activity is logged in /var/log/cloudera-OCI-initialize.log.   This log file can be used to triage cluster setup issues.
 
 ![](images/01%20-%20manager.png)
 
