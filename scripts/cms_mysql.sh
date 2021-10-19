@@ -239,8 +239,8 @@ systemctl enable mysqld
 systemctl start mysqld
 log "->Bootstrap Databases"
 mysql_pw=` cat /var/log/mysqld.log | grep root@localhost | gawk '{print $13}'`
-mysql -u root -p${mysql_pw} -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'S0m3p@ssw1234';"
-mysql -u root -p${mysql_pw} -e "FLUSH PRIVILEGES;"
+mysql -u root --connect-expired-password -p${mysql_pw} -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'S0m3p@ssw1234';"
+mysql -u root --connect-expired-password -p${mysql_pw} -e "FLUSH PRIVILEGES;"
 mysql_pw="S0m3p@ssw1234"
 mysql -u root -p${mysql_pw} -e "SET GLOBAL validate_password.policy=LOW;"
 mysql -u root -p${mysql_pw} -e "SET GLOBAL log_bin_trust_function_creators = 1;"
