@@ -116,7 +116,7 @@ variable "vcore_ratio" {
 }
 
 variable "yarn_scheduler" {
-  default = "fair"
+  default = "capacity"
 }
 
 variable "enable_secondary_vnic" {

@@ -680,6 +680,7 @@ variables:
     title: "YARN Scheduler"
     description: "Select YARN Scheduler type"
     visible: ${AdvancedOptions}
+    default: "capacity"
 
   enable_secondary_vnic:
     type: boolean

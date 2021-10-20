@@ -41,6 +41,9 @@ EXECNAME="TUNING"
 log "->TUNING START"
 sed -i.bak 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 setenforce 0
+EXECNAME="PAUSE FOR YUM"
+log "->Waiting 120 seconds to ensure YUM is ready to go"
+sleep 120
 EXECNAME="JAVA"
 log "->INSTALL"
 yum install java-1.8.0-openjdk.x86_64 -y >> $LOG_FILE
